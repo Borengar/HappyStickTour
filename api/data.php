@@ -68,7 +68,6 @@ switch ($_GET['query']) {
 		break;
 	case 'mappack':
 		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getMappack(); break; // creates the mappack for a round
 			case 'PUT': putMappack(); break; // update the mappack url for a round
 		}
 		break;
@@ -2212,124 +2211,6 @@ function postMappool() {
 
 	http_response_code(401);
 	echoFeedback(true, 'You have no access to mappools');
-}
-
-/**
- * Creates the mappack for a round identified by id
- *
- * @param integer  $_GET['round']  Id of the round
- */
-function getMappack() {
-	global $database;
-	$db = $database->getConnection();
-	global $osuApi;
-
-	$user = checkToken();
-
-	if ($user->scope != 'MAPPOOLER') {
-		http_response_code(401);
-		echoFeedback(true, 'You need the scope MAPPOOLER to create mappacks');
-		return;
-	}
-
-	$stmt = $db->prepare('SELECT mappool_slots.beatmap_id
-		FROM mappool_slots
-		WHERE mappool_slots.round = :round');
-	$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
-	$stmt->execute();
-	$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-	if (count($rows) == 0) {
-		echoFeedback(true, 'No beatmaps in this mappool');
-		return;
-	}
-	
-	$beatmaps = [];
-	foreach ($rows as $row) {
-		$beatmaps[] = $row['beatmap_id'];
-	}
-
-	$stmt = $db->prepare('SELECT tiers.lower_endpoint, tiers.upper_endpoint, rounds.name
-		FROM rounds INNER JOIN tiers ON rounds.tier = tiers.id
-		WHERE rounds.id = :id');
-	$stmt->bindValue(':id', $_GET['round'], PDO::PARAM_INT);
-	$stmt->execute();
-	$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-	$tier_name = $rows[0]['lower_endpoint'] . '-' . $rows[0]['upper_endpoint'];
-	$week_name = $rows[0]['name'];
-
-	$curl = curl_init();
-	curl_setopt($curl, CURLOPT_URL, 'https://osu.ppy.sh/forum/ucp.php?mode=login');
-	curl_setopt($curl, CURLOPT_POST, true);
-	curl_setopt($curl, CURLOPT_POSTFIELDS, 'sid=&username=Borengar&password=nHmsKKa6QKN3k0JbmHaj&autologin=on&login=login');
-	curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($curl, CURLOPT_VERBOSE, true);
-	curl_setopt($curl, CURLOPT_HEADER, true);
-	$response = curl_exec($curl);
-
-	$header_size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
-	$header = substr($response, 0, $header_size);
-	$body = substr($response, $header_size);
-
-	curl_close($curl);
-
-	$cookie_headers = explode('Set-Cookie: ', $header);
-
-	$cookies = [];
-
-	for ($i = 1; $i < count($cookie_headers) - 2; $i++) {
-		$cookies[] = $cookie_headers[$i];
-	}
-	$cookie_string = '';
-	foreach ($cookies as $cookie) {
-		$cookie_string .= explode(';', $cookie)[0] . '; ';
-	}
-
-	$zip = new ZipArchive();
-	$filename = '../mappacks/Mappack ' . $tier_name . ' ' . $week_name . '.zip';
-	$zipError = $zip->open($filename, ZipArchive::OVERWRITE|ZipArchive::CREATE);
-	if ($zipError !== TRUE) {
-	   echoFeedback(true, 'Error when creating zip file');
-	   return;
-	}
-
-	foreach ($beatmaps as $beatmap) {
-		$beatmap_data = $osuApi->getBeatmap($beatmap);
-
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, 'https://osu.ppy.sh/d/' . $beatmap_data->beatmapset_id);
-		curl_setopt($ch, CURLOPT_HEADER, true);
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_COOKIE, $cookieString);
-
-		$a = curl_exec($ch);
-
-		$url = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-
-		curl_close($ch);
-
-		$options = array(
-			CURLOPT_FILE => fopen('../mappacks/' . str_replace('*', '', $beatmap_data->artist) . ' - ' . str_replace('*', '', $beatmap_data->title) . '.osz', 'w'),
-			CURLOPT_TIMEOUT => 28800,
-			CURLOPT_URL => $url
-		);
-
-		$ch = curl_init();
-		curl_setopt_array($ch, $options);
-		curl_exec($ch);
-		curl_close($ch);
-		
-		$zip->addFile('../mappacks/' . str_replace('*', '', $beatmap_data->artist) . ' - ' . str_replace('*', '', $beatmap_data->title) . '.osz', str_replace('*', '', $beatmap_data->artist) . ' - ' . str_replace('*', '', $beatmap_data->title) . '.osz');
-	}
-
-	$zip->close();
-
-	$response = new stdClass;
-	$response->error = '0';
-	$response->message = 'Zip created';
-	$response->filename = 'http://happysticktour.com/mappacks/Mappack ' . $tier_name . ' ' . $week_name . '.zip';
-	echo json_encode($response);
 }
 
 /**
