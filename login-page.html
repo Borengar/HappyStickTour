@@ -1,0 +1,384 @@
+<dom-module id="login-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			paper-button {
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			.discord-button {
+				background-color: var(--discord-grey);
+				margin: 20px;
+			}
+			.registration-button {
+				font-size: 30px;
+			}
+			.header {
+				font-size: 80px;
+				color: var(--happystick-green);
+			}
+			.sub {
+				font-size: 30px;
+			}
+			.wrapper {
+				background-image: url('images/index_header.png');
+				background-repeat: no-repeat;
+				background-size: contain;
+			}
+			.countdown-number {
+				font-size: 150px;
+				color: var(--happystick-green);
+			}
+			.countdown-title {
+				color: var(--happystick-green);
+			}
+		</style>
+		<iron-ajax id="loginAjax" url="auth.php" method="GET" on-response="loginResponse"></iron-ajax>
+		<iron-ajax id="settingsAjax" url="api/settings" method="GET" on-response="settingsResponse"></iron-ajax>
+		<div class="flex layout vertical wrapper">
+			<div class="flex layout vertical" hidden$="[[loading_page_hidden]]">
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div style="margin-top:3px;">Checking access. Please wait...</div>
+					<paper-spinner active style="margin-left:20px;"></paper-spinner>
+					<div class="flex"></div>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<div class="flex layout horizontal" hidden$="[[choose_scope_hidden]]">
+				<div class="flex"></div>
+				<div class="layout vertical">
+					<div class="flex"></div>
+					<div>Pick a website area</div>
+					<template is="dom-repeat" items="[[possible_scopes]]" as="scope">
+						<paper-button raised style="margin:10px;" on-click="pickScope">[[scope]]</paper-button>
+					</template>
+					<div style="margin-bottom:100px;"></div>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<div class="flex layout vertical" hidden$="[[discord_registration_hidden]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="discord-button" raised on-click="discordLogin">Staff login</paper-button>
+				</div>
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="registration-button" raised on-click="discordLogin">Summer Tour Registration</paper-button>
+					<div class="flex"></div>
+				</div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div style="margin-top:20px;width:800px;text-align:center;">Having a Discord account is mandatory for Summer Tour registration. This will make communication much easier for both staff and players. If your registration is accepted you will be automatically assigned the appropriate Discord role on our server.</div>
+					<div class="flex"></div>
+				</div>
+				<div class="layout horizontal" style="margin-bottom:50px;margin-top:20px;">
+					<div class="flex"></div>
+					<paper-button raised on-click="readDocs">Read the rules</paper-button>
+					<div class="flex"></div>
+				</div>
+			</div>
+			<div class="flex layout vertical" hidden$="[[discord_login_hidden]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="discord-button" raised on-click="discordLogin">Staff login</paper-button>
+				</div>
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="registration-button" raised on-click="discordLogin" style="margin-bottom:100px;">Player login</paper-button>
+					<paper-button class="registration-button" raised on-click="publicLogin" style="margin-bottom:100px;margin-left:200px;">Public Stats</paper-button>
+					<div class="flex"></div>
+				</div>
+			</div>
+			<div class="flex layout vertical" hidden$="[[no_scope_hidden]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="discord-button" raised on-click="discordLogin">Staff login</paper-button>
+				</div>
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div>Registrations are closed at the moment.</div>
+					<div class="flex"></div>
+				</div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="registration-button" raised on-click="back" style="margin-bottom:100px;margin-top:20px;">Back</paper-button>
+					<div class="flex"></div>
+				</div>
+			</div>
+			<div class="flex layout vertical" hidden$="[[no_guild_hidden]]">
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button raised class="discord-button" on-click="joinGuild">Join Happystick Guild</paper-button>
+					<div class="flex"></div>
+				</div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div style="margin-top:20px;width:800px;margin-bottom:100px;text-align:center;">You are currently not a member of the HappyStick Discord. Having a Discord account in the HappyStick Server is mandatory for Summer Tour registration.</div>
+					<div class="flex"></div>
+				</div>
+			</div>
+			<div class="flex layout vertical" hidden$="[[countdown_hidden]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button class="discord-button" raised on-click="discordLogin">Staff login</paper-button>
+				</div>
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdown_days]]</div>
+							<div class="flex"></div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Days</div>
+							<div class="flex"></div>
+						</div>
+					</div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdown_hours]]</div>
+							<div class="flex"></div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Hours</div>
+							<div class="flex"></div>
+						</div>
+					</div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdown_minutes]]</div>
+							<div class="flex"></div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Minutes</div>
+							<div class="flex"></div>
+						</div>
+					</div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdown_seconds]]</div>
+							<div class="flex"></div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Seconds</div>
+							<div class="flex"></div>
+						</div>
+					</div>
+					<div class="flex"></div>
+				</div>
+				<div class="layout horizontal" style="margin-top:50px;">
+					<div class="flex"></div>
+					<div style="margin-top:13px;">Registration opens:</div>
+					<paper-datetime-picker-item date="[[open_time]]" disabled></paper-datetime-picker-item>
+					<div class="flex"></div>
+				</div>
+				<div class="layout horizontal" style="margin-bottom:50px;margin-top:20px;">
+					<div class="flex"></div>
+					<paper-button raised on-click="readDocs">Read the rules</paper-button>
+					<div class="flex"></div>
+				</div>
+			</div>
+		</div>
+		<paper-dialog id="rulesDialog" style="width:850px;height:100%;" modal class="layout vertical">
+			<div class="flex layout vertical">
+				<iframe src="https://docs.google.com/document/d/1f2FUWtksvAd95y56CIu7cCyleg0nqeWeva7WB_Y1Wq4/pub?embedded=true" style="margin-top:20px;margin-bottom:20px;width:800px;height:100%;"></iframe>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Close</paper-button>
+			</div>
+		</paper-dialog>
+	</template>
+	<script>
+		addEventListener('WebComponentsReady', () => {
+			Polymer({
+				is: 'login-page',
+				properties: {
+					loading_page_hidden: {
+						type: Boolean,
+						value: false
+					},
+					choose_scope_hidden: {
+						type: Boolean,
+						value: true
+					},
+					discord_registration_hidden: {
+						type: Boolean,
+						value: true
+					},
+					discord_login_hidden: {
+						type: Boolean,
+						value: true
+					},
+					no_scope_hidden: {
+						type: Boolean,
+						value: true
+					},
+					no_guild_hidden: {
+						type: Boolean,
+						value: true
+					},
+					countdown_hidden: {
+						type: Boolean,
+						value: true
+					},
+					open_time: Date
+				},
+				ready: function() {
+					var hash = this.getHashParams();
+					if (hash && hash.access_token) {
+						this.$.loginAjax.params = {
+							'access_token': hash.access_token
+						};
+						this.$.loginAjax.generateRequest();
+					} else {
+						this.$.settingsAjax.generateRequest();
+					}
+				},
+				hideEverything: function() {
+					this.loading_page_hidden = true;
+					this.choose_scope_hidden = true;
+					this.discord_registration_hidden = true;
+					this.discord_login_hidden = true;
+					this.no_scope_hidden = true;
+					this.no_guild_hidden = true;
+					this.countdown_hidden = true;
+				},
+				getHashParams: function() {
+					var hashParams = {};
+			    var e,
+			        a = /\+/g,  // Regex for replacing addition symbol with a space
+			        r = /([^&;=]+)=?([^&;]*)/g,
+			        d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
+			        q = window.location.hash.substring(1);
+
+			    while (e = r.exec(q))
+			       hashParams[d(e[1])] = d(e[2]);
+
+			    return hashParams;
+				},
+				loginResponse: function(e) {
+					var response = e.detail.response;
+					if (response) {
+						if (response.response == 'granted') {
+							localStorage.setItem('token', response.token);
+							localStorage.setItem('scope', response.scope);
+							switch (response.scope) {
+								case 'REGISTRATION': window.location = 'registration/index.html'; break;
+								case 'PLAYER': window.location = 'player/index.html'; break;
+								case 'REFEREE': window.location = 'referee/index.html'; break;
+								case 'MAPPOOLER': window.location = 'mappooler/index.html'; break;
+								case 'ADMIN': window.location = 'admin/index.html'; break;
+							}
+						} else {
+							if (response.message == 'User not in guild') {
+								this.hideEverything();
+								this.no_guild_hidden = false;
+							} else if (response.scopes.length == 1) {
+								this.$.loginAjax.params = {
+									'access_token': this.getHashParams().access_token,
+									'scope': response.scopes[0]
+								};
+								this.$.loginAjax.generateRequest();
+							} else if (response.scopes.length > 1) {
+								this.possible_scopes = response.scopes;
+								this.hideEverything();
+								this.choose_scope_hidden = false;
+							} else {
+								this.hideEverything();
+								this.no_scope_hidden = false;
+							}
+						}
+					}
+				},
+				pickScope: function(e) {
+					if (e.model.scope) {
+						this.$.loginAjax.params = {
+							'access_token': this.getHashParams().access_token,
+							'scope': e.model.scope
+						};
+						this.$.loginAjax.generateRequest();
+					}
+				},
+				discordLogin: function() {
+					window.location = 'discord_login_forward.php';
+				},
+				publicLogin: function() {
+					window.location = 'public/index.html';
+				},
+				back: function() {
+					this.$.settingsAjax.generateRequest();
+				},
+				joinGuild: function() {
+					window.location = 'https://discord.gg/happystick';
+				},
+				countdownTick: function() {
+					var now = new Date();
+					if (this.open_time > now) {
+						var diff = this.open_time.getTime() - now.getTime();
+
+						// days
+						this.countdown_days = Math.floor(diff / 86400000);
+						diff -= this.countdown_days * 86400000;
+						this.countdown_days = ('00' + this.countdown_days).slice(-2);
+
+						// hours
+						this.countdown_hours = Math.floor(diff / 3600000);
+						diff -= this.countdown_hours * 3600000;
+						this.countdown_hours = ('00' + this.countdown_hours).slice(-2);
+
+						// minutes
+						this.countdown_minutes = Math.floor(diff / 60000);
+						diff -= this.countdown_minutes * 60000;
+						this.countdown_minutes = ('00' + this.countdown_minutes).slice(-2);
+
+						// seconds
+						this.countdown_seconds = Math.floor(diff / 1000);
+						this.countdown_seconds = ('00' + this.countdown_seconds).slice(-2);
+
+						this.async(this.countdownTick, 1000);
+					} else {
+						this.hideEverything();
+						this.discord_registration_hidden = false;
+					}
+				},
+				settingsResponse: function(e) {
+					var response = e.detail.response;
+					console.log(response);
+					var open_time = new Date(response.registration_open);
+					this.open_time = new Date(Date.UTC(open_time.getFullYear(), open_time.getMonth(), open_time.getDate(), open_time.getHours(), open_time.getMinutes(), 0));
+					var close_time = new Date(response.registration_close);
+					this.close_time = new Date(Date.UTC(close_time.getFullYear(), close_time.getMonth(), close_time.getDate(), close_time.getHours(), close_time.getMinutes(), 0));
+					var now = new Date();
+					if (this.open_time > now) {
+						this.hideEverything();
+						this.countdown_hidden = false;
+						this.countdownTick();
+					} else if (this.close_time < now) {
+						this.hideEverything();
+						this.discord_login_hidden = false;
+					} else {
+						this.hideEverything();
+						this.discord_registration_hidden = false;
+					}
+				},
+				readDocs: function() {
+					this.$.rulesDialog.open();
+				}
+			});
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,237 @@
+<dom-module id="lobby-setup">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
+		<iron-ajax id="saveTimeAjax" url="../api/lobbies/" method="PUT" content-type="application/json"></iron-ajax>
+		<div class="layout vertical" style="width:450px;margin:10px;background-color:#65B309;">
+			<div style="margin:10px;font-size:20px;">Lobby <span>[[lobby_id]]</span></div>
+			<div class="layout horizontal">
+				<div class="flex"></div>
+				<div class="layout vertical" style="width:400px;">
+					<paper-datetime-picker-item placeholder="Lobby play time" date-format="YYYY-MM-DD" date="{{play_time}}" disabled="[[locked]]"></paper-datetime-picker-item>
+					<template is="dom-repeat" items="{{slots}}">
+						<lobby-setup-slot id="[[item.id]]" open_time_setter="[[item.open_time]]" osu_profile="[[item.user.osu_profile]]" sub_since="[[item.user.twitch_profile.sub_since]]" round="[[round]]" locked="[[locked]]"></lobby-setup-slot>
+					</template>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<div style="height:10px;"></div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'lobby-setup',
+			properties: {
+				lobby_id: Number,
+				slots: Array,
+				play_time: {
+					type: Date,
+					observer: 'play_timeChanged'
+				},
+				play_time_setter: {
+					type: Date,
+					observer: 'play_time_setterChanged'
+				},
+				locked: {
+					type: Boolean,
+					value: false
+				},
+				round: Number
+			},
+			play_timeChanged: function() {
+				if (!this.locked && this.play_time) {
+					var play_time = new Date(this.play_time);
+					play_time.setSeconds(0);
+					this.$.saveTimeAjax.url = '../api/lobbies/' + this.lobby_id;
+					this.$.saveTimeAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.saveTimeAjax.body = {
+						'action': 'play_time',
+						'time': moment(play_time).format('YYYY-MM-DD HH:mm:ss')
+					};
+					this.$.saveTimeAjax.generateRequest();
+				}
+			},
+			play_time_setterChanged: function() {
+				this.locked = true;
+				if (this.play_time_setter) {
+					this.play_time = new Date(this.play_time_setter);
+				}
+				this.locked = false;
+			}
+		});
+	</script>
+</dom-module>
+
+<dom-module id="lobby-setup-slot">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			.wrapper {
+				height: 100px;
+				width: 400px;
+				background-color: #090909;
+				position: relative;
+			}
+			.image {
+				height: 90px;
+				width: 90px;
+				background-size: 90px 90px;
+				margin-left: 5px;
+			}
+			.username {
+				font-size: 20px;
+				color: white;
+				margin-left: 5px;
+			}
+			.stats {
+				font-size: 14px;
+				color: white;
+				margin-left: 5px;
+			}
+			.rank {
+				position: absolute;
+				right: 5px;
+				bottom: 5px;
+				font-size: 40px;
+				opacity: 0.5;
+				color: white;
+			}
+			.sub-icon {
+				position: absolute;
+				right: 5px;
+				top: 5px;
+				height: 30px;
+				width: 30px;
+			}
+			paper-card {
+				margin: 0;
+				width: 400px;
+			}
+		</style>
+		<iron-ajax id="saveAjax" url="../api/lobby_slots/" method="PUT" content-type="application/json" on-response="saveResponse"></iron-ajax>
+		<iron-ajax id="freePlayersAjax" url="../api/rounds//free_players" method="GET" content-type="application/json" on-response="freePlayersResponse"></iron-ajax>
+		<div class="layout vertical" hidden$="[[osu_profile_hidden]]" on-click="showChoosePlayer">
+			<osu-profile profile="[[osu_profile]]" sub_since="[[sub_since]]"></osu-profile>
+		</div>
+		<div class="layout vertical" hidden$="[[!osu_profile_hidden]]">
+			<div class="layout vertical" style="width:400px;height:100px;background-color:white;">
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-button raised style="background-color:#65B309;color:white;" on-click="showChoosePlayer">Choose player</paper-button>
+					<div class="flex"></div>
+				</div>
+				<div class="flex"></div>
+			</div>
+		</div>
+		<paper-dialog id="choosePlayerDialog" modal>
+			<h2>Choose a player for this slot</h2>
+			<paper-dialog-scrollable>
+				<div class="layout vertical" style="width:400px;height:600px;">
+					<div class="layout vertical" style="width:400px;height:100px;min-height:100px;background-color:white;" on-click="choosePlayerNone">
+						<div class="flex"></div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div>NONE</div>
+							<div class="flex"></div>
+						</div>
+						<div class="flex"></div>
+					</div>
+					<template is="dom-repeat" items="[[free_players]]" as="player">
+						<osu-profile profile="[[player.osu_profile]]" sub_since="[[player.sub_since]]" on-click="choosePlayer" style="margin-top:10px;"></osu-profile>
+						<template is="dom-repeat" items="[[player.availabilities]]" as="availability">
+							<paper-card elevation="2">
+								<div class="layout horizontal">
+									<paper-datetime-picker-item date="[[availability.time_from]]" disabled></paper-datetime-picker-item>
+									<div style="margin-left:10px;margin-top:10px;">-</div>
+									<paper-datetime-picker-item date="[[availability.time_to]]" disabled></paper-datetime-picker-item>
+								</div>
+							</paper-card>
+						</template>
+					</template>
+				</div>
+			</paper-dialog-scrollable>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+			</div>
+		</paper-dialog>
+	</template>
+	<script>
+		Polymer({
+			is: 'lobby-setup-slot',
+			properties: {
+				id: Number,
+				osu_profile: {
+					type: Object,
+					observer: 'init'
+				},
+				sub_since: String,
+				sub_icon_hidden: {
+					type: Boolean,
+					value: true
+				},
+				osu_profile_hidden: {
+					type: Boolean,
+					value: true
+				},
+				round: Number,
+				locked: Boolean
+			},
+			init: function() {
+				this.osu_profile_hidden = true;
+				if (this.osu_profile && this.osu_profile.username) {
+					this.osu_profile_hidden = false;
+				}
+			},
+			showChoosePlayer: function() {
+				if (!this.locked) {
+					this.free_players = [];
+					this.$.freePlayersAjax.url = '../api/rounds/' + this.round + '/free_players';
+					this.$.freePlayersAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.freePlayersAjax.generateRequest();
+					this.$.choosePlayerDialog.open();
+				}
+			},
+			choosePlayerNone: function() {
+				this.$.saveAjax.url = '../api/lobby_slots/' + this.id;
+				this.$.saveAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.saveAjax.body = {
+					'action': 'remove_player'
+				};
+				this.$.saveAjax.generateRequest();
+				this.$.choosePlayerDialog.close();
+			},
+			choosePlayer: function(e) {
+				this.$.saveAjax.url = '../api/lobby_slots/' + this.id;
+				this.$.saveAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.saveAjax.body = {
+					'action': 'choose_player',
+					'id': e.model.player.id
+				};
+				this.$.saveAjax.generateRequest();
+				this.$.choosePlayerDialog.close();
+			},
+			saveResponse: function() {
+				this.fire('changed', {});
+			},
+			freePlayersResponse: function(e) {
+				var response = e.detail.response;
+				this.free_players = [];
+				for (var i = 0; i < response.length; i++) {
+					var player = response[i];
+					for (var j = 0; j < player.availabilities.length; j++) {
+						player.availabilities[j].time_from = new Date(player.availabilities[j].time_from);
+						player.availabilities[j].time_to = new Date(player.availabilities[j].time_to);
+					}
+					this.push('free_players', player);
+				}
+			}
+		});
+	</script>
+</dom-module>

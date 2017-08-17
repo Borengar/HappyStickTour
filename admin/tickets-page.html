@@ -1,0 +1,255 @@
+<dom-module id="tickets-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			.heading {
+				margin: 20px;
+				font-size: 40px;
+				color: var(--happystick-green);
+			}
+		</style>
+		<iron-ajax id="ticketsAjax" url="../api/tickets" method="GET" on-response="ticketsResponse"></iron-ajax>
+		<div class="layout vertical" style="margin:20px;">
+			<div class="layout vertical" hidden$="[[list_hidden]]">
+				<div class="heading">Open tickets</div>
+				<template is="dom-repeat" items="[[open_tickets]]" as="ticket">
+					<ticket-item topic="[[ticket.topic]]" title="[[ticket.title]]" discord_profile="[[ticket.last_message.user.discord_profile]]" last_message_setter="[[ticket.last_message.time]]" on-click="openTicket"></ticket-item>
+				</template>
+				<div class="heading">Closed tickets</div>
+				<template is="dom-repeat" items="[[closed_tickets]]" as="ticket">
+					<ticket-item topic="[[ticket.topic]]" title="[[ticket.title]]" discord_profile="[[ticket.last_message.user.discord_profile]]" last_message_setter="[[ticket.last_message.time]]" on-click="closeTicket"></ticket-item>
+				</template>
+			</div>
+			<div class="layout vertical" hidden$="[[ticket_hidden]]">
+				<ticket-page id="ticketPage" on-back="openList"></ticket-page>
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'tickets-page',
+			properties: {
+				list_hidden: {
+					type: Boolean,
+					value: false
+				},
+				ticket_hidden: {
+					type: Boolean,
+					value: true
+				}
+			},
+			ready: function() {
+				this.$.ticketsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.ticketsAjax.generateRequest();
+			},
+			ticketsResponse: function(e) {
+				var tickets = e.detail.response;
+				this.open_tickets = [];
+				this.closed_tickets = [];
+				for (var i = 0; i < tickets.length; i++) {
+					if (tickets[i].closed == '1') {
+						this.push('closed_tickets', tickets[i]);
+					} else {
+						this.push('open_tickets', tickets[i]);
+					}
+				}
+			},
+			openTicket: function(e) {
+				var ticket = e.model.ticket;
+				this.$.ticketPage.ticket_id = ticket.id;
+				this.$.ticketPage.open = true;
+				this.list_hidden = true;
+				this.ticket_hidden = false;
+			},
+			closeTicket: function(e) {
+				var ticket = e.model.ticket;
+				this.$.ticketPage.ticket_id = ticket.id;
+				this.$.ticketPage.open = false;
+				this.list_hidden = true;
+				this.ticket_hidden = false;
+			},
+			openList: function() {
+				this.$.ticketsAjax.generateRequest();
+				this.list_hidden = false;
+				this.ticket_hidden = true;
+			}
+		});
+	</script>
+</dom-module>
+
+<dom-module id="ticket-item">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			:host {
+				height: 64px;
+			}
+		</style>
+		<div class="layout horizontal" style="height:64px;border:1px solid black;">
+			<div class="layout vertical" style="width:200px;border:1px solid black;">
+				<div class="flex"></div>
+				<div style="margin-left:10px;">[[topic]]</div>
+				<div class="flex"></div>
+			</div>
+			<div class="layout vertical flex" style="border:1px solid black;">
+				<div class="flex"></div>
+				<div style="font-weight:bold;white-space:nowrap;margin-left:10px;">[[title]]</div>
+				<div class="flex"></div>
+			</div>
+			<div class="layout vertical" style="width:300px;">
+				<discord-profile profile="[[discord_profile]]" style="width:300px;background-color:#2e3136;"></discord-profile>
+			</div>
+			<div class="layout vertical" style="width:200px;border:1px solid black;">
+				<div class="flex"></div>
+				<div style="margin-left:10px;">[[last_message]]</div>
+				<div class="flex"></div>
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'ticket-item',
+			properties: {
+				topic: String,
+				title: String,
+				discord_profile: Object,
+				last_message_setter: {
+					type: Date,
+					observer: 'last_message_setterChanged'
+				},
+				last_message: String
+			},
+			last_message_setterChanged: function() {
+				if (this.last_message_setter) {
+					var last_message = new Date(this.last_message_setter);
+					this.last_message = last_message.getFullYear() + '-' + ('00' + (last_message.getMonth() + 1)).slice(-2) + '-' + ('00' + last_message.getDate()).slice(-2) + ' ' + ('00' + last_message.getHours()).slice(-2) + ':' + ('00' + last_message.getMinutes()).slice(-2);
+				}
+			}
+		})
+	</script>
+</dom-module>
+
+<dom-module id="ticket-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
+		<iron-ajax id="ticketAjax" url="../api/tickets/" method="GET" on-response="ticketResponse"></iron-ajax>
+		<iron-ajax id="commentAjax" url="../api/tickets/" method="PUT" content-type="application/json" on-response="commentResponse"></iron-ajax>
+		<iron-ajax id="closeAjax" url="../api/tickets/" method="DELETE" on-response="closeResponse"></iron-ajax>
+		<div class="layout vertical">
+			<paper-button raised style="background-color:#65b309;color:white;width:200px;" on-click="back">Back to overview</paper-button>
+			<div style="margin-top:50px;">[[topic]]</div>
+			<div style="font-size:40px;color:#65b309;margin-bottom:50px;">[[title]]</div>
+			<template is="dom-repeat" items="[[messages]]" as="message">
+				<div class="layout vertical" style="margin-bottom:50px;">
+					<div class="layout horizontal">
+						<discord-profile profile="[[message.creator.discord_profile]]" style="width:300px;background-color:#2e3136;"></discord-profile>
+						<div class="layout vertical" style="margin-left:20px;">
+							<div class="flex"></div>
+							<div>[[_timeToLocal(message.timestamp)]]</div>
+							<div class="flex"></div>
+						</div>
+					</div>
+					<div style="margin-top:10px;">[[message.message]]</div>
+				</div>
+			</template>
+			<paper-textarea label="Message..." value="{{message}}" hidden$="[[!open]]"></paper-textarea>
+			<div class="layout horizontal" hidden$="[[!open]]">
+				<div class="flex"></div>
+				<paper-button raised style="background-color:#65b309;color:white;width:200px;" on-click="comment">Comment</paper-button>
+			</div>
+			<paper-button raised style="background-color:#d50000;color:white;margin-top:20px;" on-click="showClose" hidden$="[[!open]]">Close Ticket</paper-button>
+		</div>
+		<paper-dialog id="closeTicketDialog" modal style="width:500px;">
+			<h2>Close ticket</h2>
+			<div class="layout vertical">
+				<div>Do you really want to close this ticket?</div>
+				<div>You won't be able to write any more comments if you do this.</div>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="closeTicket" style="color:red;">Close</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]" style="background-color:#65B309;color:white;"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]" style="background-color:#d32f2f;color:white;"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'ticket-page',
+			properties: {
+				ticket_id: {
+					type: Number,
+					observer: 'ticket_idChanged'
+				},
+				topic: String,
+				title: String,
+				open: Boolean
+			},
+			ticket_idChanged: function() {
+				this.$.ticketAjax.url = '../api/tickets/' + this.ticket_id;
+				this.$.ticketAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.ticketAjax.generateRequest();
+			},
+			ticketResponse: function(e) {
+				var ticket = e.detail.response;
+				this.topic = ticket.topic;
+				this.title = ticket.title;
+				this.open = ticket.closed == '0';
+				this.messages = ticket.messages;
+			},
+			_timeToLocal: function(time) {
+				var timeLocal = new Date(time);
+				return timeLocal.getFullYear() + '-' + ('00' + (timeLocal.getMonth() + 1)).slice(-2) + '-' + ('00' + timeLocal.getDate()).slice(-2) + ' ' + ('00' + timeLocal.getHours()).slice(-2) + ':' + ('00' + timeLocal.getMinutes()).slice(-2);
+			},
+			back: function() {
+				this.fire('back', {});
+			},
+			comment: function() {
+				if (this.message) {
+					this.$.commentAjax.url = '../api/tickets/' + this.ticket_id;
+					this.$.commentAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.commentAjax.body = {
+						'message': this.message
+					};
+					this.$.commentAjax.generateRequest();
+					this.message = '';
+				}
+			},
+			commentResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.$.ticketAjax.generateRequest();
+			},
+			showClose: function() {
+				this.$.closeTicketDialog.open();
+			},
+			closeTicket: function() {
+				this.$.closeAjax.url = '../api/tickets/' + this.ticket_id;
+				this.$.closeAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.closeAjax.generateRequest();
+			},
+			closeResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.open = false;
+				}
+				this.$.ticketAjax.generateRequest();
+			}
+		});
+	</script>
+</dom-module>

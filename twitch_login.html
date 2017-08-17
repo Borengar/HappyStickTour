@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+		<link rel="import" href="../import.html">
+		<title>HappyStick Seasonal Tour</title>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning default-colors">
+			html {
+				font-family: Roboto;
+			}
+		</style>
+	</head>
+	<body class="fullbleed layout vertical">
+		<index-page class="flex layout vertical"></index-page>
+	</body>
+</html>
+
+<dom-module id="index-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning default-colors"></style>
+		<iron-ajax id="twitchAjax" url="api/users/@me" method="PUT" on-response="twitchResponse" content-type="application/json"></iron-ajax>
+		<div class="flex layout vertical">
+			<div class="flex"></div>
+			<div class="layout horizontal">
+				<div class="flex"></div>
+				<div class="layout horizontal" hidden$="[[wait_hidden]]">
+					<div>Linking your twitch account. Please wait...</div>
+					<paper-spinner active style="margin-left:20px;"></paper-spinner>
+				</div>
+				<div class="layout vertical" hidden$="[[success_hidden]]">
+					<div>Twitch successfully linked!</div>
+					<paper-button raised on-click="goBack">Back to my page</paper-button>
+				</div>
+				<div class="layout horizontal" hidden$="[[error_hidden]]">
+					<div>Something went horribly wrong while trying to link your twitch account.</div>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<div class="flex"></div>
+		</div>
+	</template>
+	<script>
+		addEventListener('WebComponentsReady', () => {
+			Polymer({
+				is: 'index-page',
+				properties: {
+					wait_hidden: {
+						type: Boolean,
+						value: false
+					},
+					success_hidden: {
+						type: Boolean,
+						value: true
+					},
+					error_hidden: {
+						type: Boolean,
+						value: true
+					}
+				},
+				ready: function() {
+					var code = this.getUrlParameter('code');
+					var state = this.getUrlParameter('state');
+					if (code && state) {
+						this.$.twitchAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.twitchAjax.body = {
+							'action': 'twitch',
+							'code': code,
+							'state': state
+						};
+						this.$.twitchAjax.generateRequest();
+					}
+				},
+				getUrlParameter: function(name) {
+					var url = window.location.href;
+			    name = name.replace(/[\[\]]/g, "\\$&");
+			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			        results = regex.exec(url);
+			    if (!results) return null;
+			    if (!results[2]) return '';
+			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+				},
+				twitchResponse: function(e) {
+					var response = e.detail.response;
+					if (response && response.message == 'Twitch account linked') {
+						this.wait_hidden = true;
+						this.success_hidden = false;
+					} else {
+						this.wait_hidden = true;
+						this.error_hidden = false;
+					}
+				},
+				goBack: function() {
+					var scope = localStorage.getItem('scope');
+					if (scope == 'REGISTRATION') {
+						window.location = 'registration/index.html';
+					} else if (scope == 'PLAYER') {
+						window.location = 'player/index.html';
+					} else {
+						window.location = 'login.html';
+					}
+				}
+			});
+		});
+	</script>
+</dom-module>

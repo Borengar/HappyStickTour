@@ -1,0 +1,342 @@
+<dom-module id="contact-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			ticket-item {
+				margin-left: 20px;
+				margin-right: 20px;
+			}
+			.new-button {
+				margin: 20px;
+				background-color: var(--happystick-green);
+				color: white;
+				width: 200px;
+			}
+			.heading {
+				font-size: 40px;
+				margin: 20px;
+				color: var(--happystick-green);
+			}
+		</style>
+		<iron-ajax id="ticketsAjax" url="../api/tickets" method="GET" on-response="ticketsResponse"></iron-ajax>
+		<iron-ajax id="createTicketAjax" url="../api/tickets" method="POST" content-type="application/json" on-response="createTicketResponse"></iron-ajax>
+		<div class="layout vertical">
+			<div class="layout vertical" hidden$="[[list_hidden]]">
+				<paper-button raised class="new-button" on-click="showCreateTicket">Create Ticket</paper-button>
+				<div class="heading">Open tickets</div>
+				<template is="dom-repeat" items="[[open_tickets]]" as="ticket">
+					<ticket-item ticket="[[ticket]]" on-click="openTicket"></ticket-item>
+				</template>
+				<div class="heading">Closed tickets</div>
+				<template is="dom-repeat" items="[[closed_tickets]]" as="ticket">
+					<ticket-item ticket="[[ticket]]" on-click="closeTicket"></ticket-item>
+				</template>
+			</div>
+			<div class="layout vertical" hidden$="[[ticket_hidden]]">
+				<ticket-page id="ticketPage" on-back="openList"></ticket-page>
+			</div>
+		</div>
+		<paper-dialog id="createTicketDialog" modal style="width:500px;">
+			<h2>Create ticket</h2>
+			<div class="layout vertical">
+				<paper-dropdown-menu label="Topic" style="width:300px;">
+					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_topic}}">
+						<paper-item value="General">General</paper-item>
+						<paper-item value="Scheduling">Scheduling</paper-item>
+						<paper-item value="Hacking/Multiaccounting">Hacking/Multiaccounting</paper-item>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				<paper-input label="Title" value="{{title}}"></paper-input>
+				<paper-textarea label="Message" value="{{message}}"></paper-textarea>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button on-click="createTicket">Create</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]" style="background-color:#65B309;color:white;"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]" style="background-color:#d32f2f;color:white;"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'contact-page',
+			properties: {
+				list_hidden: {
+					type: Boolean,
+					value: false
+				},
+				ticket_hidden: {
+					type: Boolean,
+					value: true
+				}
+			},
+			ready: function() {
+				this.$.ticketsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.ticketsAjax.generateRequest();
+			},
+			ticketsResponse: function(e) {
+				this.open_tickets = [];
+				this.closed_tickets = [];
+				var tickets = e.detail.response;
+				for (var i = 0; i < tickets.length; i++) {
+					if (tickets[i].closed == '1') {
+						this.push('closed_tickets', tickets[i]);
+					} else {
+						this.push('open_tickets', tickets[i]);
+					}
+				}
+			},
+			showCreateTicket: function() {
+				this.selected_topic = 'General';
+				this.title = '';
+				this.message = '';
+				this.$.createTicketDialog.open();
+			},
+			createTicket: function() {
+				this.$.createTicketAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.createTicketAjax.body = {
+					'topic': this.selected_topic,
+					'title': this.title,
+					'message': this.message
+				};
+				this.$.createTicketAjax.generateRequest();
+			},
+			createTicketResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.createTicketDialog.close();
+				}
+				this.$.ticketsAjax.generateRequest();
+			},
+			openTicket: function(e) {
+				this.$.ticketPage.ticket_id = e.model.ticket.id;
+				this.list_hidden = true;
+				this.ticket_hidden = false;
+			},
+			closeTicket: function(e) {
+				this.$.ticketPage.ticket_id = e.model.ticket.id;
+				this.list_hidden = true;
+				this.ticket_hidden = false;
+			},
+			openList: function() {
+				this.$.ticketsAjax.generateRequest();
+				this.list_hidden = false;
+				this.ticket_hidden = true;
+			}
+		});
+	</script>
+</dom-module>
+
+<dom-module id="ticket-item">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			:host {
+				height: 64px;
+			}
+		</style>
+		<div class="layout horizontal" style="height:64px;border:1px solid black;">
+			<div class="layout vertical" style="width:200px;border:1px solid black;">
+				<div class="flex"></div>
+				<div style="margin-left:10px;">[[ticket.topic]]</div>
+				<div class="flex"></div>
+			</div>
+			<div class="layout vertical flex" style="border:1px solid black;">
+				<div class="flex"></div>
+				<div style="font-weight:bold;white-space:nowrap;margin-left:10px;">[[ticket.title]]</div>
+				<div class="flex"></div>
+			</div>
+			<div class="layout vertical" style="width:300px;">
+				<discord-profile profile="[[ticket.last_message.user.discord_profile]]" style="width:300px;"></discord-profile>
+			</div>
+			<div class="layout vertical" style="width:200px;border:1px solid black;">
+				<div class="flex"></div>
+				<div style="margin-left:10px;">[[last_message_local]]</div>
+				<div class="flex"></div>
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'ticket-item',
+			properties: {
+				ticket: {
+					type: Object,
+					observer: 'ticketChanged'
+				}
+			},
+			ticketChanged: function() {
+				var last_message_utc = new Date(this.ticket.last_message.time);
+				var last_message_local = new Date(Date.UTC(last_message_utc.getFullYear(), last_message_utc.getMonth(), last_message_utc.getDate(), last_message_utc.getHours(), last_message_utc.getMinutes(), 0));
+				this.last_message_local = last_message_local.getFullYear() + '-' + ('00' + (last_message_local.getMonth() + 1)).slice(-2) + '-' + ('00' + last_message_local.getDate()).slice(-2) + ' ' + ('00' + last_message_local.getHours()).slice(-2) + ':' + ('00' + last_message_local.getMinutes()).slice(-2);
+			}
+		})
+	</script>
+</dom-module>
+
+<dom-module id="ticket-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			.back-button, .comment-button, .close-button {
+				color: white;
+				margin: 20px;
+			}
+			.back-button, .comment-button {
+				background-color: var(--happystick-green);
+				width: 200px;
+			}
+			.close-button {
+				background-color: var(--error-red);
+			}
+			.heading {
+				color: var(--happystick-green);
+				font-size: 40px;
+				margin: 0 20px;
+			}
+			.topic {
+				margin: 50px 20px 0 20px;
+			}
+			paper-textarea {
+				margin: 20px;
+			}
+			paper-button[dialog-confirm] {
+				color: var(--error-red);
+			}
+			paper-toast {
+				color: white;
+			}
+			#successToast {
+				background-color: var(--happystick-green);
+			}
+			#errorToast {
+				background-color: var(--error-red);
+			}
+		</style>
+		<iron-ajax id="ticketAjax" url="../api/tickets/" method="GET" on-response="ticketResponse"></iron-ajax>
+		<iron-ajax id="commentAjax" url="../api/tickets/" method="PUT" content-type="application/json" on-response="commentResponse"></iron-ajax>
+		<iron-ajax id="closeAjax" url="../api/tickets/" method="DELETE" on-response="closeResponse"></iron-ajax>
+		<div class="layout vertical">
+			<paper-button raised class="back-button" on-click="back">Back to overview</paper-button>
+			<div class="topic">[[topic]]</div>
+			<div class="heading" style="margin-bottom:50px;">[[title]]</div>
+			<template is="dom-repeat" items="[[messages]]" as="message">
+				<div class="layout vertical" style="margin:20px;margin-bottom:50px;">
+					<div class="layout horizontal">
+						<discord-profile profile="[[message.creator.discord_profile]]" style="width:300px;"></discord-profile>
+						<div class="layout vertical" style="margin-left:20px;">
+							<div class="flex"></div>
+							<div>[[_timeToLocal(message.timestamp)]]</div>
+							<div class="flex"></div>
+						</div>
+					</div>
+					<div style="margin-top:10px;">[[message.message]]</div>
+				</div>
+			</template>
+			<paper-textarea label="Message..." value="{{message}}" hidden$="[[!open]]"></paper-textarea>
+			<div class="layout horizontal" hidden$="[[!open]]">
+				<div class="flex"></div>
+				<paper-button raised class="comment-button" on-click="comment">Comment</paper-button>
+			</div>
+			<paper-button raised class="close-button" on-click="showClose" hidden$="[[!open]]">Close Ticket</paper-button>
+		</div>
+		<paper-dialog id="closeTicketDialog" modal style="width:500px;">
+			<h2>Close ticket</h2>
+			<div class="layout vertical">
+				<div>Do you really want to close this ticket?</div>
+				<div>You won't be able to write any more comments if you do this.</div>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="closeTicket">Close</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'ticket-page',
+			properties: {
+				open: Boolean,
+				ticket_id: {
+					type: Number,
+					observer: 'ticket_idChanged'
+				},
+				topic: String,
+				title: String,
+				open: Boolean
+			},
+			ticket_idChanged: function() {
+				this.$.ticketAjax.url = '../api/tickets/' + this.ticket_id;
+				this.$.ticketAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.ticketAjax.generateRequest();
+			},
+			ticketResponse: function(e) {
+				var ticket = e.detail.response;
+				this.topic = ticket.topic;
+				this.title = ticket.title;
+				this.open = ticket.closed == '0';
+				this.messages = ticket.messages;
+			},
+			_timeToLocal: function(time) {
+				var timeUTC = new Date(time);
+				var timeLocal = new Date(Date.UTC(timeUTC.getFullYear(), timeUTC.getMonth(), timeUTC.getDate(), timeUTC.getHours(), timeUTC.getMinutes(), 0));
+				return timeLocal.getFullYear() + '-' + ('00' + (timeLocal.getMonth() + 1)).slice(-2) + '-' + ('00' + timeLocal.getDate()).slice(-2) + ' ' + ('00' + timeLocal.getHours()).slice(-2) + ':' + ('00' + timeLocal.getMinutes()).slice(-2);
+			},
+			back: function() {
+				this.fire('back', {});
+			},
+			comment: function() {
+				if (this.message) {
+					this.$.commentAjax.url = '../api/tickets/' + this.ticket_id;
+					this.$.commentAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.commentAjax.body = {
+						'message': this.message
+					};
+					this.$.commentAjax.generateRequest();
+					this.message = '';
+				}
+			},
+			commentResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.$.ticketAjax.generateRequest();
+			},
+			showClose: function() {
+				this.$.closeTicketDialog.open();
+			},
+			closeTicket: function() {
+				this.$.closeAjax.url = '../api/tickets/' + this.ticket_id;
+				this.$.closeAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.closeAjax.generateRequest();
+			},
+			closeResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.open = false;
+				}
+			}
+		});
+	</script>
+</dom-module>

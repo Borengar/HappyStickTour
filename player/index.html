@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+		<link rel="import" href="../import.html">
+		<link rel="import" href="contact-page.html">
+		<link rel="import" href="lobby-page.html">
+		<link rel="import" href="mappool-item.html">
+		<link rel="import" href="mappool-page.html">
+		<title>HappyStick Seasonal Tour</title>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning default-colors">
+			html {
+				font-family: Roboto;
+			}
+		</style>
+	</head>
+	<body class="fullbleed layout vertical">
+		<index-page class="flex layout vertical"></index-page>
+	</body>
+</html>
+
+<dom-module id="index-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			app-header {
+				background-color: var(--discord-grey);
+			}
+			app-drawer {
+				z-index: 999;
+			}
+			osu-profile {
+				margin: 20px;
+			}
+			twitch-profile {
+				margin: 20px;
+			}
+			paper-card {
+				margin: 10px 20px;
+				width: 500px;
+			}
+			.main-title {
+				color: white;
+			}
+			.logout-button {
+				color: white;
+			}
+			.tier-bar, .round-name, .round-time {
+				margin-left: 20px;
+			}
+			.heading {
+				margin: 20px;
+				font-size: 40px;
+				color: var(--happystick-green);
+			}
+			.trivia {
+				margin: 20px;
+				margin-bottom: 0;
+				width: 1000px;
+			}
+			.add-button, .trivia-button {
+				background-color: var(--happystick-green);
+				color: white;
+				width: 400px;
+				margin: 20px;
+			}
+			.add-button {
+				width: 500px;
+			}
+			#addDialog {
+				width: 500px;
+			}
+			#successToast {
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			#errorToast {
+				background-color: var(--error-red);
+				color: white;
+			}
+			.explanation {
+				margin-left: 20px;
+			}
+		</style>
+		<iron-ajax id="userAjax" url="../api/users/@me" method="GET" on-response="userResponse"></iron-ajax>
+		<iron-ajax id="saveUserAjax" url="../api/users/@me" method="PUT" content-type="application/json" on-response="saveUserResponse"></iron-ajax>
+		<iron-ajax id="availabilityAjax" url="../api/rounds//availability" method="GET" on-response="availabilityResponse"></iron-ajax>
+		<iron-ajax id="createAvailabilityAjax" url="../api/rounds//availability" method="POST" content-type="application/json" on-response="createAvailabilityResponse"></iron-ajax>
+		<iron-ajax id="deleteAvailabilityAjax" url="../api/availability/" method="DELETE" on-response="deleteAvailabilityResponse"></iron-ajax>
+		<iron-ajax id="winAvailabilityAjax" url="../api/rounds//availability" method="GET" on-response="winAvailabilityResponse"></iron-ajax>
+		<iron-ajax id="loseAvailabilityAjax" url="../api/rounds//availability" method="GET" on-response="loseAvailabilityResponse"></iron-ajax>
+		<app-header>
+			<app-toolbar>
+				<paper-icon-button icon="menu" onclick="drawer.toggle()" style="color:white;"></paper-icon-button>
+				<div main-title class="main-title">Player</div>
+				<div class="flex"></div>
+				<discord-profile profile="[[discord_profile]]"></discord-profile>
+				<paper-icon-button class="logout-button" icon="power-settings-new" on-click="logout"></paper-icon-button>
+			</app-toolbar>
+		</app-header>
+		<iron-pages attr-for-selected="value" selected="[[page_selected]]" class="flex layout vertical">
+			<div value="General" class="layout vertical">
+				<div class="heading">My profile</div>
+				<osu-profile profile="[[osu_profile]]" sub_since="[[twitch_profile.sub_since]]"></osu-profile>
+				<div class="tier-bar">My tier: [[tier.name]]</div>
+				<twitch-profile profile="[[twitch_profile]]" hidden$="[[twitch_profile_hidden]]"></twitch-profile>
+				<div class="heading">About me</div>
+				<paper-textarea class="trivia" label="Trivia" value="{{trivia}}"></paper-textarea>
+				<div style="margin-left:20px;">Fill out some fun facts about yourself that we can use while casting matches to let people know a bit more about you! (playstyle, favorite mappers, mod specialties, other hobbies, etc)</div>
+				<paper-button raised class="trivia-button" on-click="saveTrivia">Save</paper-button>
+			</div>
+			<div value="Match" class="layout vertical">
+				<div class="explanation" style="margin-top:20px;">Please enter when you are available. All times are displayed in your local time!</div>
+				<div class="explanation">You can add as many timespans as you want.</div>
+				<div class="heading" style="flex:none;">Next round</div>
+				<div class="layout vertical" style="flex:none;" hidden$="[[next_round_hidden]]">
+					<div class="round-name">[[next_round_name]]</div>
+					<div class="layout horizontal" style="flex:none;">
+						<div style="margin-left:20px;margin-right:10px;margin-top:13px;">Your timespan should be between these two times:</div>
+						<paper-datetime-picker-item date="[[next_round_from]]" disabled></paper-datetime-picker-item>
+						<div style="margin-left:10px;margin-top:10px;">-</div>
+						<paper-datetime-picker-item date="[[next_round_to]]" disabled></paper-datetime-picker-item>
+					</div>
+					<div class="layout horizontal" style="flex:none;" hidden$="[[next_round_2_hidden]]">
+						<div style="margin-left:20px;margin-right:10px;margin-top:13px;">Or/and alternatively between those two:</div>
+						<paper-datetime-picker-item date="[[next_round_from_2]]" disabled></paper-datetime-picker-item>
+						<div style="margin-left:10px;margin-top:10px;">-</div>
+						<paper-datetime-picker-item date="[[next_round_to_2]]" disabled></paper-datetime-picker-item>
+					</div>
+					<template is="dom-repeat" items="[[availabilities]]" as="availability">
+						<paper-card elevation="2">
+							<div class="layout horizontal" style="flex:none;">
+								<paper-datetime-picker-item date="[[availability.time_from]]" disabled></paper-datetime-picker-item>
+								<div style="margin-left:10px;margin-top:10px;">-</div>
+								<paper-datetime-picker-item date="[[availability.time_to]]" disabled></paper-datetime-picker-item>
+								<div class="flex"></div>
+								<paper-icon-button icon="delete" on-click="delete"></paper-icon-button>
+							</div>
+						</paper-card>
+					</template>
+					<paper-button raised class="add-button" on-click="showAdd" style="flex:none;">Add your availability</paper-button>
+				</div>
+				<div class="heading" style="flex:none;">If I win</div>
+				<div class="layout vertical" style="flex:none;" hidden$="[[after_win_hidden]]">
+					<div class="round-name">[[after_win_name]]</div>
+					<div class="layout horizontal" style="flex:none;">
+						<div style="margin-left:20px;margin-right:10px;margin-top:13px;">Your timespan should be between these two times:</div>
+						<paper-datetime-picker-item date="[[after_win_from]]" disabled></paper-datetime-picker-item>
+						<div style="margin-left:10px;margin-top:10px;">-</div>
+						<paper-datetime-picker-item date="[[after_win_to]]" disabled></paper-datetime-picker-item>
+					</div>
+					<div class="layout horizontal" style="flex:none;" hidden$="[[after_win_2_hidden]]">
+						<div style="margin-left:20px;margin-right:10px;margin-top:13px;">Or/and alternatively between those two:</div>
+						<paper-datetime-picker-item date="[[after_win_from_2]]" disabled></paper-datetime-picker-item>
+						<div style="margin-left:10px;margin-top:10px;">-</div>
+						<paper-datetime-picker-item date="[[after_win_to_2]]" disabled></paper-datetime-picker-item>
+					</div>
+					<template is="dom-repeat" items="[[win_availabilities]]" as="availability">
+						<paper-card elevation="2">
+							<div class="layout horizontal" style="flex:none;">
+								<paper-datetime-picker-item date="[[availability.time_from]]" disabled></paper-datetime-picker-item>
+								<div style="margin-left:10px;margin-top:10px;">-</div>
+								<paper-datetime-picker-item date="[[availability.time_to]]" disabled></paper-datetime-picker-item>
+								<div class="flex"></div>
+								<paper-icon-button icon="delete" on-click="delete"></paper-icon-button>
+							</div>
+						</paper-card>
+					</template>
+					<paper-button raised class="add-button" on-click="showAddWin" style="flex:none;">Add your availability</paper-button>
+				</div>
+				<div class="heading" style="flex:none;">If I lose</div>
+				<div class="layout vertical" style="flex:none;" hidden$="[[after_lose_hidden]]">
+					<div class="round-name">[[after_lose_name]]</div>
+					<div class="layout horizontal" style="flex:none;">
+						<div style="margin-left:20px;margin-right:10px;margin-top:13px;">Your timespan should be between these two times:</div>
+						<paper-datetime-picker-item date="[[after_lose_from]]" disabled></paper-datetime-picker-item>
+						<div style="margin-left:10px;margin-top:10px;">-</div>
+						<paper-datetime-picker-item date="[[after_lose_to]]" disabled></paper-datetime-picker-item>
+					</div>
+					<div class="layout horizontal" style="flex:none;" hidden$="[[after_lose_2_hidden]]">
+						<div style="margin-left:20px;margin-right:10px;margin-top:13px;">Or/and alternatively between those two:</div>
+						<paper-datetime-picker-item date="[[after_lose_from_2]]" disabled></paper-datetime-picker-item>
+						<div style="margin-left:10px;margin-top:10px;">-</div>
+						<paper-datetime-picker-item date="[[after_lose_to_2]]" disabled></paper-datetime-picker-item>
+					</div>
+					<template is="dom-repeat" items="[[lose_availabilities]]" as="availability">
+						<paper-card elevation="2">
+							<div class="layout horizontal" style="flex:none;">
+								<paper-datetime-picker-item date="[[availability.time_from]]" disabled></paper-datetime-picker-item>
+								<div style="margin-left:10px;margin-top:10px;">-</div>
+								<paper-datetime-picker-item date="[[availability.time_to]]" disabled></paper-datetime-picker-item>
+								<div class="flex"></div>
+								<paper-icon-button icon="delete" on-click="delete"></paper-icon-button>
+							</div>
+						</paper-card>
+					</template>
+					<paper-button raised class="add-button" on-click="showAddLose" style="flex:none;">Add your availability</paper-button>
+				</div>
+			</div>
+			<lobby-page value="Lobby" id="[[current_lobby]]"></lobby-page>
+			<mappool-page value="Mappools" tier="[[tier]]"></mappool-page>
+			<div value="Info" class="flex layout horizontal">
+				<div class="flex"></div>
+				<div class="layout vertical">
+					<iframe src="https://docs.google.com/document/d/1f2FUWtksvAd95y56CIu7cCyleg0nqeWeva7WB_Y1Wq4/pub?embedded=true" style="margin-top:20px;margin-bottom:20px;width:800px;height:100%;"></iframe>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<contact-page value="Tickets"></contact-page>
+		</iron-pages>
+		<app-drawer id="drawer" swipe-open>
+			<paper-menu attr-for-selected="value" selected="{{page_selected}}">
+				<paper-item value="General">My Profile</paper-item>
+				<paper-item value="Match">My Next Match</paper-item>
+				<paper-item value="Lobby">My Current Lobby</paper-item>
+				<paper-item value="Mappools">Mappools</paper-item>
+				<paper-item value="Info">Information &amp; Rules</paper-item>
+				<paper-item value="Tickets">Contact</paper-item>
+			</paper-menu>
+		</app-drawer>
+		<paper-dialog id="addDialog" modal>
+			<h2>Add availability</h2>
+			<div class="layout vertical">
+				<paper-datetime-picker-item placeholder="Time from" date="{{time_from}}"></paper-datetime-picker-item>
+				<paper-datetime-picker-item placeholder="Time to" date="{{time_to}}"></paper-datetime-picker-item>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="add">Save</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]"></paper-toast>
+	</template>
+	<script>
+		addEventListener('WebComponentsReady', () => {
+			Polymer({
+				is: 'index-page',
+				properties: {
+					twitch_profile_hidden: {
+						type: Boolean,
+						value: true
+					},
+					next_round_hidden: {
+						type: Boolean,
+						value: true
+					},
+					next_round_2_hidden: {
+						type: Boolean,
+						value: true
+					},
+					after_win_hidden: {
+						type: Boolean,
+						value: true
+					},
+					after_win_2_hidden: {
+						type: Boolean,
+						value: true
+					},
+					after_lose_hidden: {
+						type: Boolean,
+						value: true
+					},
+					after_lose_2_hidden: {
+						type: Boolean,
+						value: true
+					},
+					page_selected: {
+						type: String,
+						value: 'General'
+					},
+					availabilities: {
+						type: Array,
+						notify: true
+					},
+					win_availabilities: {
+						type: Array,
+						notify: true
+					},
+					lose_availabilities: {
+						type: Array, notify: true
+					}
+				},
+				ready: function() {
+					this.$.userAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.userAjax.generateRequest();
+				},
+				userResponse: function(e) {
+					var user = e.detail.response;
+					this.discord_profile = user.discord_profile;
+					this.osu_profile = user.osu_profile;
+					this.tier = user.tier;
+					if (user.twitch_profile) {
+						this.twitch_profile = user.twitch_profile;
+						this.twitch_profile_hidden = false;
+					}
+					if (user.trivia) {
+						this.trivia = user.trivia;
+					}
+					if (user.current_lobby) {
+						this.current_lobby = user.current_lobby;
+					}
+					if (user.next_round) {
+						this.next_round_id = user.next_round.id;
+						this.next_round_name = user.next_round.name;
+						if (user.next_round.time_from) {
+							var next_round_from_utc = new Date(user.next_round.time_from);
+							this.next_round_from = new Date(Date.UTC(next_round_from_utc.getFullYear(), next_round_from_utc.getMonth(), next_round_from_utc.getDate(), next_round_from_utc.getHours(), next_round_from_utc.getMinutes(), 0));
+							var next_round_to_utc = new Date(user.next_round.time_to);
+							this.next_round_to = new Date(Date.UTC(next_round_to_utc.getFullYear(), next_round_to_utc.getMonth(), next_round_to_utc.getDate(), next_round_to_utc.getHours(), next_round_to_utc.getMinutes(), 0));
+							if (user.next_round.time_from_2) {
+								var next_round_from_utc_2 = new Date(user.next_round.time_from_2);
+								this.next_round_from_2 = new Date(Date.UTC(next_round_from_utc_2.getFullYear(), next_round_from_utc_2.getMonth(), next_round_from_utc_2.getDate(), next_round_from_utc_2.getHours(), next_round_from_utc_2.getMinutes(), 0));
+								var next_round_to_utc_2 = new Date(user.next_round.time_to_2);
+								this.next_round_to_2 = new Date(Date.UTC(next_round_to_utc_2.getFullYear(), next_round_to_utc_2.getMonth(), next_round_to_utc_2.getDate(), next_round_to_utc_2.getHours(), next_round_to_utc_2.getMinutes(), 0));
+								this.next_round_2_hidden = false;
+							}
+							this.next_round_hidden = false;
+						}
+						this.$.availabilityAjax.url = '../api/rounds/' + user.next_round.id + '/availability';
+						this.$.availabilityAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.availabilityAjax.generateRequest();
+					}
+					if (user.after_win) {
+						this.after_win_id = user.after_win.id;
+						this.after_win_name = user.after_win.name;
+						if (user.after_win.time_from) {
+							var after_win_from_utc = new Date(user.after_win.time_from);
+							this.after_win_from = new Date(Date.UTC(after_win_from_utc.getFullYear(), after_win_from_utc.getMonth(), after_win_from_utc.getDate(), after_win_from_utc.getHours(), after_win_from_utc.getMinutes(), 0));
+							var after_win_to_utc = new Date(user.after_win.time_to);
+							this.after_win_to = new Date(Date.UTC(after_win_to_utc.getFullYear(), after_win_to_utc.getMonth(), after_win_to_utc.getDate(), after_win_to_utc.getHours(), after_win_to_utc.getMinutes(), 0));
+							if (user.after_win.time_from_2) {
+								var after_win_from_utc_2 = new Date(user.after_win.time_from_2);
+								this.after_win_from_2 = new Date(Date.UTC(after_win_from_utc_2.getFullYear(), after_win_from_utc_2.getMonth(), after_win_from_utc_2.getDate(), after_win_from_utc_2.getHours(), after_win_from_utc_2.getMinutes(), 0));
+								var after_win_to_utc_2 = new Date(user.after_win.time_to_2);
+								this.after_win_to_2 = new Date(Date.UTC(after_win_to_utc_2.getFullYear(), after_win_to_utc_2.getMonth(), after_win_to_utc_2.getDate(), after_win_to_utc_2.getHours(), after_win_to_utc_2.getMinutes(), 0));
+								this.after_win_2_hidden = false;
+							}
+							this.after_win_hidden = false;
+						}
+						this.$.winAvailabilityAjax.url = '../api/rounds/' + user.after_win.id + '/availability';
+						this.$.winAvailabilityAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.winAvailabilityAjax.generateRequest();
+					}
+					if (user.after_lose) {
+						this.after_lose_id = user.after_lose.id;
+						this.after_lose_name = user.after_lose.name;
+						if (user.after_lose.time_from) {
+							var after_lose_from_utc = new Date(user.after_lose.time_from);
+							this.after_lose_from = new Date(Date.UTC(after_lose_from_utc.getFullYear(), after_lose_from_utc.getMonth(), after_lose_from_utc.getDate(), after_lose_from_utc.getHours(), after_lose_from_utc.getMinutes(), 0));
+							var after_lose_to_utc = new Date(user.after_lose.time_to);
+							this.after_lose_to = new Date(Date.UTC(after_lose_to_utc.getFullYear(), after_lose_to_utc.getMonth(), after_lose_to_utc.getDate(), after_lose_to_utc.getHours(), after_lose_to_utc.getMinutes(), 0));
+							if (user.after_lose.time_from_2) {
+								var after_lose_from_utc_2 = new Date(user.after_lose.time_from_2);
+								this.after_lose_from_2 = new Date(Date.UTC(after_lose_from_utc_2.getFullYear(), after_lose_from_utc_2.getMonth(), after_lose_from_utc_2.getDate(), after_lose_from_utc_2.getHours(), after_lose_from_utc_2.getMinutes(), 0));
+								var after_lose_to_utc_2 = new Date(user.after_lose.time_to_2);
+								this.after_lose_to_2 = new Date(Date.UTC(after_lose_to_utc_2.getFullYear(), after_lose_to_utc_2.getMonth(), after_lose_to_utc_2.getDate(), after_lose_to_utc_2.getHours(), after_lose_to_utc_2.getMinutes(), 0));
+								this.after_lose_2_hidden = false;
+							}
+							this.after_lose_hidden = false;
+						}
+						this.$.loseAvailabilityAjax.url = '../api/rounds/' + user.after_lose.id + '/availability';
+						this.$.loseAvailabilityAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.loseAvailabilityAjax.generateRequest();
+					}
+				},
+				showAdd: function() {
+					this.edit_round_id = this.next_round_id;
+					this.time_from = null;
+					this.time_to = null;
+					this.$.addDialog.open();
+				},
+				showAddWin: function() {
+					this.edit_round_id = this.after_win_id;
+					this.time_from = null;
+					this.time_to = null;
+					this.$.addDialog.open();
+				},
+				showAddLose: function() {
+					this.edit_round_id = this.after_lose_id;
+					this.time_from = null;
+					this.time_to = null;
+					this.$.addDialog.open();
+				},
+				add: function() {
+					if (this.time_from && this.time_to) {
+						this.time_from.setSeconds(0, 0);
+						this.time_to.setSeconds(0, 0);
+						this.$.createAvailabilityAjax.url = '../api/rounds/' + this.edit_round_id + '/availability';
+						this.$.createAvailabilityAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.createAvailabilityAjax.body = {
+							'time_from': this.time_from.toISOString(),
+							'time_to': this.time_to.toISOString()
+						};
+						this.$.createAvailabilityAjax.generateRequest();
+					}
+				},
+				createAvailabilityResponse: function(e) {
+					var response = e.detail.response;
+					this.toast_message = response.message;
+					if (response.error == '1') {
+						this.$.errorToast.open();
+					} else {
+						this.$.successToast.open();
+					}
+					this.$.availabilityAjax.generateRequest();
+					if (this.after_win_id) {
+						this.$.winAvailabilityAjax.generateRequest();
+					}
+					if (this.after_lose_id) {
+						this.$.loseAvailabilityAjax.generateRequest();
+					}
+				},
+				availabilityResponse: function(e) {
+					var response = e.detail.response;
+					this.availabilities = [];
+					for (var i = 0; i < response.length; i++) {
+						var time_from_utc = new Date(response[i].time_from);
+						var time_from = new Date(Date.UTC(time_from_utc.getFullYear(), time_from_utc.getMonth(), time_from_utc.getDate(), time_from_utc.getHours(), time_from_utc.getMinutes(), 0));
+						var time_to_utc = new Date(response[i].time_to);
+						var time_to = new Date(Date.UTC(time_to_utc.getFullYear(), time_to_utc.getMonth(), time_to_utc.getDate(), time_to_utc.getHours(), time_to_utc.getMinutes(), 0));
+						this.push('availabilities', {
+							id: response[i].id,
+							time_from: time_from,
+							time_to: time_to
+						});
+					}
+				},
+				winAvailabilityResponse: function(e) {
+					var response = e.detail.response;
+					this.win_availabilities = [];
+					for (var i = 0; i < response.length; i++) {
+						var time_from_utc = new Date(response[i].time_from);
+						var time_from = new Date(Date.UTC(time_from_utc.getFullYear(), time_from_utc.getMonth(), time_from_utc.getDate(), time_from_utc.getHours(), time_from_utc.getMinutes(), 0));
+						var time_to_utc = new Date(response[i].time_to);
+						var time_to = new Date(Date.UTC(time_to_utc.getFullYear(), time_to_utc.getMonth(), time_to_utc.getDate(), time_to_utc.getHours(), time_to_utc.getMinutes(), 0));
+						this.push('win_availabilities', {
+							id: response[i].id,
+							time_from: time_from,
+							time_to: time_to
+						});
+					}
+				},
+				loseAvailabilityResponse: function(e) {
+					var response = e.detail.response;
+					this.lose_availabilities = [];
+					for (var i = 0; i < response.length; i++) {
+						var time_from_utc = new Date(response[i].time_from);
+						var time_from = new Date(Date.UTC(time_from_utc.getFullYear(), time_from_utc.getMonth(), time_from_utc.getDate(), time_from_utc.getHours(), time_from_utc.getMinutes(), 0));
+						var time_to_utc = new Date(response[i].time_to);
+						var time_to = new Date(Date.UTC(time_to_utc.getFullYear(), time_to_utc.getMonth(), time_to_utc.getDate(), time_to_utc.getHours(), time_to_utc.getMinutes(), 0));
+						this.push('lose_availabilities', {
+							id: response[i].id,
+							time_from: time_from,
+							time_to: time_to
+						});
+					}
+				},
+				delete: function(e) {
+					this.$.deleteAvailabilityAjax.url = '../api/availability/' + e.model.availability.id;
+					this.$.deleteAvailabilityAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.deleteAvailabilityAjax.generateRequest();
+				},
+				deleteAvailabilityResponse: function(e) {
+					var response = e.detail.response;
+					this.toast_message = response.message;
+					if (response.error == '1') {
+						this.$.errorToast.open();
+					} else {
+						this.$.successToast.open();
+					}
+					this.$.availabilityAjax.generateRequest();
+					if (this.after_win_id) {
+						this.$.winAvailabilityAjax.generateRequest();
+					}
+					if (this.after_lose_id) {
+						this.$.loseAvailabilityAjax.generateRequest();
+					}
+				},
+				saveTrivia: function() {
+					this.$.saveUserAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.saveUserAjax.body = {
+						'trivia': this.trivia
+					};
+					this.$.saveUserAjax.generateRequest();
+				},
+				saveUserResponse: function(e) {
+					var response = e.detail.response;
+					this.toast_message = response.message;
+					if (response.error == '1') {
+						this.$.errorToast.open();
+					} else {
+						this.$.successToast.open();
+					}
+					this.$.userAjax.generateRequest();
+				},
+				logout: function() {
+					window.location = '../index.html';
+				}
+			});
+		});
+	</script>
+</dom-module>

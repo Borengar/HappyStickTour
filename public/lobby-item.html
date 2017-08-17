@@ -1,0 +1,89 @@
+<dom-module id="lobby-item">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
+		<div class="layout vertical" style="width:450px;margin:10px;background-color:#65B309;">
+			<div style="margin:10px;font-size:20px;">Lobby <span>[[lobby_id]]</span></div>
+			<div class="layout horizontal">
+				<div class="flex"></div>
+				<div class="layout vertical" style="width:400px;">
+					<paper-datetime-picker-item placeholder="Lobby play time" date-format="YYYY-MM-DD" date="{{play_time}}" disabled></paper-datetime-picker-item>
+					<paper-button raised style="background-color:white;margin-bottom:10px;" on-click="openRef">Open</paper-button>
+					<template is="dom-repeat" items="[[slots]]" as="slot">
+						<lobby-item-slot id="[[slot.id]]" osu_profile="[[slot.user.osu_profile]]" sub-since="[[slot.user.twitch_profile.sub_since]]"></lobby-item-slot>
+					</template>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<div style="height:10px;"></div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'lobby-item',
+			properties: {
+				lobby_id: Number,
+				slots: Array,
+				play_time: Date,
+				play_time_setter: {
+					type: Date,
+					observer: 'play_time_setterChanged'
+				}
+			},
+			play_time_setterChanged: function() {
+				if (this.play_time_setter) {
+					var play_time_utc = new Date(this.play_time_setter);
+					this.play_time = new Date(Date.UTC(play_time_utc.getFullYear(), play_time_utc.getMonth(), play_time_utc.getDate(), play_time_utc.getHours(), play_time_utc.getMinutes(), 0));
+				}
+			},
+			openRef: function() {
+				this.fire('open', {id: this.lobby_id});
+			}
+		});
+	</script>
+</dom-module>
+
+<dom-module id="lobby-item-slot">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			:host {
+				width: 400px;
+				height: 100px;
+				background-color: white;
+			}
+		</style>
+		<div class="layout vertical" hidden$="[[empty]]">
+			<osu-profile profile="[[osu_profile]]" sub_since="[[sub_since]]"></osu-profile>
+		</div>
+		<div class="layout vertical" style="width:400px;height:100px;background-color:white;" hidden$="[[!empty]]">
+			<div class="flex"></div>
+			<div class="layout horizontal">
+				<div class="flex"></div>
+				<div>EMPTY</div>
+				<div class="flex"></div>
+			</div>
+			<div class="flex"></div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'lobby-item-slot',
+			properties: {
+				id: Number,
+				osu_profile: {
+					type: Object,
+					observer: 'init'
+				},
+				sub_since: String,
+				empty: {
+					type: Boolean,
+					value: true
+				}
+			},
+			init: function() {
+				if (this.osu_profile) {
+					this.empty = false;
+				}
+			}
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,222 @@
+<dom-module id="mappool-item">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			:host {
+				width: 900px;
+				height: 150px;
+			}
+			.wrapper {
+				width: 900px;
+				height: 150px;
+				position: relative;
+			}
+			.title {
+				color: white;
+				font-size: 30px;
+				text-shadow: 2px 2px black;
+				margin-left: 10px;
+			}
+			.artist {
+				color: white;
+				font-size: 20px;
+				text-shadow: 2px 2px black;
+				margin-left: 10px;
+				margin-bottom: 10px;
+			}
+			.image {
+				position: absolute;
+				top: 0;
+				left: 0;
+				height: 100%;
+				width: 100%;
+				opacity: 0.5;
+				z-index: 1;
+				background-color: #333333;
+				background-position: center;
+			}
+			.mod-image {
+				position: absolute;
+				bottom: 20px;
+				width: 90px;
+				height: 87px;
+				opacity: 1;
+			}
+			.picked-overlay, .banned-overlay {
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: 900px;
+				height: 150px;
+				opacity: 1;
+			}
+		</style>
+		<div id="mapElement" class="layout vertical wrapper">
+			<div class="flex layout vertical">
+				<div class="flex layout vertical" style="z-index:2;opacity:1;">
+					<div class="flex"></div>
+					<div class="title"><span>[[map.title]]</span> [<span>[[map.version]]</span>]</div>
+					<div class="artist">[[map.artist]]</div>
+				</div>
+				<div class="image" style="background-image:url('https://assets.ppy.sh//beatmaps/[[map.beatmapset_id]]/covers/cover.jpg');"></div>
+				<div hidden$="[[mod1hidden]]" class="mod-image" style="background-image:url('[[mod1url]]');right:110px;z-index:2;"></div>
+				<div hidden$="[[mod2hidden]]" class="mod-image" style="background-image:url('[[mod2url]]');right:65px;z-index:3;"></div>
+				<div hidden$="[[mod3hidden]]" class="mod-image" style="background-image:url('[[mod3url]]');right:20px;z-index:4;"></div>
+			</div>
+			<div class="picked-overlay" hidden$="[[!picked]]">
+				<img src="http://happysticktour.com/images/picked.png">
+			</div>
+			<div class="banned-overlay" hidden$="[[!banned]]">
+				<img src="http://happysticktour.com/images/banned.png">
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'mappool-item',
+			properties: {
+				id: Number,
+				beatmapId: {
+					type: Number,
+					observer: 'beatmapIdChanged'
+				},
+				map: Object,
+				mods: {
+					type: Number,
+					observer: 'modsChanged'
+				},
+				freemod: {
+					type: Number,
+					observer: 'modsChanged'
+				},
+				tiebreaker: {
+					type: Number,
+					observer: 'modsChanged'
+				},
+				noMap: {
+					type: Boolean,
+					value: true
+				},
+				mod1hidden: {
+					type: Boolean,
+					value: true
+				},
+				mod2hidden: {
+					type: Boolean,
+					value: true
+				},
+				mod3hidden: {
+					type: Boolean,
+					value: true
+				},
+				mod1url: String,
+				mod2url: String,
+				mod3url: String,
+				picked: {
+					type: Boolean,
+					value: false
+				},
+				banned: {
+					type: Boolean,
+					value: false
+				}
+			},
+			beatmapIdChanged: function() {
+				if (this.beatmapId) {
+					this.editBeatmapId = this.beatmapId;
+					this.noMap = false;
+				} else {
+					this.noMap = true;
+				}
+			},
+			modsChanged: function() {
+				this.mod1hidden = true;
+				this.mod2hidden = true;
+				this.mod3hidden = true;
+				this.mod1url = '';
+				this.mod2url = '';
+				this.mod3url = '';
+				this.editFreemod = false;
+				this.editTiebreaker = false;
+				this.editHD = false;
+				this.editDT = false;
+				this.editHR = false;
+				if (this.freemod == 1) {
+					this.mod1url = 'http://happysticktour.com/images/mod-Freemod.png';
+					this.mod1hidden = false;
+					this.editFreemod = true;
+				} else if (this.tiebreaker == 1) {
+					this.mod1url = 'http://happysticktour.com/images/mod-Tiebreaker.png';
+					this.mod1hidden = false;
+					this.editTiebreaker = true;
+				} else if (this.mods || this.mods == 0) {
+					var modsInBinary = parseInt(this.mods).toString(2);
+					for (var i = 0; i < modsInBinary.length; i++) {
+						if (i == 0 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '0' && modsInBinary.length == 1) {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-Nomod.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-Nomod.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-Nomod.png';
+								this.mod3hidden = false;
+							}
+						}
+						if (i == 0 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// NoFail
+						}
+						if (i == 1 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// Easy
+						}
+						if (i == 2 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// NoVideo
+						}
+						if (i == 3 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-HD.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-HD.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-HD.png';
+								this.mod3hidden = false;
+							}
+							this.editHD = true;
+						}
+						if (i == 4 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-HR.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-HR.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-HR.png';
+								this.mod3hidden = false;
+							}
+							this.editHR = true;
+						}
+						if (i == 5 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// SuddenDeath
+						}
+						if (i == 6 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-DT.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-DT.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-DT.png';
+								this.mod3hidden = false;
+							}
+							this.editDT = true;
+						}
+					}
+				}
+			}
+		});
+	</script>
+</dom-module>

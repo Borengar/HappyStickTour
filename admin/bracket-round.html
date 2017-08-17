@@ -1,0 +1,236 @@
+<dom-module id="bracket-round">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			.wrapper {
+				width: 300px;
+				height: 400px;
+				margin: 10px;
+			}
+			.setup-text {
+				margin-top: 5px;
+			}
+			.setup-button {
+				height: 30px;
+				width: 30px;
+			}
+		</style>
+		<div id="wrapper" class="layout vertical wrapper" on-mouseenter="mouseEnter" on-mouseleave="mouseLeave">
+			<div class="layout horizontal" hidden$="[[empty_lobby]]">
+				<div class="flex layout vertical">
+					<paper-input label="Name" value="{{name}}"></paper-input>
+					<div hidden$="[[!focused]]" class="flex layout vertical">
+						<div class="layout horizontal">
+							<div class="flex setup-text">Lobby size:</div>
+							<div class="flex layout horizontal">
+								<paper-icon-button class="setup-button" icon="add" on-click="increaseSize"></paper-icon-button>
+								<div class="setup-text">[[lobby_size]]</div>
+								<paper-icon-button class="setup-button" icon="remove" on-click="decreaseSize"></paper-icon-button>
+							</div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex setup-text">Continue:</div>
+							<div class="flex layout horizontal">
+								<paper-icon-button class="setup-button" icon="add" on-click="increaseContinue"></paper-icon-button>
+								<div class="setup-text">[[amount_continue_to_upper]]</div>
+								<paper-icon-button class="setup-button" icon="remove" on-click="decreaseContinue"></paper-icon-button>
+							</div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex setup-text">Drop down:</div>
+							<div class="flex layout horizontal">
+								<paper-icon-button class="setup-button" icon="add" on-click="increaseDropDown"></paper-icon-button>
+								<div class="setup-text">[[amount_drop_down]]</div>
+								<paper-icon-button class="setup-button" icon="remove" on-click="decreaseDropDown"></paper-icon-button>
+							</div>
+						</div>
+						<paper-datetime-picker-item placeholder="Time from" date-format="YYYY-MM-DD" date="{{time_from}}"></paper-datetime-picker-item>
+						<paper-datetime-picker-item placeholder="Time to" date-format="YYYY-MM-DD" date="{{time_to}}"></paper-datetime-picker-item>
+						<paper-datetime-picker-item placeholder="Time from 2" date="{{time_from_2}}"></paper-datetime-picker-item>
+						<paper-datetime-picker-item placeholder="Time to 2" date="{{time_to_2}}"></paper-datetime-picker-item>
+						<paper-datetime-picker-item placeholder="Public release" date-format="YYYY-MM-DD" date="{{public_release_time}}"></paper-datetime-picker-item>
+					</div>
+					<div hidden$="[[focused]]" class="flex layout vertical">
+						<div><span>[[amount_lobbies]]</span> lobbies</div>
+						<template is="dom-repeat" items="[[boxes]]">
+							<div class="flex" style="background-color:[[item.color]];width:250px;border-style:solid;border-width:1px;"></div>
+						</template>
+					</div>
+					<div class="layout horizontal" style="height:50px;">
+						<div class="flex"></div>
+						<div>[[total_drop_down]]</div>
+						<iron-icon icon="arrow-downward" style="height:30px;width:30px;"></iron-icon>
+						<div class="flex"></div>
+					</div>
+				</div>
+				<div class="layout vertical" style="width:50px;height:400px;">
+					<div class="flex"></div>
+					<div style="margin-left:5px;">[[total_continue_to_upper]]</div>
+					<iron-icon icon="arrow-forward" style="height:30px;width:30px;"></iron-icon>
+					<div class="flex"></div>
+				</div>
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'bracket-round',
+			properties: {
+				name: {
+					type: String,
+					reflectToAttribute: true,
+					notify: true
+				},
+				input_amount: {
+					type: Number,
+					observer: 'input_amountChanged'
+				},
+				lobby_size: {
+					type: Number,
+					notify: true,
+					reflectToAttribute: true,
+					observer: 'lobby_sizeChanged'
+				},
+				amount_continue_to_upper: {
+					type: Number,
+					notify: true,
+					reflectToAttribute: true,
+					observer: 'amount_continue_to_upperChanged'
+				},
+				amount_drop_down: {
+					type: Number,
+					notify: true,
+					reflectToAttribute: true,
+					observer: 'amount_drop_downChanged'
+				},
+				boxes: Array,
+				focused: {
+					type: Boolean,
+					value: false
+				},
+				total_continue_to_upper: {
+					type: Number,
+					reflectToAttribute: true,
+					notify: true
+				},
+				total_drop_down: {
+					type: Number,
+					reflectToAttribute: true,
+					notify: true
+				},
+				amount_lobbies: {
+					type: Number,
+					reflectToAttribute: true,
+					notify: true
+				},
+				empty_lobby: {
+					type: Boolean,
+					value: false
+				},
+				amount_active_lobbies: {
+					type: Number,
+					reflectToAttribute: true,
+					notify: true,
+					observer: 'amount_active_lobbiesChanged'
+				},
+				locked: {
+					type: Boolean,
+					value: false
+				},
+				time_from: {
+					type: Date,
+					reflectToAttribute: true,
+					notify: true
+				},
+				time_to: {
+					type: Date,
+					reflectToAttribute: true,
+					notify: true
+				},
+				time_from_2: {
+					type: Date,
+					reflectToAttribute: true,
+					notify: true
+				},
+				time_to_2: {
+					type: Date,
+					reflectToAttribute: true,
+					notify: true
+				},
+				public_release_time: {
+					type: Date,
+					reflectToAttribute: true,
+					notify: true
+				}
+			},
+			mouseEnter: function() {
+				this.focused = true;
+			},
+			mouseLeave: function() {
+				this.focused = false;
+			},
+			increaseSize: function() {
+				if (!this.locked) {
+					this.lobby_size++;
+					this.fire('calculatenumbers', {});
+				}
+			},
+			decreaseSize: function() {
+				if (!this.locked && parseInt(this.lobby_size) > 1) {
+					this.lobby_size--;
+					this.fire('calculatenumbers', {});
+				}
+			},
+			increaseContinue: function() {
+				if (!this.locked && parseInt(this.amount_continue_to_upper) + parseInt(this.amount_drop_down) < parseInt(this.lobby_size)) {
+					this.amount_continue_to_upper++;
+					this.fire('calculatenumbers', {});
+				}
+			},
+			decreaseContinue: function() {
+				if (!this.locked && parseInt(this.amount_continue_to_upper) > 0) {
+					this.amount_continue_to_upper--;
+					this.fire('calculatenumbers', {});
+				}
+			},
+			increaseDropDown: function() {
+				if (!this.locked && parseInt(this.amount_continue_to_upper) + parseInt(this.amount_drop_down) < parseInt(this.lobby_size)) {
+					this.amount_drop_down++;
+					this.fire('calculatenumbers', {});
+				}
+			},
+			decreaseDropDown: function() {
+				if (!this.locked && parseInt(this.amount_drop_down) > 0) {
+					this.amount_drop_down--;
+					this.fire('calculatenumbers', {});
+				}
+			},
+			amount_continue_to_upperChanged: function() {
+				this.redraw();
+			},
+			lobby_sizeChanged: function() {
+				this.redraw();
+			},
+			amount_drop_downChanged: function() {
+				this.redraw();
+			},
+			redraw: function() {
+				this.boxes = [];
+				for (var i = 0; i < this.amount_continue_to_upper; i++) {
+					this.push('boxes', {color: 'green'});
+				}
+				for (var i = 0; i < this.amount_drop_down; i++) {
+					this.push('boxes', {color: 'yellow'});
+				}
+				for (var i = 0; i < this.lobby_size - this.amount_continue_to_upper - this.amount_drop_down; i++) {
+					this.push('boxes', {color: 'red'});
+				}
+			},
+			input_amountChanged: function() {
+				this.empty_lobby = (this.input_amount == 0);
+			},
+			amount_active_lobbiesChanged: function() {
+				this.locked = (this.amount_active_lobbies != 0);
+			}
+		});
+	</script>
+</dom-module>

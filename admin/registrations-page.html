@@ -1,0 +1,200 @@
+<dom-module id="registrations-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			.green-button {
+				background-color: var(--happystick-green);
+				color: white;
+				width: 300px;
+				margin-bottom: 10px;
+			}
+			registration-item {
+				margin-top: 10px;
+			}
+			.header {
+				color: var(--happystick-green);
+				font-size: 40px;
+			}
+			paper-dropdown-menu {
+				width: 300px;
+			}
+		</style>
+		<iron-ajax id="registrationsAjax" url="../api/registrations" method="GET" on-response="registrationsResponse"></iron-ajax>
+		<iron-ajax id="seedingAjax" url="../api/players" method="POST" on-response="seedingResponse"></iron-ajax>
+		<iron-ajax id="settingsAjax" url="../api/settings" method="GET" on-response="settingsResponse"></iron-ajax>
+		<iron-ajax id="saveTimeAjax" url="../api/settings" method="PUT" on-response="saveTimeResponse" content-type="application/json"></iron-ajax>
+		<div class="layout vertical" style="margin:20px;">
+			<div class="header">Signup time</div>
+			<paper-datetime-picker-item placeholder="Signup opens" date-format="YYYY-MM-DD" date="{{open_time}}"></paper-datetime-picker-item>
+			<paper-datetime-picker-item placeholder="Signup closes" date-format="YYYY-MM-DD" date="{{close_time}}"></paper-datetime-picker-item>
+			<paper-button class="green-button" raised on-click="saveTime">Save</paper-button>
+			<paper-button class="green-button" raised on-click="showSeeding" style="margin-top:30px;">Seeding</paper-button>
+			<paper-button class="green-button" raised on-click="refresh">Refresh</paper-button>
+			<div class="header">Signup stats</div>
+			<template is="dom-repeat" items="[[signup_stats]]">
+				<div class="layout horizontal" style="font-size:20px;">
+					<div style="width:150px;">[[item.name]]</div>
+					<div>:</div>
+					<div style="margin-left:20px;">[[item.signups_total]]</div>
+					<div>/</div>
+					<div>[[item.slots]]</div>
+				</div>
+			</template>
+			<div class="header">Signups</div>
+			<paper-dropdown-menu label="Tier">
+				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
+					<paper-item value="All">All</paper-item>
+					<template is="dom-repeat" items="[[tiers]]" as="tier">
+						<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<template id="registrationsList" is="dom-repeat" items="[[registrations]]" as="registration" filter="[[inTier(selected_tier)]]">
+				<registration-item registration="[[registration]]"></registration-item>
+			</template>
+		</div>
+		<paper-dialog id="seedingDialog" modal>
+			<h2>Seeding</h2>
+			<div>This action will seed all registrations and give players the player role.</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="seeding">Seed</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]" style="background-color:#65B309;color:white;"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]" style="background-color:#d32f2f;color:white;"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'registrations-page',
+			properties: {
+				tiers: {
+					type: Array,
+					observer: 'tiersChanged'
+				},
+				signup_stats: Array
+			},
+			ready: function() {
+				this.$.settingsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.settingsAjax.generateRequest();
+			},
+			tiersChanged: function() {
+				this.selected_tier = 'All';
+			},
+			refresh: function() {
+				this.$.registrationsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.registrationsAjax.generateRequest();
+			},
+			inTier: function(selected_tier) {
+				return function(registration) {
+					return (selected_tier == 'All') ? true : registration.tier == selected_tier;
+				};
+			},
+			registrationsResponse: function(e) {
+				var response = e.detail.response;
+				this.registrations = [];
+				for (var i = 0; i < response.length; i++) {
+					this.push('registrations', {discord_profile: response[i].discord_profile, osu_profile: response[i].osu_profile, tier: response[i].tier, twitch_profile: response[i].twitch_profile, time: new Date(response[i].time)});
+				}
+				this.signup_stats = [];
+				for (var i = 0; i < this.tiers.length; i++) {
+					this.push('signup_stats', this.tiers[i]);
+					this.signup_stats[this.signup_stats.length - 1].signups_total = 0;
+				}
+				for (var i = 0; i < this.registrations.length; i++) {
+					for (var j = 0; j < this.signup_stats.length; j++) {
+						if (this.registrations[i].tier == this.signup_stats[j].id) {
+							this.set('signup_stats.' + j + '.signups_total', this.signup_stats[j].signups_total + 1);
+							break;
+						}
+					}
+				}
+			},
+			showSeeding: function() {
+				this.$.seedingDialog.open();
+			},
+			seeding: function() {
+				this.$.seedingAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.seedingAjax.generateRequest();
+			},
+			settingsResponse: function(e) {
+				var settings = e.detail.response;
+				if (settings.registration_open) {
+					this.open_time = new Date(settings.registration_open);
+				}
+				if (settings.registration_close) {
+					this.close_time = new Date(settings.registration_close);
+				}
+			},
+			saveTime: function() {
+				this.$.saveTimeAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.saveTimeAjax.body = {
+					'registration_open': moment(this.open_time).format('YYYY-MM-DD hh:mm:ss'),
+					'registration_close': moment(this.close_time).format('YYYY-MM-DD hh:mm:ss')
+				};
+				this.$.saveTimeAjax.generateRequest();
+			},
+			saveTimeResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.$.settingsAjax.generateRequest();
+			}
+		});
+	</script>
+</dom-module>
+
+<dom-module id="registration-item">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
+		<div class="layout horizontal">
+			<div class="layout vertical">
+				<div class="flex"></div>
+				<paper-datetime-picker-item date="[[registration.time]]" disabled></paper-datetime-picker-item>
+				<div class="flex"></div>
+			</div>
+			<osu-profile profile="[[registration.osu_profile]]" sub_since="[[registration.twitch_profile.sub_since]]"></osu-profile>
+			<div class="layout vertical" style="margin-left:20px;">
+				<div class="flex"></div>
+				<discord-profile profile="[[registration.discord_profile]]"></discord-profile>
+				<div class="flex"></div>
+			</div>
+			<div class="layout vertical" style="margin-left:20px;" hidden$="[[twitch_hidden]]">
+				<div class="flex"></div>
+				<twitch-profile profile="[[registration.twitch_profile]]"></twitch-profile>
+				<div class="flex"></div>
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'registration-item',
+			properties: {
+				registration: {
+					type: Object,
+					observer: 'registrationChanged'
+				},
+				twitch_hidden: {
+					type: Boolean,
+					value: true
+				}
+			},
+			registrationChanged: function() {
+				if (this.registration.twitch_profile) {
+					this.twitch_hidden = false;
+				}
+			}
+		});
+	</script>
+</dom-module>

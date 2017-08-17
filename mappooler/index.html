@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+		<link rel="import" href="../import.html">
+		<link rel="import" href="mappool-slot.html">
+		<title>HappyStick Seasonal Tour</title>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning default-colors">
+			html {
+				font-family: Roboto;
+			}
+		</style>
+	</head>
+	<body class="fullbleed layout vertical">
+		<index-page class="flex layout vertical"></index-page>
+	</body>
+</html>
+
+<dom-module id="index-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			app-header {
+				background-color: var(--discord-grey);
+			}
+			mappool-slot {
+				margin: 10px;
+			}
+			paper-checkbox {
+				margin: 10px;
+			}
+			.main-title {
+				color: white;
+			}
+			.logout-button {
+				color: white;
+				margin-left: 20px;
+			}
+			.tier-selector {
+				margin: 10px;
+				width: 300px;
+			}
+			.add-button {
+				background-color: var(--happystick-green);
+				color: white;
+				width: 300px;
+				height: 45px;
+				min-height: 45px;
+				margin: 10px;
+			}
+			#successToast {
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			#errorToast {
+				background-color: var(--error-red);
+				color: white;
+			}
+		</style>
+		<iron-ajax id="userAjax" url="../api/users/@me" method="GET" on-response="userResponse"></iron-ajax>
+		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}"></iron-ajax>
+		<iron-ajax id="roundsAjax" url="../api/tiers//rounds" method="GET" last-response="{{rounds}}"></iron-ajax>
+		<iron-ajax id="mappoolAjax" url="../api/rounds//mappool" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<iron-ajax id="addSlotAjax" url="../api/rounds//mappool" method="POST" content-type="application/json" on-response="addSlotResponse"></iron-ajax>
+		<iron-ajax id="mappackAjax" url="../api/rounds//mappack" method="GET" on-response="mappackResponse"></iron-ajax>
+		<iron-ajax id="saveMappackAjax" url="../api/rounds//mappack" method="PUT" content-type="application/json" on-response="saveMappackResponse"></iron-ajax>
+		<iron-ajax id="feedbackAjax" url="../api/rounds//feedback" method="GET" last-response="{{feedback}}"></iron-ajax>
+		<iron-ajax id="saveRoundAjax" url="../api/rounds/" method="PUT" content-type="application/json" on-response="saveRoundResponse"></iron-ajax>
+		<app-header>
+			<app-toolbar>
+				<div main-title class="main-title">Mappooler</div>
+				<div class="flex"></div>
+				<discord-profile profile="[[discord_profile]]"></discord-profile>
+				<paper-icon-button class="logout-button" icon="power-settings-new" on-click="logout"></paper-icon-button>
+			</app-toolbar>
+		</app-header>
+		<div class="layout vertical">
+			<paper-dropdown-menu class="tier-selector" label="Tier">
+				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
+					<template is="dom-repeat" items="[[tiers]]" as="tier">
+						<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-dropdown-menu class="tier-selector" label="Round" hidden$="[[round_hidden]]">
+				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_round}}">
+					<template is="dom-repeat" items="[[rounds]]" as="round">
+						<paper-item value="[[round.id]]">[[round.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-dropdown-menu class="tier-selector" label="Copy from" hidden$="[[copy_hidden]]">
+				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{copy_mappool_from_round}}">
+					<paper-item value="-1">No copy</paper-item>
+					<template is="dom-repeat" items="[[rounds]]" as="round">
+						<paper-item value="[[round.id]]">[[round.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<div class="layout horizontal" style="min-height:60px;" hidden$="[[add_hidden]]">
+				<paper-button class="add-button" on-click="createMappack" disabled$="[[mappack_disabled]]">Create Mappack</paper-button>
+				<div class="layout vertical">
+					<div class="flex"></div>
+					<paper-spinner active style="margin-left:20px;" hidden$="[[!mappack_disabled]]"></paper-spinner>
+					<div class="flex"></div>
+				</div>
+			</div>
+			<div class="layout horizontal" style="min-height:60px;margin:10px;" hidden$="[[add_hidden]]">
+				<paper-input label="Mappack URL" value="{{mappool.mappack}}" style="width:590px;"></paper-input>
+				<paper-button class="add-button" on-click="saveMappack">Save URL</paper-button>
+			</div>
+			<template is="dom-repeat" items="[[mappool.slots]]" as="slot">
+				<mappool-slot id="[[slot.id]]" beatmap="[[slot.beatmap]]" beatmap_info="[[slot.beatmap_info]]" freemod="[[slot.freemod]]" mods="[[slot.mods]]" tiebreaker="[[slot.tiebreaker]]" add_hidden="[[add_hidden]]" on-slotsaved="slotSaved"></mappool-slot>
+			</template>
+			<paper-button raised class="add-button" on-click="showAddSlot" hidden$="[[add_hidden]]">Add Beatmap</paper-button>
+			<template is="dom-repeat" items="[[feedback]]">
+				<div class="layout vertical" style="margin:20px 0 40px 10px;display:block;">
+					<div class="layout horizontal" style="min-height:100px;">
+						<osu-profile profile="[[item.user.osu_profile]]"></osu-profile>
+						<discord-profile profile="[[item.user.discord_profile]]" style="margin-left:10px;"></discord-profile>
+					</div>
+					<div style="margin-top:10px;width:900px;white-space:pre-wrap;">[[item.feedback]]</div>
+				</div>
+			</template>
+		</div>
+		<paper-dialog id="addSlotDialog" modal style="width:1100px;">
+			<h2>Edit mappool slot</h2>
+			<div class="layout vertical">
+				<paper-input label="Beatmap ID" value="{{edit_beatmap_id}}" invalid="[[edit_beatmap_id_invalid]]" error-message="[[edit_beatmap_id_error_message]]" on-blur="edit_beatmap_idChanged"></paper-input>
+				<paper-checkbox checked="{{edit_freemod}}">Freemod</paper-checkbox>
+				<paper-checkbox checked="{{edit_tiebreaker}}">Tiebreaker</paper-checkbox>
+				<div class="layout horizontal">
+					<paper-checkbox checked="{{edit_hd}}">HD</paper-checkbox>
+					<paper-checkbox checked="{{edit_dt}}">DT</paper-checkbox>
+					<paper-checkbox checked="{{edit_hr}}">HR</paper-checkbox>
+				</div>
+				<paper-textarea label="General beatmap info" value="{{beatmap_info}}"></paper-textarea>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="saveSlot">Save</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]"></paper-toast>
+	</template>
+	<script>
+		addEventListener('WebComponentsReady', () => {
+			Polymer({
+				is: 'index-page',
+				properties: {
+					selected_tier: {
+						type: Number,
+						observer: 'selected_tierChanged'
+					},
+					selected_round: {
+						type: Number,
+						observer: 'selected_roundChanged'
+					},
+					copy_mappool_from_round: {
+						type: Number,
+						observer: 'copy_mappool_from_roundChanged'
+					},
+					round_hidden: {
+						type: Boolean,
+						value: true
+					},
+					copy_hidden: {
+						type: Boolean,
+						value: true
+					},
+					add_hidden: {
+						type: Boolean,
+						value: true
+					},
+					edit_freemod: {
+						type: Boolean,
+						observer: 'edit_freemodChanged'
+					},
+					edit_tiebreaker: {
+						type: Boolean,
+						observer: 'edit_tiebreakerChanged'
+					},
+					edit_hd: {
+						type: Boolean,
+						observer: 'edit_hdChanged'
+					},
+					edit_dt: {
+						type: Boolean,
+						observer: 'edit_dtChanged'
+					},
+					edit_hr: {
+						type: Boolean,
+						observer: 'edit_hrChanged'
+					},
+					mappack_disabled: {
+						type: Boolean,
+						value: false
+					},
+					changing_tier: {
+						type: Boolean,
+						value: false
+					},
+					changing_round: {
+						type: Boolean,
+						value: false
+					}
+				},
+				ready: function() {
+					this.$.userAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.userAjax.generateRequest();
+					this.$.tiersAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.tiersAjax.generateRequest();
+				},
+				userResponse: function(e) {
+					var user = e.detail.response;
+					this.discord_profile = user.discord_profile;
+				},
+				selected_tierChanged: function() {
+					this.changing_tier = true;
+					this.rounds = [];
+					this.selected_round = null;
+					this.copy_mappool_from_round = null;
+					if (this.selected_tier) {
+						this.$.roundsAjax.url = '../api/tiers/' + this.selected_tier + '/rounds';
+						this.$.roundsAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.roundsAjax.generateRequest();
+						this.round_hidden = false;
+					} else {
+						this.round_hidden = true;
+					}
+					this.changing_tier = false;
+				},
+				selected_roundChanged: function() {
+					this.changing_round = true;
+					if (this.selected_round) {
+						for (var i = 0; i < this.rounds.length; i++) {
+							if (this.selected_round == this.rounds[i].id) {
+								this.copy_mappool_from_round = this.rounds[i].copy_mappool_from_round;
+								break;
+							}
+						}
+						this.$.mappoolAjax.url = '../api/rounds/' + this.selected_round + '/mappool';
+						this.$.mappoolAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.mappoolAjax.generateRequest();
+						this.$.feedbackAjax.url = '../api/rounds/' + this.selected_round + '/feedback';
+						this.$.feedbackAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						}
+						this.$.feedbackAjax.generateRequest();
+						this.copy_hidden = false;
+					} else {
+						this.mappool = [];
+						this.copy_hidden = true;
+					}
+					this.changing_round = false;
+				},
+				copy_mappool_from_roundChanged: function() {
+					if (!this.changing_tier && !this.changing_round) {
+						this.$.saveRoundAjax.url = '../api/rounds/' + this.selected_round;
+						this.$.saveRoundAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						};
+						this.$.saveRoundAjax.body = {
+							'copy_mappool_from_round': this.copy_mappool_from_round
+						};
+						this.$.saveRoundAjax.generateRequest();
+					}
+					if (this.copy_mappool_from_round != -1) {
+						this.add_hidden = true;
+					} else {
+						this.add_hidden = false;
+					}
+				},
+				slotSaved: function() {
+					this.$.mappoolAjax.generateRequest();
+				},
+				showAddSlot: function() {
+					this.edit_freemod = false;
+					this.edit_tiebreaker = false;
+					this.edit_hd = false;
+					this.edit_dt = false;
+					this.edit_hr = false;
+					this.edit_beatmap_id = '';
+					this.$.addSlotDialog.open();
+				},
+				saveSlot: function() {
+					var mods = 0;
+					if (this.edit_hd) {
+						mods += 8;
+					}
+					if (this.edit_hr) {
+						mods += 16;
+					}
+					if (this.edit_dt) {
+						mods += 64;
+					}
+					this.$.addSlotAjax.url = '../api/rounds/' + this.selected_round + '/mappool';
+					this.$.addSlotAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.addSlotAjax.body = {
+						'beatmap_id': this.edit_beatmap_id,
+						'freemod': this.edit_freemod ? '1' : '0',
+						'tiebreaker': this.edit_tiebreaker ? '1' : '0',
+						'mods': mods,
+						'beatmap_info': this.beatmap_info
+					};
+					this.$.addSlotAjax.generateRequest();
+				},
+				edit_beatmap_idChanged: function() {
+					if (!isNaN(this.edit_beatmap_id) || this.edit_beatmap_id.indexOf('https://osu.ppy.sh/b/') > -1 || this.edit_beatmap_id.indexOf('http://bloodcat.com/osu/s/') > -1) {
+						this.edit_beatmap_id_invalid = false;
+						this.edit_beatmap_id_error_message = '';
+						this.edit_beatmap_id = this.edit_beatmap_id.replace('https://osu.ppy.sh/b/', '').replace('&m=0', '').replace('?m=0', '').replace('http://bloodcat.com/osu/s/', '');
+					} else {
+						this.edit_beatmap_id_invalid = true;
+						this.edit_beatmap_id_error_message = 'This is not a valid beatmap ID or /b/ link!';
+					}
+				},
+				addSlotResponse: function(e) {
+					var response = e.detail.response;
+					this.toast_message = response.message;
+					if (response.error == '1') {
+						this.$.errorToast.open();
+					} else {
+						this.$.successToast.open();
+					}
+					this.$.mappoolAjax.generateRequest();
+				},
+				edit_freemodChanged: function() {
+					if (this.edit_freemod) {
+						this.edit_tiebreaker = false;
+						this.edit_hd = false;
+						this.edit_hr = false;
+						this.edit_dt = false;
+					}
+				},
+				edit_tiebreakerChanged: function() {
+					if (this.edit_tiebreaker) {
+						this.edit_freemod = false;
+						this.edit_hd = false;
+						this.edit_hr = false;
+						this.edit_dt = false;
+					}
+				},
+				edit_hdChanged: function() {
+					if (this.edit_hd) {
+						this.edit_freemod = false;
+						this.edit_tiebreaker = false;
+					}
+				},
+				edit_hrChanged: function() {
+					if (this.edit_hr) {
+						this.edit_freemod = false;
+						this.edit_tiebreaker = false;
+					}
+				},
+				edit_dtChanged: function() {
+					if (this.edit_dt) {
+						this.edit_freemod = false;
+						this.edit_tiebreaker = false;
+					}
+				},
+				createMappack: function() {
+					this.mappack_disabled = true;
+					this.$.mappackAjax.url = '../api/rounds/' + this.selected_round + '/mappack';
+					this.$.mappackAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.mappackAjax.generateRequest();
+				},
+				mappackResponse: function(e) {
+					var response = e.detail.response;
+					console.log(response);
+					if (response.error == '0' && response.filename) {
+						window.location = response.filename;
+					}
+					this.mappack_disabled = false;
+				},
+				logout: function() {
+					window.location = '../index.html';
+				},
+				saveMappack: function() {
+					this.$.saveMappackAjax.url = '../api/rounds/' + this.selected_round + '/mappack';
+					this.$.saveMappackAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.saveMappackAjax.body = {
+						'mappack': this.mappool.mappack
+					};
+					this.$.saveMappackAjax.generateRequest();
+				},
+				saveMappackResponse: function(e) {
+					var response = e.detail.response;
+					this.toast_message = response.message;
+					if (response.error == '1') {
+						this.$.errorToast.open();
+					} else {
+						this.$.successToast.open();
+					}
+				},
+				saveRoundResponse: function(e) {
+					var response = e.detail.response;
+					this.toast_message = response.message;
+					if (response.error == '1') {
+						this.$.errorToast.open();
+					} else {
+						this.$.successToast.open();
+						this.$.mappoolAjax.generateRequest();
+						this.$.feedbackAjax.generateRequest();
+						for (var i = 0; i < this.rounds.length; i++) {
+							if (this.rounds[i].id == this.selected_round) {
+								this.set('rounds.' + i + '.copy_mappool_from_round', this.copy_mappool_from_round);
+								break;
+							}
+						}
+					}
+				}
+			});
+		});
+	</script>
+</dom-module>

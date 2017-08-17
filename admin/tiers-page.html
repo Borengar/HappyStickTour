@@ -1,0 +1,204 @@
+<dom-module id="tiers-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			paper-icon-button {
+				padding: 0;
+				width: 20px;
+				height: 20px;
+			}
+			.tier-card {
+				width: 1000px;
+				height: 40px;
+				margin: 10px;
+				padding: 10px;
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			.new-tier {
+				width: 1000px;
+				margin: 10px;
+			}
+			.success-toast {
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			.error-toast {
+				background-color: var(--error-red);
+				color: white;
+			}
+		</style>
+		<iron-ajax id="createTierAjax" url="../api/tiers" method="POST" on-response="createResponse" content-type="application/json"></iron-ajax>
+		<iron-ajax id="editTierAjax" url="../api/tiers" method="PUT" on-response="editResponse" content-type="application/json"></iron-ajax>
+		<iron-ajax id="deleteTierAjax" url="../api/tiers" method="DELETE" on-response="deleteResponse" content-type="application/json"></iron-ajax>
+		<div class="layout vertical">
+			<template is="dom-repeat" items="[[tiers]]">
+				<paper-card class="tier-card" elevation="1">
+					<div class="layout horizontal">
+						<div>[[item.name]]</div>
+						<div>:&nbsp;</div>
+						<div>[[item.lower_endpoint]]</div>
+						<div>&nbsp;-&nbsp;</div>
+						<div>[[item.upper_endpoint]]</div>
+						<div>:&nbsp;</div>
+						<div>[[item.slots]]</div>
+						<div>&nbsp;Slots</div>
+						<div class="flex"></div>
+						<paper-icon-button icon="image:edit" on-click="showEditTierDialog"></paper-icon-button>
+						<paper-icon-button icon="delete" style="margin-left:10px;" on-click="showDeleteTierDialog"></paper-icon-button>
+					</div>
+				</paper-card>
+			</template>
+			<paper-button raised class="new-tier" on-click="showNewTierDialog">New tier</paper-button>
+		</div>
+		<paper-dialog id="editTierDialog" modal>
+			<h2>Edit tier</h2>
+			<paper-input label="Name" value="{{name}}"></paper-input>
+			<div class="layout horizontal">
+				<paper-input label="Lower endpoint" value="{{lower_endpoint}}" style="width:150px;"></paper-input>
+				<div class="layout vertical">
+					<div class="flex"></div>
+					<div style="margin-left:10px;margin-right:10px;margin-bottom:12px;">-</div>
+				</div>
+				<paper-input label="Upper endpoint" value="{{upper_endpoint}}" style="width:150px;"></paper-input>
+			</div>
+			<paper-input label="Slots" value="{{slots}}"></paper-input>
+			<paper-checkbox checked="{{seed_by_rank}}">Seed by rank</paper-checkbox>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="editTier">Save</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-dialog id="deleteTierDialog" modal>
+			<h2>Delete tier</h2>
+			<div>
+				Are you sure you want to delete the tier <span>[[lower_endpoint]]</span> - <span>[[upper_endpoint]]</span>?
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="deleteTier" style="color:red;">Delete</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-dialog id="newTierDialog" modal>
+			<h2>Create new tier</h2>
+			<paper-input label="Name" value="{{name}}"></paper-input>
+			<div class="layout horizontal">
+				<paper-input label="Lower endpoint" value="{{lower_endpoint}}" style="width:150px;"></paper-input>
+				<div class="layout vertical">
+					<div class="flex"></div>
+					<div style="margin-left:10px;margin-right:10px;margin-bottom:12px;">-</div>
+				</div>
+				<paper-input label="Upper endpoint" value="{{upper_endpoint}}" style="width:150px;"></paper-input>
+			</div>
+			<paper-input label="Slots" value="{{slots}}"></paper-input>
+			<paper-checkbox checked="{{seed_by_rank}}">Seed by rank</paper-checkbox>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="createTier">Create</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" class="success-toast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="errorToast" class="error-toast" text="[[toast_message]]"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'tiers-page',
+			showEditTierDialog: function(e) {
+				var item = e.model.item;
+				if (item) {
+					this.tier_id = item.id;
+					this.lower_endpoint = item.lower_endpoint;
+					this.upper_endpoint = item.upper_endpoint;
+					this.slots = item.slots;
+					this.seed_by_rank = item.seed_by_rank;
+					this.name = item.name;
+					this.$.editTierDialog.open();
+				}
+			},
+			showDeleteTierDialog: function(e) {
+				var item = e.model.item;
+				if (item) {
+					this.tier_id = item.id;
+					this.lower_endpoint = item.lower_endpoint;
+					this.upper_endpoint = item.upper_endpoint;
+					this.slots = item.slots;
+					this.seed_by_rank = item.seed_by_rank;
+					this.name = item.name;
+					this.$.deleteTierDialog.open();
+				}
+			},
+			showNewTierDialog: function() {
+				this.tier_id = null;
+				this.lower_endpoint = null;
+				this.upper_endpoint = null;
+				this.slots = 64;
+				this.seed_by_rank = false;
+				this.name = null;
+				this.$.newTierDialog.open();
+			},
+			editTier: function() {
+				this.$.editTierAjax.url = '../api/tiers/' + this.tier_id;
+				this.$.editTierAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.editTierAjax.body = {
+					'lower_endpoint': this.lower_endpoint,
+					'upper_endpoint': this.upper_endpoint,
+					'slots': this.slots,
+					'seed_by_rank': this.seed_by_rank,
+					'name': this.name
+				};
+				this.$.editTierAjax.generateRequest();
+			},
+			deleteTier: function() {
+				this.$.deleteTierAjax.url = '../api/tiers/' + this.tier_id;
+				this.$.deleteTierAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.deleteTierAjax.generateRequest();
+			},
+			createTier: function() {
+				this.$.createTierAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.createTierAjax.body = {
+					'lower_endpoint': this.lower_endpoint,
+					'upper_endpoint': this.upper_endpoint,
+					'slots': this.slots,
+					'seed_by_rank': this.seed_by_rank,
+					'name': this.name
+				};
+				this.$.createTierAjax.generateRequest();
+			},
+			editResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.fire('tierschanged', {});
+			},
+			deleteResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.fire('tierschanged', {});
+			},
+			createResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.fire('tierschanged', {});
+			}
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,40 @@
+<dom-module id="discord-profile">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			.wrapper {
+				height: 64px;
+				width: 300px;
+				background-color: #2e3136;
+			}
+			.image {
+				width: 50px;
+				height: 50px;
+				border-radius: 50%;
+				background-size:50px 50px;
+			}
+			.name {
+				color: white;
+			}
+		</style>
+		<div class="layout horizontal wrapper">
+			<div style="margin-left:10px;" class="layout vertical">
+				<div class="flex"></div>
+				<div class="image" style="background-image:url('https://cdn.discordapp.com/avatars/[[profile.id]]/[[profile.avatar]].png?size=256');"></div>
+				<div class="flex"></div>
+			</div>
+			<div style="margin-left:10px;" class="layout vertical">
+				<div class="flex"></div>
+				<div class="name">[[profile.username]]#[[profile.discriminator]]</div>
+				<div class="flex"></div>
+			</div>
+		</div>
+	</template>
+	<script>
+		Polymer({
+			is: 'discord-profile',
+			properties: {
+				profile: Object
+			}
+		});
+	</script>
+</dom-module>

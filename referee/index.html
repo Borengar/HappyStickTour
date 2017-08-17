@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+		<link rel="import" href="../import.html">
+		<link rel="import" href="lobbies-page.html">
+		<link rel="import" href="lobby-page.html">
+		<link rel="import" href="mappool-item.html">
+		<title>HappyStick Seasonal Tour</title>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning default-colors">
+			html {
+				font-family: Roboto;
+			}
+		</style>
+	</head>
+	<body class="fullbleed layout vertical">
+		<index-page class="flex layout vertical"></index-page>
+	</body>
+</html>
+
+<dom-module id="index-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			app-header {
+				background-color: var(--discord-grey);
+			}
+			paper-button {
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			.main-title {
+				color: white;
+			}
+			.logout-button {
+				color: white;
+			}
+			.header {
+				font-size: 40px;
+				color: var(--happystick-green);
+			}
+		</style>
+		<iron-ajax id="userAjax" url="../api/users/@me" method="GET" on-response="userResponse"></iron-ajax>
+		<app-header>
+			<app-toolbar>
+				<paper-icon-button icon="menu" onclick="drawer.toggle()" style="color:white;"></paper-icon-button>
+				<div main-title class="main-title">Referee</div>
+				<div class="flex"></div>
+				<discord-profile profile="[[discord_profile]]"></discord-profile>
+				<paper-icon-button class="logout-button" icon="power-settings-new" on-click="logout"></paper-icon-button>
+			</app-toolbar>
+		</app-header>
+		<iron-pages attr-for-selected="value" selected="[[page_selected]]">
+			<lobbies-page id="lobbiesPage" value="Lobbies" on-open="openRef"></lobbies-page>
+			<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+				<lobby-page id="[[lobby.id]]" round="[[lobby.round]]" value="[[lobby.id]]"></lobby-page>
+			</template>
+			<div value="api" class="layout vertical" style="padding:20px;">
+				<div class="header">Your API Key</div>
+				<div style="margin-top:20px;">[[api_key]]</div>
+			</div>
+		</iron-pages>
+		<app-drawer id="drawer" swipe-open style="z-index:999;">
+			<paper-menu attr-for-selected="value" selected="{{page_selected}}" style="height:100%;overflow:auto;">
+				<paper-item value="Lobbies">Lobbies</paper-item>
+				<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+					<paper-item value="[[lobby.id]]">Lobby&nbsp;<span>[[lobby.id]]</span></paper-item>
+				</template>
+				<paper-item value="api">API Key</paper-item>
+			</paper-menu>
+		</app-drawer>
+	</template>
+	<script>
+		addEventListener('WebComponentsReady', () => {
+			Polymer({
+				is: 'index-page',
+				properties: {
+					page_selected: {
+						type: String,
+						value: 'Lobbies'
+					},
+					lobbies: {
+						type: Array,
+						value: []
+					}
+				},
+				ready: function() {
+					this.api_key = localStorage.getItem('token');
+					this.$.userAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.userAjax.generateRequest();
+				},
+				userResponse: function(e) {
+					var user = e.detail.response;
+					this.discord_profile = user.discord_profile;
+				},
+				openRef: function(e) {
+					var round = this.$.lobbiesPage.selected_round;
+					this.push('lobbies', {id: e.detail.id, round: round});
+					this.page_selected = e.detail.id;
+				},
+				logout: function() {
+					window.location = '../index.html';
+				}
+			});
+		});
+	</script>
+</dom-module>

@@ -1,0 +1,332 @@
+<dom-module id="mappool-slot">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			:host {
+				width: 900px;
+				height: 150px;
+			}
+			.wrapper {
+				width: 900px;
+				height: 150px;
+				position: relative;
+			}
+			.title {
+				color: white;
+				font-size: 30px;
+				text-shadow: 2px 2px black;
+				margin-left: 10px;
+			}
+			.artist {
+				color: white;
+				font-size: 20px;
+				text-shadow: 2px 2px black;
+				margin-left: 10px;
+				margin-bottom: 10px;
+			}
+			.image {
+				position: absolute;
+				top: 0;
+				left: 0;
+				height: 100%;
+				width: 100%;
+				opacity: 0.5;
+				z-index: 1;
+				background-color: #333333;
+				background-position: center;
+			}
+			.mod-image {
+				position: absolute;
+				bottom: 20px;
+				width: 90px;
+				height: 87px;
+				opacity: 1;
+			}
+			paper-checkbox {
+				margin: 10px;
+			}
+		</style>
+		<iron-ajax id="saveSlotAjax" url="../api/mappool_slots/" method="PUT" content-type="application/json" on-response="saveSlotResponse"></iron-ajax>
+		<iron-ajax id="deleteSlotAjax" url="../api/mappool_slots/" method="DELETE" on-response="deleteSlotResponse"></iron-ajax>
+		<div id="mapElement" class="layout vertical wrapper" on-click="chooseMap">
+			<div class="flex layout vertical">
+				<div class="flex layout vertical" style="z-index:2;opacity:1;">
+					<div class="flex"></div>
+					<div class="title"><span>[[beatmap.title]]</span> [<span>[[beatmap.version]]</span>]</div>
+					<div class="artist">[[beatmap.artist]]</div>
+				</div>
+				<div class="image" style="background-image:url('https://assets.ppy.sh//beatmaps/[[beatmap.beatmapset_id]]/covers/cover.jpg');"></div>
+				<div hidden$="[[mod1hidden]]" class="mod-image" style="background-image:url('[[mod1url]]');right:110px;z-index:2;"></div>
+				<div hidden$="[[mod2hidden]]" class="mod-image" style="background-image:url('[[mod2url]]');right:65px;z-index:3;"></div>
+				<div hidden$="[[mod3hidden]]" class="mod-image" style="background-image:url('[[mod3url]]');right:20px;z-index:4;"></div>
+			</div>
+		</div>
+		<paper-dialog id="editSlotDialog" modal style="width:1100px;">
+			<h2>Edit mappool slot</h2>
+			<div class="layout vertical">
+				<paper-input label="Beatmap ID" value="{{edit_beatmap_id}}" invalid="[[edit_beatmap_id_invalid]]" error-message="[[edit_beatmap_id_error_message]]" on-blur="edit_beatmap_idChanged"></paper-input>
+				<paper-checkbox checked="{{edit_freemod}}">Freemod</paper-checkbox>
+				<paper-checkbox checked="{{edit_tiebreaker}}">Tiebreaker</paper-checkbox>
+				<div class="layout horizontal">
+					<paper-checkbox checked="{{edit_hd}}">HD</paper-checkbox>
+					<paper-checkbox checked="{{edit_dt}}">DT</paper-checkbox>
+					<paper-checkbox checked="{{edit_hr}}">HR</paper-checkbox>
+				</div>
+				<paper-textarea label="General beatmap info" value="{{beatmap_info}}"></paper-textarea>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="saveSlot">Save</paper-button>
+				<paper-button dialog-confirm on-click="deleteSlot" style="color:red">Delete</paper-button>
+			</div>
+		</paper-dialog>
+	</template>
+	<script>
+		Polymer({
+			is: 'mappool-slot',
+			properties: {
+				id: Number,
+				beatmap: Object,
+				mods: {
+					type: Number,
+					observer: 'modsChanged'
+				},
+				freemod: {
+					type: Number,
+					observer: 'modsChanged'
+				},
+				tiebreaker: {
+					type: Number,
+					observer: 'modsChanged'
+				},
+				mod1hidden: {
+					type: Boolean,
+					value: true
+				},
+				mod2hidden: {
+					type: Boolean,
+					value: true
+				},
+				mod3hidden: {
+					type: Boolean,
+					value: true
+				},
+				mod1url: String,
+				mod2url: String,
+				mod3url: String,
+				edit_beatmap_id: String,
+				edit_freemod: {
+					type: Boolean,
+					observer: 'edit_freemodChanged'
+				},
+				edit_tiebreaker: {
+					type: Boolean,
+					observer: 'edit_tiebreakerChanged'
+				},
+				edit_hd: {
+					type: Boolean,
+					observer: 'edit_hdChanged'
+				},
+				edit_dt: {
+					type: Boolean,
+					observer: 'edit_dtChanged'
+				},
+				edit_hr: {
+					type: Boolean,
+					observer: 'edit_hrChanged'
+				},
+				beatmapInfo: String,
+				add_hidden: {
+					type: Boolean,
+					value: false
+				}
+			},
+			beatmapIdChanged: function() {
+				if (this.beatmapId) {
+					this.edit_beatmap_id = this.beatmapId;
+					this.noMap = false;
+				}
+			},
+			modsChanged: function() {
+				this.mod1hidden = true;
+				this.mod2hidden = true;
+				this.mod3hidden = true;
+				this.mod1url = '';
+				this.mod2url = '';
+				this.mod3url = '';
+				this.edit_freemod = false;
+				this.edit_tiebreaker = false;
+				this.edit_hd = false;
+				this.edit_dt = false;
+				this.edit_hr = false;
+				if (this.freemod == 1) {
+					this.mod1url = 'http://happysticktour.com/images/mod-Freemod.png';
+					this.mod1hidden = false;
+					this.edit_freemod = true;
+				} else if (this.tiebreaker == 1) {
+					this.mod1url = 'http://happysticktour.com/images/mod-Tiebreaker.png';
+					this.mod1hidden = false;
+					this.edit_tiebreaker = true;
+				} else if (this.mods || this.mods == 0) {
+					var modsInBinary = parseInt(this.mods).toString(2);
+					for (var i = 0; i < modsInBinary.length; i++) {
+						if (i == 0 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '0' && modsInBinary.length == 1) {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-Nomod.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-Nomod.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-Nomod.png';
+								this.mod3hidden = false;
+							}
+						}
+						if (i == 0 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// NoFail
+						}
+						if (i == 1 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// Easy
+						}
+						if (i == 2 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// NoVideo
+						}
+						if (i == 3 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-HD.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-HD.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-HD.png';
+								this.mod3hidden = false;
+							}
+							this.edit_hd = true;
+						}
+						if (i == 4 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-HR.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-HR.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-HR.png';
+								this.mod3hidden = false;
+							}
+							this.edit_hr = true;
+						}
+						if (i == 5 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							// SuddenDeath
+						}
+						if (i == 6 && modsInBinary.substr(modsInBinary.length - 1 - i, 1) == '1') {
+							if (this.mod1hidden) {
+								this.mod1url = 'http://happysticktour.com/images/mod-DT.png';
+								this.mod1hidden = false;
+							} else if (this.mod2hidden) {
+								this.mod2url = 'http://happysticktour.com/images/mod-DT.png';
+								this.mod2hidden = false;
+							} else if (this.mod3hidden) {
+								this.mod3url = 'http://happysticktour.com/images/mod-DT.png';
+								this.mod3hidden = false;
+							}
+							this.edit_dt = true;
+						}
+					}
+				}
+			},
+			chooseMap: function() {
+				if (!this.add_hidden) {
+					this.editChangeMessage = '';
+					this.showHistory = false;
+					this.edit_beatmap_id = this.beatmap.beatmap_id;
+					this.$.editSlotDialog.open();
+				}
+			},
+			edit_beatmap_idChanged: function() {
+				if (!isNaN(this.edit_beatmap_id) || this.edit_beatmap_id.indexOf('https://osu.ppy.sh/b/') > -1 || this.edit_beatmap_id.indexOf('http://bloodcat.com/osu/s/') > -1) {
+					this.edit_beatmap_id_invalid = false;
+					this.edit_beatmap_id_error_message = '';
+					this.edit_beatmap_id = this.edit_beatmap_id.replace('https://osu.ppy.sh/b/', '').replace('&m=0', '').replace('?m=0', '').replace('http://bloodcat.com/osu/s/', '');
+				} else {
+					this.edit_beatmap_id_invalid = true;
+					this.edit_beatmap_id_error_message = 'This is not a valid beatmap ID or /b/ link!';
+				}
+			},
+			edit_freemodChanged: function() {
+				if (this.edit_freemod) {
+					this.edit_tiebreaker = false;
+					this.edit_hd = false;
+					this.edit_hr = false;
+					this.edit_dt = false;
+				}
+			},
+			edit_tiebreakerChanged: function() {
+				if (this.edit_tiebreaker) {
+					this.edit_freemod = false;
+					this.edit_hd = false;
+					this.edit_hr = false;
+					this.edit_dt = false;
+				}
+			},
+			edit_hdChanged: function() {
+				if (this.edit_hd) {
+					this.edit_freemod = false;
+					this.edit_tiebreaker = false;
+				}
+			},
+			edit_hrChanged: function() {
+				if (this.edit_hr) {
+					this.edit_freemod = false;
+					this.edit_tiebreaker = false;
+				}
+			},
+			edit_dtChanged: function() {
+				if (this.edit_dt) {
+					this.edit_freemod = false;
+					this.edit_tiebreaker = false;
+				}
+			},
+			saveSlot: function() {
+				var mods = 0;
+				if (this.edit_hd) {
+					mods += 8;
+				}
+				if (this.edit_hr) {
+					mods += 16;
+				}
+				if (this.edit_dt) {
+					mods += 64;
+				}
+				this.$.saveSlotAjax.url = '../api/mappool_slots/' + this.id;
+				this.$.saveSlotAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.saveSlotAjax.body = {
+					'beatmap_id': this.edit_beatmap_id,
+					'freemod': this.edit_freemod ? '1' : '0',
+					'tiebreaker': this.edit_tiebreaker ? '1' : '0',
+					'mods': mods,
+					'beatmap_info': this.beatmap_info
+				};
+				this.$.saveSlotAjax.generateRequest();
+			},
+			saveSlotResponse: function() {
+				this.fire('slotsaved', {});
+			},
+			deleteSlot: function() {
+				this.$.deleteSlotAjax.url = '../api/mappool_slots/' + this.id;
+				this.$.deleteSlotAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.deleteSlotAjax.generateRequest();
+			},
+			deleteSlotResponse: function() {
+				this.fire('slotsaved', {});
+			},
+			toggleHistory: function() {
+				this.showHistory = !this.showHistory;
+			}
+		});
+	</script>
+</dom-module>

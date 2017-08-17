@@ -1,0 +1,235 @@
+<dom-module id="setup-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			paper-button {
+				background-color: var(--happystick-green);
+				color: white;
+				height: 40px;
+				margin-top: 20px;
+			}
+			.tier-selector {
+				width: 200px;
+				margin-left: 50px;
+				margin-top: 10px;
+			}
+			.forward-icon {
+				width: 50px;
+				height: 50px;
+				margin-left: 10px;
+			}
+			.forward-number {
+				font-size: 20px;
+				margin-left: 20px;
+				margin-top: 10px;
+			}
+		</style>
+		<iron-ajax id="bracketAjax" url="../api/tiers//rounds" method="GET" on-response="bracketResponse" last-response="{{bracket}}"></iron-ajax>
+		<iron-ajax id="saveAjax" url="../api/tiers//rounds" on-response="saveResponse" method="PUT" content-type="application/json"></iron-ajax>
+		<div class="layout vertical">
+			<div class="layout horizontal">
+				<paper-dropdown-menu class="tier-selector" label="Tier">
+					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
+						<template is="dom-repeat" items="[[tiers]]" as="tier">
+							<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				<paper-button on-click="save" raised>Save</paper-button>
+			</div>
+			<div class="layout horizontal">
+				<div class="layout vertical" style="height:400px;width:50px;">
+					<div class="flex"></div>
+					<div style="margin-left:5px;">[[slots]]</div>
+					<iron-icon icon="arrow-forward" style="height:30px;width:30px;"></iron-icon>
+					<div class="flex"></div>
+				</div>
+				<template id="repeater" is="dom-repeat" items="{{bracket_rounds}}" as="column">
+					<div class="layout vertical">
+						<template is="dom-repeat" items="{{column.levels}}" as="level">
+							<bracket-round name="{{level.name}}" input_amount="{{level.input_amount}}" lobby_size="{{level.lobby_size}}" amount_continue_to_upper="{{level.amount_continue_to_upper}}" amount_drop_down="{{level.amount_drop_down}}" total_continue_to_upper="{{level.total_continue_to_upper}}" total_drop_down="{{level.total_drop_down}}" amount_lobbies="{{level.amount_lobbies}}" amount_active_lobbies="{{level.amount_active_lobbies}}" time_from="{{level.time_from}}" time_to="{{level.time_to}}" time_from_2="{{level.time_from_2}}" time_to_2="{{level.time_to_2}}" public_release_time="{{level.public_release_time}}" on-calculatenumbers="calculateNumbers"></bracket-round>
+						</template>
+					</div>
+				</template>
+			</div>
+		</div>
+		<paper-toast id="successToast" text="[[toast_message]]" style="background-color:#65B309;color:white;"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]" style="background-color:#d32f2f;color:white;"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'setup-page',
+			properties: {
+				selected_tier:  {
+					type: String,
+					observer: 'selected_tierChanged'
+				},
+				slots: {
+					type: Number,
+					observer: 'slotsChanged'
+				},
+				bracket_rounds: Array,
+				tiers: {
+					type: Array,
+					observer: 'tiersChanged'
+				}
+			},
+			selected_tierChanged: function() {
+				this.bracket_rounds = [];
+				this.loading_bracket = true;
+				if (this.selected_tier) {
+					this.$.bracketAjax.url = '../api/tiers/' + this.selected_tier + '/rounds';
+					this.$.bracketAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.bracketAjax.generateRequest();
+				}
+				for (var i = 0; i < this.tiers.length; i++) {
+					if (this.tiers[i].id == this.selected_tier) {
+						this.slots = this.tiers[i].slots;
+					}
+				}
+			},
+			bracketResponse: function() {
+				if (this.bracket) {
+					for (var i = 0; i < this.bracket.length; i++) {
+						if (this.bracket[i].level == '0') {
+							this.push('bracket_rounds', {levels: []});
+						}
+						if (this.bracket[i].time_from) {
+							var time_from_utc = new Date(this.bracket[i].time_from);
+							var time_from = new Date(Date.UTC(time_from_utc.getFullYear(), time_from_utc.getMonth(), time_from_utc.getDate(), time_from_utc.getHours(), time_from_utc.getMinutes(), 0));
+						} else {
+							var time_from = null;
+						}
+						if (this.bracket[i].time_to) {
+							var time_to_utc = new Date(this.bracket[i].time_to);
+							var time_to = new Date(Date.UTC(time_to_utc.getFullYear(), time_to_utc.getMonth(), time_to_utc.getDate(), time_to_utc.getHours(), time_to_utc.getMinutes(), 0));
+						} else {
+							var time_to = null;
+						}
+						if (this.bracket[i].time_from_2) {
+							var time_from_2_utc = new Date(this.bracket[i].time_from_2);
+							var time_from_2 = new Date(Date.UTC(time_from_2_utc.getFullYear(), time_from_2_utc.getMonth(), time_from_2_utc.getDate(), time_from_2_utc.getHours(), time_from_2_utc.getMinutes(), 0));
+						} else {
+							var time_from_2 = null;
+						}
+						if (this.bracket[i].time_to_2) {
+							var time_to_2_utc = new Date(this.bracket[i].time_to_2);
+							var time_to_2 = new Date(Date.UTC(time_to_2_utc.getFullYear(), time_to_2_utc.getMonth(), time_to_2_utc.getDate(), time_to_2_utc.getHours(), time_to_2_utc.getMinutes(), 0));
+						} else {
+							var time_to_2 = null;
+						}
+						if (this.bracket[i].public_release_time) {
+							var public_release_time_utc = new Date(this.bracket[i].public_release_time);
+							var public_release_time = new Date(Date.UTC(public_release_time_utc.getFullYear(), public_release_time_utc.getMonth(), public_release_time_utc.getDate(), public_release_time_utc.getHours(), public_release_time_utc.getMinutes(), 0));
+						} else {
+							var public_release_time = null;
+						}
+						this.push('bracket_rounds.' + this.bracket[i].week + '.levels', {name: this.bracket[i].name, lobby_size: this.bracket[i].lobby_size, amount_continue_to_upper: this.bracket[i].amount_continue_to_upper, amount_drop_down: this.bracket[i].amount_drop_down, input_amount: this.bracket[i].input_amount, total_continue_to_upper: this.bracket[i].total_continue_to_upper, total_drop_down: this.bracket[i].total_drop_down, amount_lobbies: this.bracket[i].amount_lobbies, amount_active_lobbies: this.bracket[i].amount_active_lobbies, time_from: time_from, time_to: time_to, time_from_2: time_from_2, time_to_2: time_to_2, public_release_time: public_release_time});
+					}
+				}
+				this.loading_bracket = false;
+			},
+			slotsChanged: function() {
+				this.calculateNumbers();
+			},
+			calculateNumbers: function() {
+				if (!this.loading_bracket) {
+					// calculate numbers for each bracketWeek
+					for (var column = 0; column < this.bracket_rounds.length; column++) {
+						for (var row = 0; row < this.bracket_rounds[column].levels.length; row++) {
+							var input_amount = 0;
+							if (column == 0 && row == 0) {
+								input_amount = this.slots;
+							}
+							if (column == 0 && row > 0) {
+								if (this.bracket_rounds[column].levels[row - 1]) {
+									input_amount = this.bracket_rounds[column].levels[row - 1].total_drop_down;
+								}
+							}
+							if (row == 0 && column > 0) {
+								if (this.bracket_rounds[column - 1].levels[row]) {
+									input_amount = this.bracket_rounds[column - 1].levels[row].total_continue_to_upper;
+								}
+							}
+							if (row > 0 && column > 0) {
+								if (this.bracket_rounds[column].levels[row - 1]) {
+									input_amount = this.bracket_rounds[column].levels[row - 1].total_drop_down;
+								}
+								if (this.bracket_rounds[column - 1].levels[row]) {
+									input_amount += this.bracket_rounds[column - 1].levels[row].total_continue_to_upper;
+								}
+							}
+							this.set('bracket_rounds.' + column + '.levels.' + row + '.input_amount', input_amount);
+							this.set('bracket_rounds.' + column + '.levels.' + row + '.amount_lobbies', Math.ceil(input_amount / this.bracket_rounds[column].levels[row].lobby_size));
+							this.set('bracket_rounds.' + column + '.levels.' + row + '.total_continue_to_upper', this.bracket_rounds[column].levels[row].amount_lobbies * this.bracket_rounds[column].levels[row].amount_continue_to_upper);
+							this.set('bracket_rounds.' + column + '.levels.' + row + '.total_drop_down', this.bracket_rounds[column].levels[row].amount_lobbies * this.bracket_rounds[column].levels[row].amount_drop_down);
+						}
+					}
+					// remove empty columns
+					for (var column = this.bracket_rounds.length - 1; column >= 0; column--) {
+						var rowsWithInputAmount = 0;
+						for (var row = 0; row < this.bracket_rounds[column].levels.length; row++) {
+							if (this.bracket_rounds[column].levels[row].input_amount != 0) {
+								rowsWithInputAmount++;
+							}
+						}
+						if (rowsWithInputAmount == 0) {
+							this.splice('bracket_rounds', column, 99);
+						}
+					}
+					// remove empty rows at column end
+					for (var column = 0; column < this.bracket_rounds.length; column++) {
+						for (var row = this.bracket_rounds[column].levels.length - 1; row >= 0; row--) {
+							if (this.bracket_rounds[column].levels[row].input_amount == 0 && row == this.bracket_rounds[column].levels.length - 1) {
+								this.splice('bracket_rounds.' + column + '.levels', row, 99);
+							}
+						}
+					}
+					for (var column = 0; column < this.bracket_rounds.length; column++) {
+						for (var row = 0; row < this.bracket_rounds[column].levels.length; row++) {
+							if (this.bracket_rounds[column].levels[row].total_continue_to_upper > 0) {
+								if (!this.bracket_rounds[column + 1]) {
+									this.push('bracket_rounds', {levels: []});
+								}
+								while (!this.bracket_rounds[column + 1].levels[row]) {
+									if (this.bracket_rounds[column + 1].levels.length < row) {
+										this.push('bracket_rounds.' + (column + 1) + '.levels', {name: '', input_amount: 0, lobby_size: 1, amount_continue_to_upper: 0, amount_drop_down: 0, total_continue_to_upper: 0, total_drop_down: 0, amount_lobbies: 0});
+									} else {
+										this.push('bracket_rounds.' + (column + 1) + '.levels', {name: '', input_amount: this.bracket_rounds[column].levels[row].total_continue_to_upper, lobby_size: 1, amount_continue_to_upper: 0, amount_drop_down: 0, total_continue_to_upper: 0, total_drop_down: 0, amount_lobbies: this.bracket_rounds[column].levels[row].total_continue_to_upper});
+									}
+								}
+							}
+							if (this.bracket_rounds[column].levels[row].total_drop_down > 0) {
+								if (!this.bracket_rounds[column].levels[row + 1]) {
+									this.push('bracket_rounds.' + column + '.levels', {name: '', input_amount: this.bracket_rounds[column].levels[row].total_drop_down, lobby_size: 1, amount_continue_to_upper: 0, amount_drop_down: 0, total_continue_to_upper: 0, total_drop_down: 0, amount_lobbies: this.bracket_rounds[column].levels[row].total_drop_down});
+								}
+							}
+						}
+					}
+				}
+			},
+			save: function() {
+				this.$.saveAjax.url = '../api/tiers/' + this.selected_tier + '/rounds';
+				this.$.saveAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.saveAjax.body = this.bracket_rounds;
+				this.$.saveAjax.generateRequest();
+			},
+			saveResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+			},
+			tiersChanged: function() {
+				this.selected_tier = null;
+				this.bracket_rounds = [];
+			}
+		});
+	</script>
+</dom-module>

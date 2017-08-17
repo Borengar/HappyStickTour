@@ -1,0 +1,253 @@
+<dom-module id="lobbies-page">
+	<template>
+		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+			paper-button[dialog-confirm] {
+				color: var(--error-red);
+			}
+			.create-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin-left: 50px;
+				margin-top: 10px;
+				width: 200px;
+			}
+			.delete-button {
+				background-color: var(--error-red);
+				color: white;
+				margin-left: 50px;
+				width: 200px;
+			}
+			.tier-selector {
+				width: 200px;
+				margin-left: 50px;
+				margin-top: 10px;
+			}
+			#deleteDialog {
+				width: 500px;
+			}
+			#successToast {
+				background-color: var(--happystick-green);
+				color: white;
+			}
+			#errorToast {
+				background-color: var(--error-red);
+				color: white;
+			}
+		</style>
+		<iron-ajax id="roundsAjax" url="../api/tiers//rounds" method="GET" on-response="roundsResponse" last-response="{{rounds}}"></iron-ajax>
+		<iron-ajax id="lobbiesAjax" url="../api/rounds//lobbies" method="GET" on-response="lobbiesResponse" last-response="{{lobbies}}"></iron-ajax>
+		<iron-ajax id="createLobbiesAjax" url="../api/rounds//lobbies" method="POST" on-response="createLobbiesResponse"></iron-ajax>
+		<iron-ajax id="deleteLobbiesAjax" url="../api/rounds//lobbies" method="DELETE" on-response="deleteLobbiesResponse"></iron-ajax>
+		<iron-ajax id="finalizeLobbiesAjax" url="../api/rounds//lobbies" method="PUT" on-response="finalizeLobbiesResponse"></iron-ajax>
+		<div class="layout vertical">
+			<paper-dropdown-menu class="tier-selector" label="Tier">
+				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
+					<template is="dom-repeat" items="[[tiers]]" as="tier">
+						<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<div class="layout vertical" hidden$="[[rounds_hidden]]">
+				<paper-dropdown-menu class="tier-selector" label="Round">
+					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_round}}">
+						<template is="dom-repeat" items="[[rounds]]" as="round" filter="isActive">
+							<paper-item value="[[round.id]]">[[round.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				<div class="layout vertical" hidden$="[[lobbies_hidden]]">
+					<div class="layout vertical" hidden$="[[create_lobbies_hidden]]">
+						<paper-button raised class="create-button" on-click="createLobbies">Create Lobbies</paper-button>
+					</div>
+					<div class="layout vertical" hidden$="[[lobby_list_hidden]]">
+						<div class="layout vertical" hidden$="[[actions_hidden]]">
+							<paper-button raised class="delete-button" on-click="showDeleteLobbies">Delete Lobbies</paper-button>
+							<!--<paper-button raised class="create-button" on-click="showFinalizeLobbies">Finalize</paper-button>-->
+						</div>
+						<div class="layout horizontal" style="margin-top:20px;">
+							<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+								<lobby-setup lobby_id="[[lobby.id]]" slots="[[lobby.slots]]" play_time_setter="[[lobby.match_time]]" round="[[selected_round]]" locked="[[actions_hidden]]" on-changed="lobbyChanged"></lobby-setup>
+							</template>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<paper-dialog id="deleteDialog" modal>
+			<h2>Delete lobbies</h2>
+			<div class="layout vertical">
+				<div>Do you really want to delete these lobbies?</div>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="deleteLobbies">Delete</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-dialog id="finalizeDialog" modal>
+			<h2>Finalize lobbies</h2>
+			<div class="layout vertical">
+				<div>Do you really want to finalize these lobbies?</div>
+				<div>This will remove the ability to change lobbies/matches and put players into the next round.</div>
+			</div>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+				<paper-button dialog-confirm on-click="finalizeLobbies">Finalize</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[toast_message]]"></paper-toast>
+	</template>
+	<script>
+		Polymer({
+			is: 'lobbies-page',
+			properties: {
+				selected_tier: {
+					type: Number,
+					observer: 'selected_tierChanged'
+				},
+				rounds_hidden: {
+					type: Boolean,
+					value: true
+				},
+				selected_round: {
+					type: Number,
+					observer: 'selected_roundChanged'
+				},
+				lobbies_hidden: {
+					type: Boolean,
+					value: true
+				},
+				create_lobbies_hidden: {
+					type: Boolean,
+					value: true
+				},
+				lobby_list_hidden: {
+					type: Boolean,
+					value: true
+				},
+				actions_hidden: {
+					type: Boolean,
+					value: false
+				}
+			},
+			selected_tierChanged: function() {
+				if (this.selected_tier) {
+					this.$.roundsAjax.url = '../api/tiers/' + this.selected_tier + '/rounds';
+					this.$.roundsAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.roundsAjax.generateRequest();
+				} else {
+					this.rounds_hidden = true;
+				}
+			},
+			roundsResponse: function() {
+				if (this.rounds) {
+					this.rounds_hidden = false;
+				}
+			},
+			selected_roundChanged: function() {
+				if (this.selected_round) {
+					this.$.lobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
+					this.$.lobbiesAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.lobbiesAjax.generateRequest();
+					this.actions_hidden = false;
+					for (var i = 0; i < this.rounds.length; i++) {
+						if (this.rounds[i].id == this.selected_round) {
+							this.actions_hidden = this.rounds[i].closed == '1';
+							break;
+						}
+					}
+				} else {
+					this.lobbies_hidden = true;
+				}
+			},
+			lobbiesResponse: function() {
+				if (this.lobbies) {
+					this.lobbies_hidden = false;
+					if (this.lobbies.length == 0) {
+						this.create_lobbies_hidden = false;
+						this.lobby_list_hidden = true;
+					} else {
+						this.create_lobbies_hidden = true;
+						this.lobby_list_hidden = false;
+					}
+				}
+			},
+			createLobbies: function() {
+				this.$.createLobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
+				this.$.createLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.createLobbiesAjax.generateRequest();
+			},
+			createLobbiesResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.$.lobbiesAjax.generateRequest();
+			},
+			showDeleteLobbies: function() {
+				this.$.deleteDialog.open();
+			},
+			deleteLobbies: function() {
+				this.$.deleteLobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
+				this.$.deleteLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.deleteLobbiesAjax.generateRequest();
+			},
+			deleteLobbiesResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+				this.$.lobbiesAjax.generateRequest();
+			},
+			tiersChanged: function() {
+				this.selected_tier = null;
+				this.selected_round = null;
+				this.$.tiersAjax.generateRequest();
+			},
+			lobbyChanged: function() {
+				this.$.lobbiesAjax.generateRequest();
+			},
+			isActive: function(round) {
+				if (round.input_amount == round.total_continue_to_upper || round.input_amount == round.total_drop_down) {
+					return false;
+				}
+				return true;
+			},
+			showFinalizeLobbies: function() {
+				this.$.finalizeDialog.open();
+			},
+			finalizeLobbies: function() {
+				this.$.finalizeLobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
+				this.$.finalizeLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.finalizeLobbiesAjax.generateRequest();
+			},
+			finalizeLobbiesResponse: function(e) {
+				var response = e.detail.response;
+				this.toast_message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.actions_hidden = true;
+					this.$.roundsAjax.generateRequest();
+				}
+			}
+		});
+	</script>
+</dom-module>
