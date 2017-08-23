@@ -299,7 +299,28 @@ function getRegistrations() {
 }
 
 function putRegistration() {
+	global $database;
+	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'ADMIN') {
+		if (isset($body->idNew)) {
+			$stmt = $db->prepare('UPDATE registrations
+				SET id = :id_new
+				WHERE id = :id_old');
+			$stmt->bindValue(':id_new', $body->idNew, PDO::PARAM_INT);
+			$stmt->bindValue(':id_old', $body->idOld, PDO::PARAM_INT);
+			$stmt->execute();
+			echoError(0, 'Discord account changed');
+			return;
+		}
+	}
 }
 
 function postRegistration() {
