@@ -326,7 +326,32 @@ function postRegistration() {
 }
 
 function deleteRegistration() {
+	global $database;
+	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'REGISTRATION') {
+		$stmt = $db->prepare('DELETE FROM registrations
+			WHERE id = :id');
+		$stmt->bindValue(':id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		echoError(0, 'Registration deleted');
+		return;
+	}
+	if ($user->scope == 'ADMIN') {
+		$stmt = $db->prepare('DELETE FROM registrations
+			WHERE id = :id');
+		$stmt->bindValue(':id', $body->id, PDO::PARAM_INT);
+		$stmt->execute();
+		echoError(0, 'Registration deleted');
+		return;
+	}
 }
 
 function getPlayers() {
@@ -604,7 +629,7 @@ function getMappool() {
 }
 
 function putMappool() {
-	
+
 }
 
 function deleteMappool() {
