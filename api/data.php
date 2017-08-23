@@ -376,7 +376,13 @@ function deleteRegistration() {
 }
 
 function getPlayers() {
+	global $database;
+	$db = $database->getConnection();
 
+	$stmt = $db->prepare('SELECT osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, tiers.id as tierId, tiers.name as tierName
+		FROM players INNER JOIN osu_users ON players.osu_id = osu_users.id INNER JOIN tier ON players.tier = tiers.id');
+	$stmt->execute();
+	echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
 }
 
 function getRounds() {
