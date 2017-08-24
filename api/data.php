@@ -690,7 +690,54 @@ function getLobbies() {
 }
 
 function postLobbies() {
+	global $database;
+	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'ADMIN') {
+		if (!isset($body->round) || !isset($body->tier)) {
+			echoError(1, 'Parameters missing');
+			return;
+		}
+		$stmt = $db->prepare('SELECT COUNT(*) as rowcount
+			FROM lobbies
+			WHERE round = :round AND tier = :tier');
+		$stmt->bindValue(':round', $body->round, PDO::PARAM_INT);
+		$stmt->bindValue(':tier', $body->tier, PDO::PARAM_INT);
+		$stmt->execute();
+		if ($stmt->fetch(PDO::FETCH_OBJ)->rowcount != 0) {
+			echoError(1, 'There are already existing lobbies');
+			return;
+		}
+		$stmt = $db->prepare('SELECT lobby_size as lobbySize, player_amount as playerAmount
+			FROM rounds
+			WHERE id = :id');
+		$stmt->bindValue(':id', $body->round, PDO::PARAM_INT);
+		$stmt->execute();
+		$round = $stmt->fetch(PDO::FETCH_OBJ);
+		for ($i = 0; $i < ((int)$round->playerAmount / (int)$round->lobbySize); $i++) {
+			$stmt = $db->prepare('INSERT INTO lobbies (round, tier)
+				VALUES (:round, :tier)');
+			$stmt->bindValue(':round', $body->round, PDO::PARAM_INT);
+			$stmt->bindValue(':tier', $body->tier, PDO::PARAM_INT);
+			$stmt->execute();
+			$id = $db->lastInsertId();
+			for ($j = 0; $j < (int)$round->lobbySize; $j++) {
+				$stmt = $db->prepare('INSERT INTO lobby_slots (lobby)
+					VALUES (:lobby)');
+				$stmt->bindValue(':lobby', $id, PDO::PARAM_INT);
+				$stmt->execute();
+			}
+		}
+		echoError(0, 'Lobbies created');
+		return;
+	}
 }
 
 function deleteLobbies() {
