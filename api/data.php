@@ -428,6 +428,11 @@ function postRound() {
 	global $database;
 	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
 	$body = json_decode(file_get_contents('php://input'));
 
 	$stmt = $db->prepare('INSERT INTO rounds (name, lobby_size, best_of, is_first_round, player_amount, is_start_round, has_continue, continue_amount, continue_round, has_drop_down, drop_down_amount, drop_down_round, has_elimination, eliminated_amount, has_bracket_reset, mappools_released, lobbies_released)
@@ -490,6 +495,11 @@ function putRound() {
 	global $database;
 	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
 	$body = json_decode(file_get_contents('php://input'));
 
 	$stmt = $db->prepare('UPDATE rounds
@@ -537,6 +547,11 @@ function deleteRound() {
 	global $database;
 	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
 	$stmt = $db->prepare('UPDATE rounds
 		SET has_continue = 0, continue_amount = 0, continue_round = NULL
 		WHERE continue_round = :continue_round');
@@ -578,6 +593,11 @@ function postTier() {
 	global $database;
 	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
 	$body = json_decode(file_get_contents('php://input'));
 
 	$stmt = $db->prepare('INSERT INTO tiers (name, lower_endpoint, upper_endpoint, starting_round, seed_by_rank, seed_by_time, seed_by_random, sub_bonus)
@@ -611,6 +631,11 @@ function putTier() {
 	global $database;
 	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
 	$body = json_decode(file_get_contents('php://input'));
 
 	$stmt = $db->prepare('UPDATE tiers
@@ -633,6 +658,11 @@ function putTier() {
 function deleteTier() {
 	global $database;
 	$db = $database->getConnection();
+
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
 
 	$stmt = $db->prepare('DELETE FROM tiers
 		WHERE id = :id');
@@ -812,6 +842,11 @@ function getSettings() {
 function putSettings() {
 	global $database;
 	$db = $database->getConnection();
+
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
 
 	$body = json_decode(file_get_contents('php://input'));
 
@@ -1010,6 +1045,11 @@ function postDiscordRoles() {
 	global $database;
 	$db = $database->getConnection();
 	global $discordApi;
+
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
 
 	$roles = $discordApi->getGuildRoles();
 	$stmt = $db->prepare('TRUNCATE discord_roles');
