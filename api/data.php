@@ -267,7 +267,26 @@ function getUser() {
 }
 
 function putUser() {
+	global $database;
+	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'PLAYER') {
+		if (isset($body->discordId)) {
+			$stmt = $db->prepare('UPDATE players
+				SET discord_id = :discord_id
+				WHERE id = :id');
+			$stmt->bindValue(':discord_id', $body->discordId, PDO::PARAM_INT);
+			$stmt->bindValue(':id', $body->id, PDO::PARAM_INT);
+			$stmt->execute();
+		}
+	}
 }
 
 function getRegistrations() {
