@@ -771,7 +771,39 @@ function postLobbies() {
 }
 
 function deleteLobbies() {
+	global $database;
+	$db = $database->getConnection();
 
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if (!isset($body->round) || !isset($body->tier)) {
+		echoError(1, 'Parameters missing');
+		return;
+	}
+	$stmt = $db->prepare('SELECT id
+		FROM lobbies
+		WHERE round = :round AND tier = :tier');
+	$stmt->bindValue(':round', $body->round, PDO::PARAM_INT);
+	$stmt->bindValue(':tier', $body->tier, PDO::PARAM_INT);
+	$stmt->execute();
+	$lobbies = $stmt->fetchAll(PDO::FETCH_OBJ);
+	foreach ($lobbies as $lobby) {
+		$stmt = $db->prepare('DELETE FROM lobby_slots
+			WHERE lobby = :lobby');
+		$stmt->bindValue(':lobby', $lobby->id, PDO::PARAM_INT);
+		$stmt->execute();
+	}
+	$stmt = $db->prepare('DELETE FROM lobbies
+		WHERE round = :round AND tier = :tier');
+	$stmt->bindValue(':round', $body->round, PDO::PARAM_INT);
+	$stmt->bindValue(':tier', $body->tier, PDO::PARAM_INT);
+	$stmt->execute();
+	echoError(0, 'Lobbies deleted');
 }
 
 function getLobby() {
