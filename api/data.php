@@ -102,6 +102,8 @@ switch ($_GET['query']) {
 	case 'osugame':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'PUT': putOsuGame(); break; // update an osu game
+			case 'POST': postOsuGame(); break; // insert a bracket reset
+			case 'DELETE': deleteOsuGame(); break; // delete a bracket reset
 		}
 		break;
 	case 'availability':
@@ -926,6 +928,14 @@ function getOsuMatch() {
 
 function putOsuGame() {
 
+}
+
+function postOsuGame() {
+
+}
+
+function deleteOsuGame() {
+	
 }
 
 function getAvailability() {
