@@ -892,7 +892,58 @@ function putLobby() {
 }
 
 function getMappools() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($user)) {
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id
+			WHERE rounds.mappools_released = 1');
+		$stmt->execute();
+		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		return;
+	}
+
+	if ($user->scope == 'PLAYER') {
+		$stmt = $db->prepare('SELECT tier
+			FROM players
+			WHERE discord_id = :discord_id');
+		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		$tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id
+			WHERE rounds.mappools_released = 1 AND mappools.tier = :tier');
+		$stmt->bindValue(':tier', $tier, PDO::PARAM_INT);
+		$stmt->execute();
+		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		return;
+	}
+
+	if ($user->scope == 'MAPPOOLER') {
+		$stmt = $db->prepare('SELECT tier
+			FROM mappoolers
+			WHERE discord_id = :discord_id');
+		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		$tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id
+			WHERE rounds.mappools_released = 1 AND mappools.tier = :tier');
+		$stmt->bindValue(':tier', $tier, PDO::PARAM_INT);
+		$stmt->execute();
+		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		return;
+	}
+
+	if ($user->scope == 'HEADPOOLER') {
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id');
+		$stmt->execute();
+		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		return;
+	}
 }
 
 function postMappool() {
