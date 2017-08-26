@@ -1034,7 +1034,112 @@ function getMappool() {
 }
 
 function putMappool() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($_GET['mappool'])) {
+		$stmt = $db->prepare('SELECT id
+			FROM mappools
+			WHERE round = :round AND tier = :tier');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		if (!isset($row->id)) {
+			$stmt = $db->prepare('INSERT INTO mappools (round, tier)
+				VALUES (:round, :tier)');
+			$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
+			$stmt->execute();
+			$id = $db->lastInsertId();
+		} else {
+			$id = $row->id;
+		}
+	} else {
+		$id = $_GET['mappool'];
+	}
+
+	if (!isset($user) || $user->scope == 'PLAYER' || $user->scope == 'REFEREE' || $user->scope == 'ADMIN') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'MAPPOOLER') {
+		$stmt = $db->prepare('SELECT rounds.mappools_released as mappoolsReleased, mappools.tier
+			FROM rounds INNER JOIN mappools ON rounds.id = mappools.round
+			WHERE mappools.id = :id');
+		$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($row->mappoolsReleased == 1) {
+			return;
+		}
+		$stmt = $db->prepare('SELECT tier
+			FROM mappoolers
+			WHERE discord_id = :discord_id');
+		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		$mappooler = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($row->tier != $mappooler->tier) {
+			return;
+		}
+
+		if (isset($body->slots)) {
+			$stmt = $db->prepare('DELETE FROM mappool_slots
+				WHERE mappool = :mappool');
+			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+			$stmt->execute();
+			foreach ($body->slots as $slot) {
+				$stmt = $db->prepare('INSERT INTO mappool_slots (mappool, beatmap_id, tiebreaker, freemod, hardrock, doubletime, hidden)
+					VALUES (:mappool, :beatmap_id, :tiebreaker, :freemod, :hardrock, :doubletime, :hidden)');
+				$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+				$stmt->bindValue(':beatmap_id', $body->beatmapId, PDO::PARAM_INT);
+				$stmt->bindValue(':tiebreaker', $body->tiebreaker, PDO::PARAM_BOOL);
+				$stmt->bindValue(':freemod', $body->freemod, PDO::PARAM_BOOL);
+				$stmt->bindValue(':hardrock', $body->hardrock, PDO::PARAM_BOOL);
+				$stmt->bindValue(':doubletime', $body->doubletime, PDO::PARAM_BOOL);
+				$stmt->bindValue(':hidden', $body->hidden, PDO::PARAM_BOOL);
+				$stmt->execute();
+			}
+		}
+
+		echoError(0, 'Mappool updated');
+		return;
+	}
+
+	if ($user->scope == 'HEADPOOLER') {
+		if (isset($body->slots)) {
+			$stmt = $db->prepare('DELETE FROM mappool_slots
+				WHERE mappool = :mappool');
+			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+			$stmt->execute();
+			foreach ($body->slots as $slot) {
+				$stmt = $db->prepare('INSERT INTO mappool_slots (mappool, beatmap_id, tiebreaker, freemod, hardrock, doubletime, hidden)
+					VALUES (:mappool, :beatmap_id, :tiebreaker, :freemod, :hardrock, :doubletime, :hidden)');
+				$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+				$stmt->bindValue(':beatmap_id', $body->beatmapId, PDO::PARAM_INT);
+				$stmt->bindValue(':tiebreaker', $body->tiebreaker, PDO::PARAM_BOOL);
+				$stmt->bindValue(':freemod', $body->freemod, PDO::PARAM_BOOL);
+				$stmt->bindValue(':hardrock', $body->hardrock, PDO::PARAM_BOOL);
+				$stmt->bindValue(':doubletime', $body->doubletime, PDO::PARAM_BOOL);
+				$stmt->bindValue(':hidden', $body->hidden, PDO::PARAM_BOOL);
+				$stmt->execute();
+			}
+		}
+		if (isset($body->mappack)) {
+			$stmt = $db->prepare('UPDATE mappools
+				SET mappack = :mappack
+				WHERE id = :id');
+			$stmt->bindValue(':mappack', $body->mappack, PDO::PARAM_STR);
+			$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+			$stmt->execute();
+		}
+
+		echoError(0, 'Mappool updated');
+		return;
+	}
 }
 
 function getOsuProfile() {
