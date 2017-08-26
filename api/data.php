@@ -74,14 +74,12 @@ switch ($_GET['query']) {
 	case 'mappools':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'GET': getMappools(); break; // get all mappools
-			case 'POST': postMappool(); break; // create new mappool
 		}
 		break;
 	case 'mappool':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'GET': getMappool(); break; // get mappool
 			case 'PUT': putMappool(); break; // update mappool
-			case 'DELETE': deleteMappool(); break; // delete mappool
 		}
 		break;
 	case 'osuprofile':
@@ -897,7 +895,7 @@ function getMappools() {
 	$user = checkToken();
 
 	if (!isset($user)) {
-		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.mappack
 			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id
 			WHERE rounds.mappools_released = 1');
 		$stmt->execute();
@@ -912,7 +910,7 @@ function getMappools() {
 		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
 		$stmt->execute();
 		$tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
-		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.mappack
 			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id
 			WHERE rounds.mappools_released = 1 AND mappools.tier = :tier');
 		$stmt->bindValue(':tier', $tier, PDO::PARAM_INT);
@@ -928,7 +926,7 @@ function getMappools() {
 		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
 		$stmt->execute();
 		$tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
-		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.mappack
 			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id
 			WHERE rounds.mappools_released = 1 AND mappools.tier = :tier');
 		$stmt->bindValue(':tier', $tier, PDO::PARAM_INT);
@@ -938,7 +936,7 @@ function getMappools() {
 	}
 
 	if ($user->scope == 'HEADPOOLER') {
-		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.name, mappools.mappack
+		$stmt = $db->prepare('SELECT mappools.id, mappools.tier, mappools.round, mappools.mappack
 			FROM mappools INNER JOIN rounds ON mappools.round = rounds.id');
 		$stmt->execute();
 		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
@@ -946,19 +944,11 @@ function getMappools() {
 	}
 }
 
-function postMappool() {
-
-}
-
 function getMappool() {
 
 }
 
 function putMappool() {
-
-}
-
-function deleteMappool() {
 
 }
 
