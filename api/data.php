@@ -945,7 +945,92 @@ function getMappools() {
 }
 
 function getMappool() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($_GET['mappool'])) {
+		$stmt = $db->prepare('SELECT id
+			FROM mappools
+			WHERE round = :round AND tier = :tier');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		$id = $row->id;
+	} else {
+		$id = $_GET['mappool'];
+	}
+
+	if (!isset($user) || $user->scope == 'PLAYER' || $user->scope == 'REFEREE') {
+		$stmt = $db->prepare('SELECT rounds.mappools_released as mappoolsReleased, mappools.mappack
+			FROM rounds INNER JOIN mappools ON mappools.round = rounds.id
+			WHERE mappools.id = :id');
+		$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($row->mappoolsReleased == 0) {
+			return;
+		}
+	}
+
+	if ($user->scope == 'MAPPOOLER') {
+		$stmt = $db->prepare('SELECT tier
+			FROM mappoolers
+			WHERE discord_id = :discord_id');
+		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		$mappooler = $stmt->fetch(PDO::FETCH_OBJ);
+		$stmt = $db->prepare('SELECT tier
+			FROM mappools
+			WHERE id = :id');
+		$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+		$stmt->execute();
+		$mappool = $stmt->fetch(PDD::FETCH_OBJ);
+		if ($mappooler->tier != $mappool->tier) {
+			return;
+		}
+	}
+
+	$mappool = new stdClass;
+	$mappool->id = $id;
+	$mappool->mappack = $row->mappack;
+	$stmt = $db->prepare('SELECT mappool_slots.id, mappool_slots.beatmap_id as beatmapId, mappool_slots.tiebreaker, mappool_slots.freemod, mappool_slots.hardrock, mappool_slots.doubletime, mappool_slots.hidden, osu_beatmaps.beatmapset_id as beatmapsetId, osu_beatmaps.title, osu_beatmaps.artist, osu_beatmaps.version, osu_beatmaps.cover, osu_beatmaps.preview_url as previewUrl, osu_beatmaps.total_length as totalLength, osu_beatmaps.bpm, osu_beatmaps.count_circles as countCircles, osu_beatmaps.count_sliders as countSliders, osu_beatmaps.cs, osu_beatmaps.drain, osu_beatmaps.accuracy, osu_beatmaps.ar, osu_beatmaps.difficulty_rating as difficultyRating
+		FROM mappool_slots INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
+		WHERE mappool_slots.mappool = :mappool');
+	$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+	$stmt->execute();
+	$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+	$mappool->slots = [];
+	foreach ($rows as $beatmap) {
+		$slot = new stdClass;
+		$slot->id = $beatmap->id;
+		$slot->tiebreaker = $beatmap->tiebreaker;
+		$slot->freemod = $beatmap->freemod;
+		$slot->hardrock = $beatmap->hardrock;
+		$slot->doubletime = $beatmap->doubletime;
+		$slot->hidden = $beatmap->hidden;
+		$slot->beatmap = new stdClass;
+		$slot->beatmap->id = $beatmap->beatmapId;
+		$slot->beatmap->beatmapsetId = $beatmap->beatmapsetId;
+		$slot->beatmap->title = $beatmap->title;
+		$slot->beatmap->artist = $beatmap->artist;
+		$slot->beatmap->version = $beatmap->version;
+		$slot->beatmap->cover = $beatmap->cover;
+		$slot->beatmap->previewUrl = $beatmap->previewUrl;
+		$slot->beatmap->totalLength = $beatmap->totalLength;
+		$slot->beatmap->bpm = $beatmap->bpm;
+		$slot->beatmap->countCircles = $beatmap->countCircles;
+		$slot->beatmap->countSliders = $beatmap->countSliders;
+		$slot->beatmap->cs = $beatmap->cs;
+		$slot->beatmap->drain = $beatmap->drain;
+		$slot->beatmap->accuracy = $beatmap->accuracy;
+		$slot->beatmap->ar = $beatmap->ar;
+		$slot->beatmap->difficultyRating = $beatmap->difficultyRating;
+		$mappools->slots[] = $slot;
+	}
+
+	echo json_encode($mappool);
 }
 
 function putMappool() {
