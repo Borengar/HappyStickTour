@@ -787,7 +787,18 @@ function deleteLobbies() {
 }
 
 function getLobby() {
+	global $db;
+	global $osuApi;
 
+	$stmt = $db->prepare('SELECT id, round, tier, match_id as matchId, match_time as matchTime, comment
+		FROM lobbies
+		WHERE id = :id');
+	$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+	$stmt->execute();
+	$lobby = $stmt->fetch(PDO::FETCH_OBJ);
+	if (isset($lobby->matchId)) {
+		$lobby->events = $osuApi->getMatch($lobby->matchId);
+	}
 }
 
 function putLobby() {
