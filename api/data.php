@@ -802,7 +802,91 @@ function getLobby() {
 }
 
 function putLobby() {
+	global $db;
 
+	$user = checkToken();
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'ADMIN') {
+		if (isset($body->matchTime)) {
+			$stmt = $db->prepare('UPDATE lobbies
+				SET match_time = :match_time
+				WHERE id = :id');
+			$stmt->bindValue(':match_time', $body->matchTime, PDO::PARAM_STR);
+			$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->execute();
+		}
+
+		echoError(0, 'Lobby updated');
+		return;
+	}
+
+	if ($user->scope == 'REFEREE') {
+		if (isset($body->matchId)) {
+			$stmt = $db->prepare('UPDATE lobbies
+				SET match_id = :match_id
+				WHERE id = :id');
+			$stmt->bindValue(':match_id', $body->matchId, PDO::PARAM_INT);
+			$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->execute();
+		}
+		if (isset($body->comment)) {
+			$stmt = $db->prepare('UPDATE lobbies
+				SET comment = :comment
+				WHERE id = :id');
+			$stmt->bindValue(':comment', $body->comment, PDO::PARAM_STR);
+			$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->execute();
+		}
+		if (isset($body->continues)) {
+			$stmt = $db->prepare('SELECT COUNT(*) as rowcount
+				FROM lobby_slots INNER JOIN players ON lobby_slots.user_id = players.id
+				WHERE lobby_slots.lobby = :lobby AND players.current_lobby <> :current_lobby');
+			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->bindValue(':current_lobby', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->execute();
+			$rowcount = $stmt->fetch(PDO::FETCH_OBJ);
+			if ($rowcount->rowcount == 0) {
+				$stmt = $db->prepare('SELECT rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound
+					FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round
+					WHERE lobbies.id = :id');
+				$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+				$stmt->execute();
+				$round = $stmt->fetch(PDO::FETCH_OBJ);
+				foreach ($body->continues as $player) {
+					$stmt = $db->prepare('UPDATE lobby_slots
+						SET continue_to_upper = :continue_to_upper, drop_down = :drop_down, eliminated = :eliminated, forfeit = :forfeit, noshow = :noshow
+						WHERE lobby = :lobby and user_id = :user_id');
+					$stmt->bindValue(':continue_to_upper', $player->continue == 'continue', PDO::PARAM_BOOL);
+					$stmt->bindValue(':drop_down', $player->continue == 'dropdown', PDO::PARAM_BOOL);
+					$stmt->bindValue(':eliminated', $player->continue == 'eliminated', PDO::PARAM_BOOL);
+					$stmt->bindValue(':forfeit', $player->continue == 'forfeit', PDO::PARAM_BOOL);
+					$stmt->bindValue(':noshow', $player->continue == 'noshow', PDO::PARAM_BOOL);
+					$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+					$stmt->bindValue(':user_id', $player->id, PDO::PARAM_INT);
+					$stmt->execute();
+					$nextRound = null;
+					switch ($player->continues) {
+						case 'continue': $nextRound = $round->continueRound; break;
+						case 'dropdown': $nextRound = $round->dropDownRound; break;
+						default: $nextRound = null;
+					}
+					$stmt = $db->prepare('UPDATE players
+						SET next_round = :next_round
+						WHERE id = :id');
+					$stmt->bindValue(':next_round', $nextRound, PDO::PARAM_INT);
+					$stmt->bindValue(':id', $player->id, PDO::PARAM_INT);
+					$stmt->execute();
+				}
+			}
+		}
+		echoError(0, 'Lobby updated');
+		return;
+	}
 }
 
 function getMappools() {
