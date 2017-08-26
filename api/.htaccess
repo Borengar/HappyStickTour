@@ -8,6 +8,7 @@ RewriteRule ^tiers/([^/]+)/?$ data.php?query=tier&tier=$1
 RewriteRule ^tiers/?$ data.php?query=tiers
 RewriteRule ^lobbies/([^/]+)/?$ data.php?query=lobby&lobby=$1
 RewriteRule ^lobbies/?$ data.php?query=lobbies
+RewriteRule ^mappools/([^/]+)/([^/]+)/?$ data.php?query=mappool&round=$1&tier=$2
 RewriteRule ^mappools/([^/]+)/?$ data.php?query=mappool&mappool=$1
 RewriteRule ^mappools/?$ data.php?query=mappools
 RewriteRule ^osuprofile/([^/]+)/?$ data.php?query=osuprofile&id=$1
