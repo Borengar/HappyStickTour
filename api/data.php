@@ -5,6 +5,7 @@ require_once '../php_classes/OsuApi.php';
 require_once '../php_classes/TwitchApi.php';
 require_once '../php_classes/DiscordApi.php';
 $database = new Database();
+$db = $database->getConnection();
 $osuApi = new OsuApi();
 $twitchApi = new TwitchApi();
 $discordApi = new DiscordApi();
@@ -136,8 +137,7 @@ switch ($_GET['query']) {
 }
 
 function generateToken() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	while (true) {
 		$token = str_replace('.', '', uniqid('', true));
@@ -156,8 +156,7 @@ function generateToken() {
 }
 
 function checkToken() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 	$token = $_SERVER['HTTP_AUTHORIZATION'];
 
 	$stmt = $db->prepare('SELECT user_id as id, scope
@@ -180,8 +179,7 @@ function echoError($error, $message) {
 }
 
 function recalculateRound($round) {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	if (empty($round)) {
 		$stmt = $db->prepare('SELECT has_continue, continue_round, has_drop_down, drop_down_round
@@ -240,8 +238,7 @@ function recalculateRound($round) {
 }
 
 function getUser() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	if ($_GET['user'] == '@me') {
 		$user = checkToken();
@@ -267,8 +264,7 @@ function getUser() {
 }
 
 function putUser() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -290,8 +286,7 @@ function putUser() {
 }
 
 function getRegistrations() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 	global $osuApi;
 	$user = checkToken();
 	if (!isset($user)) {
@@ -318,8 +313,7 @@ function getRegistrations() {
 }
 
 function putRegistration() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -343,8 +337,7 @@ function putRegistration() {
 }
 
 function postRegistration() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -366,8 +359,7 @@ function postRegistration() {
 }
 
 function deleteRegistration() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -395,8 +387,7 @@ function deleteRegistration() {
 }
 
 function getPlayers() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$stmt = $db->prepare('SELECT osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, tiers.id as tierId, tiers.name as tierName
 		FROM players INNER JOIN osu_users ON players.osu_id = osu_users.id INNER JOIN tier ON players.tier = tiers.id');
@@ -425,8 +416,7 @@ function getRounds() {
 }
 
 function postRound() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -473,8 +463,7 @@ function postRound() {
 }
 
 function getRound() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$stmt = $db->prepare('SELECT id, name, lobby_size as lobbySize, best_of as bestOf, is_first_round as isFirstRound, player_amount as playerAmount, is_start_round as isStartRound, has_continue as hasContinue, continue_amount as continueAmount, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_amount as dropDownAmount, drop_down_round as dropDownRound, has_elimination as hasElimination, eliminated_amount as eliminatedAmount, has_bracket_reset as hasBracketReset, mappools_released as mappoolsReleased, lobbies_released as lobbiesReleased
 		FROM rounds
@@ -492,8 +481,7 @@ function getRound() {
 }
 
 function putRound() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -544,8 +532,7 @@ function putRound() {
 }
 
 function deleteRound() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -579,8 +566,7 @@ function deleteRound() {
 }
 
 function getTiers() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$stmt = $db->prepare('SELECT id, name, lower_endpoint as lowerEndpoint, upper_endpoint as upperEndpoint, starting_round as startingRound, seed_by_rank as seedByRank, seed_by_time as seedByTime, seed_by_random as seedByRandom, sub_bonus as subBonus
 		FROM tiers
@@ -616,8 +602,7 @@ function postTier() {
 }
 
 function getTier() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$stmt = $db->prepare('SELECT id, name, lower_endpoint as lowerEndpoint, upper_endpoint as upperEndpoint, starting_round as startingRound, seed_by_rank as seedByRank, seed_by_time as seedByTime, seed_by_random as seedByRandom, sub_bonus as subBonus
 		FROM tiers
@@ -628,8 +613,7 @@ function getTier() {
 }
 
 function putTier() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -656,8 +640,7 @@ function putTier() {
 }
 
 function deleteTier() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -673,8 +656,7 @@ function deleteTier() {
 }
 
 function getLobbies() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$body = json_decode(file_get_contents('php://input'));
 
@@ -690,7 +672,7 @@ function getLobbies() {
 		foreach ($lobbies as &$lobby) {
 			$stmt = $db->prepare('SELECT lobby_slots.id, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
 				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id
-				WHERE lobby_slots.id = :id')
+				WHERE lobby_slots.id = :id');
 			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
@@ -709,7 +691,7 @@ function getLobbies() {
 		foreach ($lobbies as &$lobby) {
 			$stmt = $db->prepare('SELECT lobby_slots.id, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
 				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id
-				WHERE lobby_slots.id = :id')
+				WHERE lobby_slots.id = :id');
 			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
@@ -720,8 +702,7 @@ function getLobbies() {
 }
 
 function postLobbies() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -771,8 +752,7 @@ function postLobbies() {
 }
 
 function deleteLobbies() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -862,8 +842,7 @@ function putAvailability() {
 }
 
 function getSettings() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$stmt = $db->prepare('SELECT registrations_open as registrationsOpen, registrations_from as registrationsFrom, registrations_to as registrationsTo, role_admin as roleAdmin, role_headpooler as roleHeadpooler, role_mappooler as roleMappooler, role_referee as roleReferee, role_player as rolePlayer
 		FROM settings');
@@ -872,8 +851,7 @@ function getSettings() {
 }
 
 function putSettings() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope != 'ADMIN') {
@@ -940,8 +918,7 @@ function getDiscordLogin() {
 }
 
 function postDiscordLogin() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 	global $discordApi;
 
 	$body = json_decode(file_get_contents('php://input'));
@@ -1063,8 +1040,7 @@ function postDiscordLogin() {
 }
 
 function getDiscordRoles() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 
 	$stmt = $db->prepare('SELECT id, name, color, position
 		FROM discord_roles
@@ -1074,8 +1050,7 @@ function getDiscordRoles() {
 }
 
 function postDiscordRoles() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 	global $discordApi;
 
 	$user = checkToken();
@@ -1105,8 +1080,7 @@ function getTwitchLogin() {
 }
 
 function postTwitchLogin() {
-	global $database;
-	$db = $database->getConnection();
+	global $db;
 	global $twitchApi;
 	$user = checkToken();
 	if (!isset($user)) {
