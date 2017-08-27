@@ -1253,7 +1253,36 @@ function deleteOsuGame() {
 }
 
 function getAvailability() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($user)) {
+		return;
+	}
+
+	if ($user->scope == 'PLAYER') {
+		$stmt = $db->prepare('SELECT availabilities.id, availabilities.time_from as timeFrom, availabilities.time_to as timeTo
+			FROM availabilites INNER JOIN players ON availabilites.user_id = players.id
+			WHERE availabilities.round = :round AND players.discord_id = :discord_id
+			ORDER BY availabilities.time_from ASC');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		return;
+	}
+
+	if ($user->scope == 'ADMIN') {
+		$stmt = $db->prepare('SELECT availabilities.id, availabilities.time_from as timeFrom, availabilities.time_to as timeTo, players.discord_id as discordId, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, tiers.id as tierId, tiers.name as tierName
+			FROM availabilites INNER JOIN players ON availabilities.user_id = players.id INNER JOIN osu_users ON players.osu_id = osu_users.id INNER JOIN tiers ON players.tier = tiers.id
+			WHERE availabilities.round = :round
+			ORDER BY availabilities.time_from ASC');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->execute();
+		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		return;
+	}
 }
 
 function putAvailability() {
