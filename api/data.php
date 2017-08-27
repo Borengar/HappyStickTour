@@ -1162,7 +1162,34 @@ function getOsuMatch() {
 }
 
 function putOsuGame() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if (isset($body->counts)) {
+		$stmt = $db->prepare('UPDATE osu_match_games
+			SET counts = :counts
+			WHERE match_event = :match_event');
+		$stmt->bindValue(':counts', $body->counts, PDO::PARAM_BOOL);
+		$stmt->bindValue(':match_event', $_GET['id'], PDO::PARAM_INT);
+		$stmt->execute();
+	}
+	if (isset($body->pickedBy)) {
+		$stmt = $db->prepare('UPDATE osu_match_games
+			SET picked_by = :picked_by
+			WHERE match_event = :match_event');
+		$stmt->bindValue(':picked_by', $body->pickedBy, PDO::PARAM_INT);
+		$stmt->bindValue(':match_event', $_GET['id'], PDO::PARAM_INT);
+	}
+
+	echoError(0, 'Game updated');
+	return;
 }
 
 function postOsuGame() {
