@@ -1221,7 +1221,23 @@ function postOsuGame() {
 }
 
 function deleteOsuGame() {
-	
+	global $db;
+
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	$stmt = $db->prepare('DELETE FROM osu_match_events
+		WHERE id = :id AND type = \'bracket-reset\'');
+	$stmt->bindValue(':id', $_GET['id'], PDO::PARAM_INT);
+	$stmt->execute();
+
+	echoError(0, 'Bracket reset removed');
+	return;
 }
 
 function getAvailability() {
