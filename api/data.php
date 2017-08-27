@@ -693,12 +693,24 @@ function getLobbies() {
 		$stmt->execute();
 		$lobbies = $stmt->fetchAll(PDO::FETCH_OB);
 		foreach ($lobbies as &$lobby) {
-			$stmt = $db->prepare('SELECT lobby_slots.id, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
+			$stmt = $db->prepare('SELECT lobby_slots.id, lobby_slots.user_id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
 				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id
 				WHERE lobby_slots.id = :id');
 			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
+			foreach ($lobby->slots as &$slot) {
+				if (!empty($slot->userId)) {
+					$stmt = $db->prepare('SELECT time_from as timeFrom, time_to as timeTo
+						FROM availabilities
+						WHERE round = :round AND user_id = :user_id
+						ORDER BY time_from ASC');
+					$stmt->bindValue(':round', $lobby->round, PDO::PARAM_INT);
+					$stmt->bindValue(':user_id', $slot->userId, PDO::PARAM_INT);
+					$stmt->execute();
+					$slot->availabilites = $stmt->fetchAll(PDO::FETCH_OBJ);
+				}
+			}
 		}
 		echo json_encode($lobbies);
 		return;
