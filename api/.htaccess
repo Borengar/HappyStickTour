@@ -2,6 +2,7 @@ RewriteEngine On
 RewriteRule ^users/([^/]+)/?$ data.php?query=user&user=$1
 RewriteRule ^registrations/?$ data.php?query=registrations
 RewriteRule ^players/?$ data.php?query=players
+RewriteRule ^rounds/([^/]+)/availability/?$ data.php?query=availability&round=$1
 RewriteRule ^rounds/([^/]+)/?$ data.php?query=round&round=$1
 RewriteRule ^rounds/?$ data.php?query=rounds
 RewriteRule ^tiers/([^/]+)/?$ data.php?query=tier&tier=$1
