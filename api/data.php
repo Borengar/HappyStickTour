@@ -97,10 +97,14 @@ switch ($_GET['query']) {
 			case 'GET': getOsuMatch(); break; // get an osu match over the osu api
 		}
 		break;
+	case 'osugames':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'POST': postOsuGame(); break; // insert a bracket reset
+		}
+		break;
 	case 'osugame':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'PUT': putOsuGame(); break; // update an osu game
-			case 'POST': postOsuGame(); break; // insert a bracket reset
 			case 'DELETE': deleteOsuGame(); break; // delete a bracket reset
 		}
 		break;

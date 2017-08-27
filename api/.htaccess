@@ -12,6 +12,7 @@ RewriteRule ^mappools/([^/]+)/([^/]+)/?$ data.php?query=mappool&round=$1&tier=$2
 RewriteRule ^mappools/([^/]+)/?$ data.php?query=mappool&mappool=$1
 RewriteRule ^mappools/?$ data.php?query=mappools
 RewriteRule ^osuprofile/([^/]+)/?$ data.php?query=osuprofile&id=$1
+RewriteRule ^osumatch/([^/]+)/games/?$ data.php?query=osugames&match=$1
 RewriteRule ^osumatch/([^/]+)/?$ data.php?query=osumatch&id=$1
 RewriteRule ^osugame/([^/]+)/?$ data.php?query=osugame&id=$1
 RewriteRule ^settings/?$ data.php?query=settings
