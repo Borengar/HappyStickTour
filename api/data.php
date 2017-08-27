@@ -1193,7 +1193,31 @@ function putOsuGame() {
 }
 
 function postOsuGame() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	$stmt = $db->prepare('SELECT MIN(t1.ID + 1) AS nextID
+		FROM tablename t1 LEFT JOIN tablename t2 ON t1.ID + 1 = t2.ID
+		WHERE t2.ID IS NULL');
+	$stmt->execute();
+	$freeId = $stmt->fetch(PDO::FETCH_OBJ)->nextID;
+	$stmt = $db->prepare('INSERT INTO osu_match_events (id, match_id, type, timestamp)
+		VALUES (:id, :match_id, :type, :timestamp)');
+	$stmt->bindValue(':id', $freeId, PDO::PARAM_INT);
+	$stmt->bindValue(':match_id', $_GET['match'], PDO::PARAM_INT);
+	$stmt->bindValue(':type', 'bracket-reset', PDO::PARAM_STR);
+	$stmt->bindValue(':timestamp', $body->time, PDO::PARAM_STR);
+	$stmt->execute();
+
+	echoError(0, 'Bracket reset created');
+	return;
 }
 
 function deleteOsuGame() {
