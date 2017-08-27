@@ -1245,7 +1245,42 @@ function getAvailability() {
 }
 
 function putAvailability() {
+	global $db;
 
+	$user = checkToken();
+
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'ADMIN') {
+		$stmt = $db->prepare('SELECT id
+			FROM players
+			WHERE discord_id = :discord_id');
+		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+		$stmt->execute();
+		$userId = $stmt->fetch(PDO::FETCH_OBJ)->id;
+		$stmt = $db->prepare('DELETE FROM availabilities
+			WHERE round = :round AND user_id = :user_id');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+		$stmt->execute();
+
+		foreach ($body->availabilities as $availability) {
+			$stmt = $db->prepare('INSERT INTO availabilites (round, user_id, time_from, time_to)
+				VALUES (:round, :user_id, :time_from, :time_to)');
+			$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+			$stmt->bindValue(':time_from', $availability->timeFrom, PDO::PARAM_STR);
+			$stmt->bindValue(':time_to', $availability->timeTo, PDO::PARAM_STR);
+			$stmt->execute();
+		}
+
+		echoError(0, 'Availability saved');
+		return;
+	}
 }
 
 function getSettings() {
