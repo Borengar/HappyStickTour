@@ -1,40 +1,47 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="discord-profile">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+		<style include="iron-flex iron-flex-alignment">
 			.wrapper {
 				height: 64px;
 				width: 300px;
 				background-color: #2e3136;
 			}
-			.image {
-				width: 50px;
+			.avatar {
 				height: 50px;
+				width: 50px;
+				margin: 7px 10px;
 				border-radius: 50%;
-				background-size:50px 50px;
+				background-size: 50px 50px;
 			}
 			.name {
 				color: white;
 			}
 		</style>
-		<div class="layout horizontal wrapper">
-			<div style="margin-left:10px;" class="layout vertical">
+		<div class="wrapper layout horizontal">
+			<div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/[[id]]/[[avatar]].png?size=256');"></div>
+			<div class="text-wrapper layout vertical">
 				<div class="flex"></div>
-				<div class="image" style="background-image:url('https://cdn.discordapp.com/avatars/[[profile.id]]/[[profile.avatar]].png?size=256');"></div>
-				<div class="flex"></div>
-			</div>
-			<div style="margin-left:10px;" class="layout vertical">
-				<div class="flex"></div>
-				<div class="name">[[profile.username]]#[[profile.discriminator]]</div>
+				<div class="name">[[username]]#[[discriminator]]</div>
 				<div class="flex"></div>
 			</div>
 		</div>
 	</template>
 	<script>
-		Polymer({
-			is: 'discord-profile',
-			properties: {
-				profile: Object
+		class DiscordProfile extends Polymer.Element {
+			static get is() { return 'discord-profile' }
+
+			static get properties() {
+				return {
+					id: String,
+					avatar: String,
+					username: String,
+					discriminator: String
+				}
 			}
-		});
+		}
+
+		window.customElements.define(DiscordProfile.is, DiscordProfile);
 	</script>
 </dom-module>

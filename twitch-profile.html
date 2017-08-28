@@ -1,93 +1,50 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="twitch-profile">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
+		<style include="iron-flex iron-flex-alignment">
 			.wrapper {
 				height: 100px;
 				width: 400px;
 				background-color: #090909;
-				position: relative;
 			}
-			.image {
+			.avatar {
 				height: 90px;
 				width: 90px;
+				margin: 5px;
 				background-size: 90px 90px;
-				margin-left: 5px;
 			}
 			.username {
 				font-size: 20px;
 				color: white;
-				margin-left: 5px;
 			}
 			.stats {
 				font-size: 14px;
 				color: white;
-				margin-left: 5px;
-			}
-			.sub-icon {
-				height: 30px;
-				width: 30px;
-				margin-bottom: 5px;
 			}
 		</style>
-		<div class="layout horizontal wrapper">
+		<div class="wrapper layout horizontal">
+			<div class="avatar" style="background-image:url('[[avatar]]');"></div>
 			<div class="layout vertical">
+				<div class="username">[[displayName]]</div>
 				<div class="flex"></div>
-				<div class="image" style="background-image:url('[[profile.avatar]]');"></div>
-				<div class="flex"></div>
-			</div>
-			<div class="layout vertical">
-				<div class="username">[[profile.display_name]]</div>
-				<div class="flex"></div>
-				<div class="layout horizontal" hidden$="[[sub_icon_hidden]]">
-					<img class="sub-icon" src="[[sub_icon]]" title="[[sub_title]]">
-					<div class="stats">[[profile.sub_since]]</div>
-				</div>
+				<div class="stats">[[subSince]]</div>
 			</div>
 		</div>
 	</template>
 	<script>
-		Polymer({
-			is: 'twitch-profile',
-			properties: {
-				profile: {
-					type: Object,
-					observer: 'profileChanged'
-				},
-				sub_icon_hidden: {
-					type: Boolean,
-					value: true
-				}
-			},
-			profileChanged: function() {
-				if (this.profile && this.profile.sub_since) {
-					var date = new Date(this.profile.sub_since);
-					var now = new Date();
-					if (now > date) {
-						this.sub_icon = 'http://happysticktour.com/images/sub_normal.png';
-						this.sub_title = 'Subscriber';
-						this.sub_icon_hidden = false;
-						var months = (now.getFullYear() - date.getFullYear()) * 12;
-						months -= date.getMonth() + 1;
-						months += now.getMonth();
-						if (months >= 3) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_3.png';
-							this.sub_title = '3-Month Subscriber';
-						}
-						if (months >= 6) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_6.png';
-							this.sub_title = '6-Month Subscriber';
-						}
-						if (months >= 12) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_12.png';
-							this.sub_title = '12-Month Subscriber';
-						}
-						if (months >= 24) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_24.png';
-							this.sub_title = '24-Month Subscriber';
-						}
-					}
+		class TwitchProfile extends Polymer.Element {
+			static get is() { return 'twitch-profile' }
+
+			static get properties() {
+				return {
+					avatar: String,
+					displayName: String,
+					subSince: Date
 				}
 			}
-		});
+		}
+
+		window.customElements.define(TwitchProfile.is, TwitchProfile);
 	</script>
 </dom-module>

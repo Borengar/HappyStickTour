@@ -1,10 +1,8 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="osu-profile">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			:host {
-				height: 100px;
-				width: 400px;
-			}
+		<style include="iron-flex iron-flex-alignment">
 			.wrapper {
 				height: 100px;
 				width: 400px;
@@ -12,111 +10,69 @@
 				position: relative;
 			}
 			.image {
+				position: absolute;
 				height: 90px;
 				width: 90px;
+				top: 5px;
+				left: 5px;
 				background-size: 90px 90px;
-				margin-left: 5px;
+			}
+			.username, .pp, .acc, .playcount {
+				position: absolute;
+				color: white;
+				left: 100px;
+			}
+			.pp, .acc, .playcount {
+				font-size: 14px;
 			}
 			.username {
 				font-size: 20px;
-				color: white;
-				margin-left: 5px;
+				top: 5px;
 			}
-			.stats {
-				font-size: 14px;
-				color: white;
-				margin-left: 5px;
+			.pp {
+				top: 32px;
+			}
+			.acc {
+				top: 50px;
+			}
+			.playcount {
+				top: 68px;
 			}
 			.rank {
 				position: absolute;
 				right: 5px;
 				bottom: 5px;
+				color: white;
 				font-size: 40px;
 				opacity: 0.5;
-				color: white;
-			}
-			.sub-icon {
-				position: absolute;
-				right: 5px;
-				top: 5px;
-				height: 30px;
-				width: 30px;
 			}
 		</style>
-		<div class="layout horizontal wrapper">
-			<div class="layout vertical">
-				<div class="flex"></div>
-				<div class="image" style="background-image:url('https://a.ppy.sh/[[profile.user_id]]');"></div>
-				<div class="flex"></div>
-			</div>
-			<div class="layout vertical">
-				<div class="username">[[profile.username]]</div>
-				<div class="stats">Performance: <span>[[profile.pp_raw]]</span>pp</div>
-				<div class="stats">Accuracy: <span>[[profile.accuracy]]</span>%</div>
-				<div class="stats">Play Count: <span>[[profile.playcount]]</span> (LV<span>[[profile.level]]</span>)</div>
-			</div>
-			<div class="rank">#<span>[[profile.pp_rank]]</span></div>
-			<img class="sub-icon" hidden$="[[sub_icon_hidden]]" src="[[sub_icon]]" title="[[sub_title]]">
+		<div class="wrapper">
+			<div class="image" style="background-image:url('[[avatarUrl]]');"></div>
+			<div class="username">[[username]]</div>
+			<div class="pp">Performance: <span>[[pp]]</span>pp</div>
+			<div class="acc">Accuracy: <span>[[hitAccuracy]]</span>%</div>
+			<div class="playcount">Play Count: <span>[[playCount]]</span> (LV<span>[[level]]</span>)</div>
+			<div class="rank">#<span>[[rank]]</span></div>
 		</div>
 	</template>
 	<script>
-		Polymer({
-			is: 'osu-profile',
-			properties: {
-				profile: {
-					type: Object,
-					observer: 'profileChanged'
-				},
-				sub_since: {
-					type: String,
-					observer: 'subSinceChanged'
-				},
-				sub_icon_hidden: {
-					type: Boolean,
-					value: true
-				}
-			},
-			subSinceChanged: function() {
-				if (this.sub_since) {
-					var date = new Date(this.sub_since);
-					var now = new Date();
-					if (now > date) {
-						this.sub_icon = 'http://happysticktour.com/images/sub_normal.png';
-						this.sub_title = 'Subscriber';
-						this.sub_icon_hidden = false;
-						var months = (now.getFullYear() - date.getFullYear()) * 12;
-						months -= date.getMonth() + 1;
-						months += now.getMonth();
-						if (months >= 3) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_3.png';
-							this.sub_title = '3-Month Subscriber';
-						}
-						if (months >= 6) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_6.png';
-							this.sub_title = '6-Month Subscriber';
-						}
-						if (months >= 12) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_12.png';
-							this.sub_title = '12-Month Subscriber';
-						}
-						if (months >= 24) {
-							this.sub_icon = 'http://happysticktour.com/images/sub_24.png';
-							this.sub_title = '24-Month Subscriber';
-						}
-					}
-				} else {
-					this.sub_icon = null;
-					this.sub_title = null;
-					this.sub_icon_hidden = true;
-				}
-			},
-			profileChanged: function() {
-				if (this.profile && this.profile.username == 'Lee Jung Hyun') {
-					this.sub_icon = 'http://happysticktour.com/images/earthshaker.png';
-					this.sub_title = 'SHAKEMAN';
-					this.sub_icon_hidden = false;
+		class OsuProfile extends Polymer.Element {
+			static get is() { return 'osu-profile' }
+
+			static get properties() {
+				return {
+					avatarUrl: String,
+					username: String,
+					pp: Number,
+					hitAccuracy: Number,
+					playCount: Number,
+					level: Number,
+					rank: Number
 				}
 			}
-		});
+		}
+
+		window.customElements.define(OsuProfile.is, OsuProfile);
 	</script>
 </dom-module>
