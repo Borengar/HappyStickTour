@@ -1,204 +1,257 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="tiers-page">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			paper-icon-button {
-				padding: 0;
-				width: 20px;
-				height: 20px;
+		<style include="iron-flex iron-flex-alignment">
+			paper-checkbox {
+				--paper-checkbox-checked-color: var(--happystick-green);
 			}
-			.tier-card {
-				width: 1000px;
-				height: 40px;
-				margin: 10px;
+			paper-input {
+				--paper-input-container-focux-color: var(--happystick-green);
+			}
+			paper-radio-button {
+				display: inline-block;
+				--paper-radio-button-checked-color: var(--happystick-green);
+				--paper-radio-button-checked-ink-color: var(--happystick-green);
+			}
+			.list-wrapper, .edit-wrapper {
+				width: 500px;
 				padding: 10px;
+			}
+			.header {
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.add-button, .action-button {
 				background-color: var(--happystick-green);
 				color: white;
-			}
-			.new-tier {
-				width: 1000px;
 				margin: 10px;
+				flex-shrink: 0;
 			}
-			.success-toast {
-				background-color: var(--happystick-green);
-				color: white;
+			.edit-section {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				flex-shrink: 0;
 			}
-			.error-toast {
-				background-color: var(--error-red);
-				color: white;
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
 			}
 		</style>
-		<iron-ajax id="createTierAjax" url="../api/tiers" method="POST" on-response="createResponse" content-type="application/json"></iron-ajax>
-		<iron-ajax id="editTierAjax" url="../api/tiers" method="PUT" on-response="editResponse" content-type="application/json"></iron-ajax>
-		<iron-ajax id="deleteTierAjax" url="../api/tiers" method="DELETE" on-response="deleteResponse" content-type="application/json"></iron-ajax>
-		<div class="layout vertical">
-			<template is="dom-repeat" items="[[tiers]]">
-				<paper-card class="tier-card" elevation="1">
-					<div class="layout horizontal">
-						<div>[[item.name]]</div>
-						<div>:&nbsp;</div>
-						<div>[[item.lower_endpoint]]</div>
-						<div>&nbsp;-&nbsp;</div>
-						<div>[[item.upper_endpoint]]</div>
-						<div>:&nbsp;</div>
-						<div>[[item.slots]]</div>
-						<div>&nbsp;Slots</div>
-						<div class="flex"></div>
-						<paper-icon-button icon="image:edit" on-click="showEditTierDialog"></paper-icon-button>
-						<paper-icon-button icon="delete" style="margin-left:10px;" on-click="showDeleteTierDialog"></paper-icon-button>
+		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" on-response="_roundsResponse" auto></iron-ajax>
+		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
+		<iron-ajax id="postTierAjax" url="../api/tiers" method="POST" content-type="application/json" on-response="_postTierResponse"></iron-ajax>
+		<iron-ajax id="putTierAjax" url="../api/tiers" method="PUT" content-type="application/json" on-response="_putTierResponse"></iron-ajax>
+		<iron-ajax id="deleteTierAjax" url="../api/tiers" method="DELETE" on-response="_deleteTierResponse"></iron-ajax>
+		<div class="wrapper layout horizontal">
+			<div class="list-wrapper layout vertical">
+				<div class="header">Tiers</div>
+				<vaadin-grid class="tiers-grid" items="[[tiers]]" active-item="{{selectedTier}}">
+					<vaadin-grid-column width="50px" flex-grow="0">
+						<template class="header">#</template>
+						<template>[[item.id]]</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column width="50px">
+						<template class="header">Name</template>
+						<template>[[item.name]]</template>
+					</vaadin-grid-column>
+				</vaadin-grid>
+				<paper-icon-button icon="add" class="add-button" on-click="_addTier"></paper-icon-button>
+			</div>
+			<div class="edit-wrapper layout vertical">
+				<div hidden$="[[!editVisible]]">
+					<div hidden$="[[!isNewTier]]">
+						<div class="header">New Tier</div>
 					</div>
-				</paper-card>
-			</template>
-			<paper-button raised class="new-tier" on-click="showNewTierDialog">New tier</paper-button>
+					<div hidden$="[[isNewTier]]">
+						<div class="header">Edit Tier</div>
+					</div>
+					<div class="edit-section">
+						<paper-input label="Name" value="{{name}}"></paper-input>
+					</div>
+					<div class="edit-section layout horizontal">
+						<paper-input label="Lower Endpoint" value="{{lowerEndpoint}}"></paper-input>
+						<div style="margin-top:30px;margin-left:10px;margin-right:10px;">-</div>
+						<paper-input label="Upper Endpoint" value="{{upperEndpoint}}"></paper-input>
+					</div>
+					<div class="edit-section">
+						<paper-dropdown-menu label="Starting Round">
+							<paper-listbox slot="dropdown-content" selected="{{startingRound}}" attr-for-selected="value">
+								<template is="dom-repeat" items="[[rounds]]" as="round">
+									<paper-item value="[[round]]">[[round.name]]</paper-item>
+								</template>
+							</paper-listbox>
+						</paper-dropdown-menu>
+					</div>
+					<div class="edit-section">
+						<paper-radio-group selected="{{selectedSeeding}}">
+							<paper-radio-button name="rank">Seed by Rank</paper-radio-button>
+							<paper-radio-button name="time">Seed by Time</paper-radio-button>
+							<paper-radio-button name="random">Seed by Random</paper-radio-button>
+						</paper-radio-group>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{subBonus}}">Sub Bonus</paper-checkbox>
+					</div>
+					<div class="layout horizontal">
+						<paper-button class="action-button" raised on-click="_saveTier">Save</paper-button>
+						<div hidden$="[[isNewTier]]">
+							<paper-button class="action-button" raised on-click="_deleteTier">Delete</paper-button>
+						</div>
+						<paper-button class="action-button" raised on-click="_cancelTier">Cancel</paper-button>
+					</div>
+				</div>
+			</div>
 		</div>
-		<paper-dialog id="editTierDialog" modal>
-			<h2>Edit tier</h2>
-			<paper-input label="Name" value="{{name}}"></paper-input>
-			<div class="layout horizontal">
-				<paper-input label="Lower endpoint" value="{{lower_endpoint}}" style="width:150px;"></paper-input>
-				<div class="layout vertical">
-					<div class="flex"></div>
-					<div style="margin-left:10px;margin-right:10px;margin-bottom:12px;">-</div>
-				</div>
-				<paper-input label="Upper endpoint" value="{{upper_endpoint}}" style="width:150px;"></paper-input>
-			</div>
-			<paper-input label="Slots" value="{{slots}}"></paper-input>
-			<paper-checkbox checked="{{seed_by_rank}}">Seed by rank</paper-checkbox>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="editTier">Save</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-dialog id="deleteTierDialog" modal>
-			<h2>Delete tier</h2>
-			<div>
-				Are you sure you want to delete the tier <span>[[lower_endpoint]]</span> - <span>[[upper_endpoint]]</span>?
-			</div>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="deleteTier" style="color:red;">Delete</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-dialog id="newTierDialog" modal>
-			<h2>Create new tier</h2>
-			<paper-input label="Name" value="{{name}}"></paper-input>
-			<div class="layout horizontal">
-				<paper-input label="Lower endpoint" value="{{lower_endpoint}}" style="width:150px;"></paper-input>
-				<div class="layout vertical">
-					<div class="flex"></div>
-					<div style="margin-left:10px;margin-right:10px;margin-bottom:12px;">-</div>
-				</div>
-				<paper-input label="Upper endpoint" value="{{upper_endpoint}}" style="width:150px;"></paper-input>
-			</div>
-			<paper-input label="Slots" value="{{slots}}"></paper-input>
-			<paper-checkbox checked="{{seed_by_rank}}">Seed by rank</paper-checkbox>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="createTier">Create</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-toast id="successToast" class="success-toast" text="[[toast_message]]"></paper-toast>
-		<paper-toast id="errorToast" class="error-toast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
-		Polymer({
-			is: 'tiers-page',
-			showEditTierDialog: function(e) {
-				var item = e.model.item;
-				if (item) {
-					this.tier_id = item.id;
-					this.lower_endpoint = item.lower_endpoint;
-					this.upper_endpoint = item.upper_endpoint;
-					this.slots = item.slots;
-					this.seed_by_rank = item.seed_by_rank;
-					this.name = item.name;
-					this.$.editTierDialog.open();
+		class TiersPage extends Polymer.Element {
+			static get is() { return 'tiers-page' }
+
+			static get properties() {
+				return {
+					editVisible: {
+						type: Boolean,
+						value: false
+					},
+					isNewTier: {
+						type: Boolean,
+						value: false
+					},
+					selectedTier: {
+						observer: '_selectedTierChanged'
+					}
 				}
-			},
-			showDeleteTierDialog: function(e) {
-				var item = e.model.item;
-				if (item) {
-					this.tier_id = item.id;
-					this.lower_endpoint = item.lower_endpoint;
-					this.upper_endpoint = item.upper_endpoint;
-					this.slots = item.slots;
-					this.seed_by_rank = item.seed_by_rank;
-					this.name = item.name;
-					this.$.deleteTierDialog.open();
-				}
-			},
-			showNewTierDialog: function() {
-				this.tier_id = null;
-				this.lower_endpoint = null;
-				this.upper_endpoint = null;
-				this.slots = 64;
-				this.seed_by_rank = false;
-				this.name = null;
-				this.$.newTierDialog.open();
-			},
-			editTier: function() {
-				this.$.editTierAjax.url = '../api/tiers/' + this.tier_id;
-				this.$.editTierAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.editTierAjax.body = {
-					'lower_endpoint': this.lower_endpoint,
-					'upper_endpoint': this.upper_endpoint,
-					'slots': this.slots,
-					'seed_by_rank': this.seed_by_rank,
-					'name': this.name
-				};
-				this.$.editTierAjax.generateRequest();
-			},
-			deleteTier: function() {
-				this.$.deleteTierAjax.url = '../api/tiers/' + this.tier_id;
-				this.$.deleteTierAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.deleteTierAjax.generateRequest();
-			},
-			createTier: function() {
-				this.$.createTierAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.createTierAjax.body = {
-					'lower_endpoint': this.lower_endpoint,
-					'upper_endpoint': this.upper_endpoint,
-					'slots': this.slots,
-					'seed_by_rank': this.seed_by_rank,
-					'name': this.name
-				};
-				this.$.createTierAjax.generateRequest();
-			},
-			editResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.fire('tierschanged', {});
-			},
-			deleteResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.fire('tierschanged', {});
-			},
-			createResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.fire('tierschanged', {});
 			}
-		});
+
+			_roundsResponse(e) {
+				var response = e.detail.response;
+				this.rounds = [];
+				for (var i = 0; i < response.length; i++) {
+					if (response[i].isStartRound == '1') {
+						this.push('rounds', response[i]);
+					}
+				}
+			}
+
+			_addTier() {
+				this._resetEditor();
+				this.editVisible = true;
+				this.selectedSeeding = 'time';
+				this.isNewTier = true;
+			}
+
+			_resetEditor() {
+				this.id = null;
+				this.name = null;
+				this.lowerEndpoint = null;
+				this.upperEndpoint = null;
+				this.startingRound = null;
+				this.selectedSeeding = null;
+				this.subBonus = true;
+			}
+
+			_cancelTier() {
+				this.editVisible = false;
+			}
+
+			_saveTier() {
+				if (this.isNewTier) {
+					this.$.postTierAjax.body = {
+						'name': this.name,
+						'lowerEndpoint': this.lowerEndpoint,
+						'upperEndpoint': this.upperEndpoint,
+						'startingRound': this.startingRound.id,
+						'selectedSeeding': this.selectedSeeding,
+						'subBonus': this.subBonus
+					}
+					this.$.postTierAjax.generateRequest();
+				} else {
+					this.$.putTierAjax.url = '../api/tiers/' + this.id;
+					this.$.putTierAjax.body = {
+						'name': this.name,
+						'lowerEndpoint': this.lowerEndpoint,
+						'upperEndpoint': this.upperEndpoint,
+						'startingRound': this.startingRound.id,
+						'selectedSeeding': this.selectedSeeding,
+						'subBonus': this.subBonus
+					}
+					this.$.putTierAjax.generateRequest();
+				}
+			}
+
+			_selectedTierChanged(e) {
+				if (e) {
+					this._resetEditor();
+					this.id = e.id;
+					this.name = e.name;
+					this.lowerEndpoint = e.lowerEndpoint;
+					this.upperEndpoint = e.upperEndpoint;
+					for (var i = 0; i < this.rounds.length; i++) {
+						if (this.rounds[i].id == e.startingRound) {
+							this.startingRound = this.rounds[i];
+						}
+					}
+					this.subBonus = e.subBonus == '1';
+					if (e.seedByTime == '1') {
+						this.selectedSeeding = 'time';
+					} else if (e.seedByRank == '1') {
+						this.selectedSeeding = 'rank';
+					} else if (e.seedByRandom == '1') {
+						this.selectedSeeding = 'random';
+					} else {
+						this.selectedSeeding = 'rank';
+					}
+					this.isNewTier = false;
+					this.editVisible = true;
+				}
+			}
+
+			_deleteTier() {
+				if (this.id && !this.isNewTier) {
+					this.$.deleteTierAjax.url = '../api/tiers/' + this.id;
+					this.$.deleteTierAjax.generateRequest();
+				}
+			}
+
+			_postTierResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getTiersAjax.generateRequest();
+				}
+			}
+
+			_putTierResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getTiersAjax.generateRequest();
+				}
+			}
+
+			_deleteTierResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getTiersAjax.generateRequest();
+				}
+			}
+		}
+
+		window.customElements.define(TiersPage.is, TiersPage);
 	</script>
 </dom-module>

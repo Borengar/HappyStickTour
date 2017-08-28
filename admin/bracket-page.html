@@ -1,0 +1,558 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="bracket-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			paper-checkbox {
+				--paper-checkbox-checked-color: var(--happystick-green);
+			}
+			paper-input {
+				--paper-input-container-focus-color: var(--happystick-green);
+			}
+			paper-dialog {
+				width: 500px;
+			}
+			vaadin-date-picker {
+				margin-left: 10px;
+				margin-top: 25px;
+				margin-left: 10px;
+			}
+			.list-wrapper, .edit-wrapper {
+				width: 500px;
+				padding: 10px;
+			}
+			.header {
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.add-button, .choose-round-button, .action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.edit-section {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				flex-shrink: 0;
+			}
+			.indented {
+				margin-left: 25px;
+			}
+			.time-input {
+				width: 30px;
+				margin-left: 10px;
+			}
+			.time-grid {
+				height: 200px;
+			}
+			.action-wrapper {
+				flex-shrink: 0;
+			}
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
+			}
+		</style>
+		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="postRoundAjax" url="../api/rounds" method="POST" content-type="application/json" on-response="_postRoundResponse"></iron-ajax>
+		<iron-ajax id="putRoundAjax" url="../api/rounds" method="PUT" content-type="application/json" on-response="_putRoundResponse"></iron-ajax>
+		<iron-ajax id="deleteRoundAjax" url="../api/rounds" method="DELETE" on-response="_deleteRoundResponse"></iron-ajax>
+		<div class="wrapper layout horizontal">
+			<div class="list-wrapper layout vertical">
+				<div class="header">Rounds</div>
+				<vaadin-grid class="rounds-grid" items="[[rounds]]" active-item="{{selectedRound}}">
+					<vaadin-grid-column width="50px" flex-grow="0">
+						<template class="header">#</template>
+						<template>[[item.id]]</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column>
+						<template class="header">Name</template>
+						<template>[[item.name]]</template>
+					</vaadin-grid-column>
+				</vaadin-grid>
+				<paper-icon-button icon="add" class="add-button" on-click="_addRound"></paper-icon-button>
+			</div>
+			<div class="edit-wrapper layout vertical">
+				<template is="dom-if" if="[[editVisible]]">
+					<template is="dom-if" if="[[isNewRound]]">
+						<div class="header">New Round</div>
+					</template>
+					<template is="dom-if" if="[[!isNewRound]]">
+						<div class="header">Edit Round</div>
+					</template>
+					<paper-input label="Name" value="{{name}}"></paper-input>
+					<div class="edit-section">
+						<paper-checkbox checked="{{isFirstRound}}">First round</paper-checkbox>
+						<template is="dom-if" if="[[isFirstRound]]">
+							<div class="indented">
+								<paper-input label="Player amount" value="{{playerAmount}}"></paper-input>
+							</div>
+						</template>
+						<template is="dom-if" if="[[!isFirstRound]]">
+							<div style="margin-top:10px;">Player amount: <span>[[playerAmount]]</span></div>
+						</template>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{isStartRound}}" disabled$="[[isFirstRound]]">Players can start in this round</paper-checkbox>
+					</div>
+					<div class="edit-section">
+						<paper-input label="Lobby size" value="{{lobbySize}}"></paper-input>
+					</div>
+					<div class="edit-section">
+						<paper-input label="BO" value="{{bestOf}}"></paper-input>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{hasContinue}}">Players can continue</paper-checkbox>
+						<template is="dom-if" if="[[hasContinue]]">
+							<div class="indented">
+								<paper-input label="Continue amount" value="{{continueAmount}}"></paper-input>
+								<div class="layout horizontal">
+									<paper-icon-button icon="add" class="choose-round-button" on-click="_chooseContinueRound"></paper-icon-button>
+									<template is="dom-if" if="[[continueRoundId]]">
+										<paper-icon-button icon="remove" class="choose-round-button" on-click="_removeContinueRound"></paper-icon-button>
+									</template>
+									<div style="width:50px;margin-top:20px;">[[continueRoundId]]</div>
+									<div style="margin-top:20px;">[[continueRoundName]]</div>
+								</div>
+							</div>
+						</template>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{hasDropDown}}">Players can drop down</paper-checkbox>
+						<template is="dom-if" if="[[hasDropDown]]">
+							<div class="indented">
+								<paper-input label="Drop down amount" value="{{dropDownAmount}}"></paper-input>
+								<div class="layout horizontal">
+									<paper-icon-button icon="add" class="choose-round-button" on-click="_chooseDropDownRound"></paper-icon-button>
+									<template is="dom-if" if="[[dropDownRoundId]]">
+										<paper-icon-button icon="remove" class="choose-round-button" on-click="_removeDropDownRound"></paper-icon-button>
+									</template>
+									<div style="width:50px;margin-top:20px;">[[dropDownRoundId]]</div>
+									<div style="margin-top:20px;">[[dropDownRoundName]]</div>
+								</div>
+							</div>
+						</template>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{hasElimination}}">Players can be eliminated</paper-checkbox>
+						<template is="dom-if" if="[[hasElimination]]">
+							<div class="indented">
+								<paper-input label="Eliminated amount" value="{{eliminatedAmount}}"></paper-input>
+							</div>
+						</template>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{hasBracketReset}}">Bracket reset</paper-checkbox>
+					</div>
+					<div class="edit-section">
+						<vaadin-grid class="time-grid" items="[[times]]" active-item="{{selectedTime}}">
+							<vaadin-grid-column>
+								<template class="header">From</template>
+								<template>[[item.from]]</template>
+							</vaadin-grid-column>
+							<vaadin-grid-column>
+								<template class="header">To</template>
+								<template>[[item.to]]</template>
+							</vaadin-grid-column>
+						</vaadin-grid>
+						<template is="dom-if" if="[[!timeEditVisible]]">
+							<paper-icon-button icon="add" class="add-button" on-click="_addTime"></paper-icon-button>
+						</template>
+						<template is="dom-if" if="[[timeEditVisible]]" on-dom-change="_timeEditorCreated">
+							<div class="layout vertical">
+								<div class="layout horizontal">
+									<vaadin-date-picker placeholder="Date" id="fromDatePicker" value="{{dateFrom}}"></vaadin-date-picker>
+									<paper-input class="time-input" value="{{hourFrom}}"></paper-input>
+									<div style="margin-top:30px;margin-left:10px;">:</div>
+									<paper-input class="time-input" value="{{minutesFrom}}"></paper-input>
+									<div style="margin-top:30px;margin-left:10px;">UTC</div>
+								</div>
+								<div class="layout horizontal">
+									<vaadin-date-picker placeholder="Date" id="toDatePicker" value="{{dateTo}}"></vaadin-date-picker>
+									<paper-input class="time-input" value="{{hourTo}}"></paper-input>
+									<div style="margin-top:30px;margin-left:10px;">:</div>
+									<paper-input class="time-input" value="{{minutesTo}}"></paper-input>
+									<div style="margin-top:30px;margin-left:10px;">UTC</div>
+								</div>
+								<div class="action-wrapper layout horizontal">
+									<paper-button class="action-button" raised on-click="_saveTime">Save</paper-button>
+									<template is="dom-if" if="[[!isNewTime]]">
+										<paper-button class="action-button" raised on-click="_deleteTime">Delete</paper-button>
+									</template>
+									<paper-button class="action-button" raised on-click="_cancelTime">Cancel</paper-button>
+								</div>
+							</div>
+						</template>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{mappoolsReleased}}">Mappools released</paper-checkbox>
+					</div>
+					<div class="edit-section">
+						<paper-checkbox checked="{{lobbiesReleased}}">Lobbies released</paper-checkbox>
+					</div>
+					<div class="action-wrapper layout horizontal">
+						<paper-button class="action-button" raised on-click="_saveRound">Save</paper-button>
+						<template is="dom-if" if="[[!isNewRound]]">
+							<paper-button class="action-button" raised on-click="_deleteRound">Delete</paper-button>
+						</template>
+						<paper-button class="action-button" raised on-click="_cancelRound">Cancel</paper-button>
+					</div>
+				</template>
+			</div>
+		</div>
+		<paper-dialog id="chooseRoundDialog">
+			<h2>Choose a round</h2>
+			<vaadin-grid class="choose-grid" items="[[choosableRounds]]" active-item="{{chosenRound}}">
+				<vaadin-grid-column width="50px" flex-grow="0">
+					<template class="header">#</template>
+					<template>[[item.id]]</template>
+				</vaadin-grid-column>
+				<vaadin-grid-column>
+					<template class="header">Name</template>
+					<template>[[item.name]]</template>
+				</vaadin-grid-column>
+			</vaadin-grid>
+			<div class="buttons">
+				<paper-button dialog-dismiss>Cancel</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
+	</template>
+	<script>
+		class BracketPage extends Polymer.Element {
+			static get is() { return 'bracket-page' }
+
+			static get properties() {
+				return {
+					editVisible: {
+						type: Boolean,
+						value: false
+					},
+					timeEditVisible: {
+						type: Boolean,
+						value: false
+					},
+					isNewRound: {
+						type: Boolean,
+						value: false
+					},
+					isNewTime: {
+						type: Boolean,
+						value: false
+					},
+					isFirstRound: {
+						observer: '_isFirstRoundChanged'
+					},
+					selectedRound: {
+						observer: '_selectedRoundChanged'
+					},
+					chosenRound: {
+						observer: '_chosenRoundChanged'
+					},
+					selectedTime: {
+						observer: '_selectedTimeChanged'
+					}
+				}
+			}
+
+			_timeEditorCreated() {
+				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.formatDate', function(d) {
+					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
+				});
+				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.parseDate', function(text) {
+					var parts = text.split('-');
+					if (parts.length === 3) {
+						var date = new Date(0, 0);
+						date.setFullYear(parseInt(parts[0]));
+						date.setMonth(parseInt(parts[1]) - 1);
+						date.setDate(parseInt(parts[2]));
+						return date;
+					}
+				});
+				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.firstDayOfWeek', 1);
+				this.shadowRoot.querySelector('#toDatePicker').set('i18n.formatDate', function(d) {
+					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
+				});
+				this.shadowRoot.querySelector('#toDatePicker').set('i18n.parseDate', function(text) {
+					var parts = text.split('-');
+					if (parts.length === 3) {
+						var date = new Date(0, 0);
+						date.setFullYear(parseInt(parts[0]));
+						date.setMonth(parseInt(parts[1]) - 1);
+						date.setDate(parseInt(parts[2]));
+						return date;
+					}
+				});
+				this.shadowRoot.querySelector('#toDatePicker').set('i18n.firstDayOfWeek', 1);
+			}
+
+			_addRound() {
+				this._resetEditor();
+				this.isNewRound = true;
+				this.editVisible = true;
+			}
+
+			_isFirstRoundChanged() {
+				if (this.isFirstRound) {
+					this.isStartRound = true;
+				}
+			}
+
+			_resetEditor() {
+				this.id = null;
+				this.name = null;
+				this.lobbySize = null;
+				this.bestOf = null;
+				this.isFirstRound = false;
+				this.playerAmount = null;
+				this.isStartRound = false;
+				this.hasContinue = false;
+				this.continueAmount = null;
+				this.continueRoundId = null;
+				this.continueRoundName = null;
+				this.hasDropDown = false;
+				this.dropDownAmount = null;
+				this.dropDownRoundId = null;
+				this.dropDownRoundName = null;
+				this.hasElimination = false;
+				this.eliminatedAmount = null;
+				this.hasBracketReset = false;
+				this.mappoolsReleased = false;
+				this.lobbiesReleased = false;
+				this.times = [];
+			}
+
+			_cancelRound() {
+				this.editVisible = false;
+			}
+
+			_saveRound() {
+				if (this.isNewRound) {
+					this.$.postRoundAjax.body = {
+						'name': this.name,
+						'lobbySize': this.lobbySize,
+						'bestOf': this.bestOf,
+						'isFirstRound': this.isFirstRound,
+						'playerAmount': this.playerAmount,
+						'isStartRound': this.isStartRound,
+						'hasContinue': this.hasContinue,
+						'continueAmount': this.continueAmount,
+						'continueRoundId': this.continueRoundId,
+						'hasDropDown': this.hasDropDown,
+						'dropDownAmount': this.dropDownAmount,
+						'dropDownRoundId': this.dropDownRoundId,
+						'hasElimination': this.hasElimination,
+						'eliminatedAmount': this.eliminatedAmount,
+						'hasBracketReset': this.hasBracketReset,
+						'mappoolsReleased': this.mappoolsReleased,
+						'lobbiesReleased': this.lobbiesReleased,
+						'times': this.times
+					}
+					this.$.postRoundAjax.generateRequest();
+				} else {
+					this.$.putRoundAjax.url = '../api/rounds/' + this.id;
+					this.$.putRoundAjax.body = {
+						'name': this.name,
+						'lobbySize': this.lobbySize,
+						'bestOf': this.bestOf,
+						'isFirstRound': this.isFirstRound,
+						'playerAmount': this.playerAmount,
+						'isStartRound': this.isStartRound,
+						'hasContinue': this.hasContinue,
+						'continueAmount': this.continueAmount,
+						'continueRoundId': this.continueRoundId,
+						'hasDropDown': this.hasDropDown,
+						'dropDownAmount': this.dropDownAmount,
+						'dropDownRoundId': this.dropDownRoundId,
+						'hasElimination': this.hasElimination,
+						'eliminatedAmount': this.eliminatedAmount,
+						'hasBracketReset': this.hasBracketReset,
+						'mappoolsReleased': this.mappoolsReleased,
+						'lobbiesReleased': this.lobbiesReleased,
+						'times': this.times
+					}
+					this.$.putRoundAjax.generateRequest();
+				}
+			}
+
+			_postRoundResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getRoundsAjax.generateRequest();
+				}
+			}
+
+			_putRoundResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getRoundsAjax.generateRequest();
+				}
+			}
+
+			_selectedRoundChanged(e) {
+				if (e) {
+					this._resetEditor();
+					this.isNewRound = false;
+					this.id = e.id;
+					this.name = e.name;
+					this.lobbySize = e.lobbySize;
+					this.bestOf = e.bestOf;
+					this.isFirstRound = e.isFirstRound == '1';
+					this.playerAmount = e.playerAmount;
+					this.isStartRound = e.isStartRound == '1';
+					this.hasContinue = e.hasContinue == '1';
+					this.continueAmount = e.continueAmount;
+					this.continueRoundId = e.continueRound;
+					for (var i = 0; i < this.rounds.length; i++) {
+						if (this.rounds[i].id == this.continueRoundId) {
+							this.continueRoundName = this.rounds[i].name;
+							break;
+						}
+					}
+					this.hasDropDown = e.hasDropDown == '1';
+					this.dropDownAmount = e.dropDownAmount;
+					this.dropDownRoundId = e.dropDownRound;
+					for (var i = 0; i < this.rounds.length; i++) {
+						if (this.rounds[i].id == this.dropDownRoundId) {
+							this.dropDownRoundName = this.rounds[i].name;
+							break;
+						}
+					}
+					this.hasElimination = e.hasElimination == '1';
+					this.eliminatedAmount = e.eliminatedAmount;
+					this.hasBracketReset = e.hasBracketReset == '1';
+					this.mappoolsReleased = e.mappoolsReleased == '1';
+					this.lobbiesReleased = e.lobbiesReleased == '1';
+					this.times = e.times;
+					this.editVisible = true;
+				}
+			}
+
+			_prepareChooseRoundDialog() {
+				this.set('choosableRounds', []);
+				for (var i = 0; i < this.rounds.length; i++) {
+					if (this.rounds[i].id != this.id) {
+						this.push('choosableRounds', this.rounds[i]);
+					}
+				}
+				this.$.chooseRoundDialog.open();
+			}
+
+			_chooseContinueRound() {
+				this.isChooseContinueRound = true;
+				this._prepareChooseRoundDialog();
+			}
+
+			_chooseDropDownRound() {
+				this.isChooseContinueRound = false;
+				this._prepareChooseRoundDialog();
+			}
+
+			_chosenRoundChanged(e) {
+				if (e) {
+					if (this.isChooseContinueRound) {
+						this.continueRoundId = e.id;
+						this.continueRoundName = e.name;
+					} else {
+						this.dropDownRoundId = e.id;
+						this.dropDownRoundName = e.name;
+					}
+					this.$.chooseRoundDialog.close();
+				}
+			}
+
+			_removeContinueRound() {
+				this.continueRoundId = null;
+				this.continueRoundName = null;
+			}
+
+			_removeDropDownRound() {
+				this.dropDownRoundId = null;
+				this.dropDownRoundName = null;
+			}
+
+			_deleteRound() {
+				if (this.id && !this.isNewRound) {
+					this.$.deleteRoundAjax.url = '../api/rounds/' + this.id;
+					this.$.deleteRoundAjax.generateRequest();
+				}
+			}
+
+			_deleteRoundResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getRoundsAjax.generateRequest();
+				}
+			}
+
+			_addTime() {
+				this.dateFrom = '';
+				this.hourFrom = '00';
+				this.minutesFrom = '00';
+				this.dateTo = '';
+				this.hourTo = '00';
+				this.minutesTo = '00';
+				this.isNewTime = true;
+				this.timeEditVisible = true;
+			}
+
+			_saveTime() {
+				if (this.isNewTime) {
+					this.push('times', {
+						from: this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2),
+						to: this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2)
+					});
+				} else {
+					this.set('times.' + this.timeEditorIndex + '.from', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2));
+					this.set('times.' + this.timeEditorIndex + '.to', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2));
+				}
+				this.timeEditVisible = false;
+			}
+
+			_cancelTime() {
+				this.timeEditVisible = false;
+			}
+
+			_selectedTimeChanged(e) {
+				if (e) {
+					for (var i = 0; i < this.times.length; i++) {
+						if (e.from == this.times[i].from && e.to == this.times[i].to) {
+							this.timeEditorIndex = i;
+						}
+					}
+					this.dateFrom = e.from.split(' ')[0];
+					this.dateTo = e.to.split(' ')[0];
+					this.hourFrom = e.from.split(' ')[1].split(':')[0];
+					this.hourTo = e.to.split(' ')[1].split(':')[0];
+					this.minutesFrom = e.from.split(' ')[1].split(':')[1];
+					this.minutesTo = e.to.split(' ')[1].split(':')[1];
+					this.isNewTime = false;
+					this.timeEditVisible = true;
+				}
+			}
+
+			_deleteTime() {
+				this.splice('times', this.timeEditorIndex, 1);
+				this.timeEditVisible = false;
+			}
+		}
+
+		window.customElements.define(BracketPage.is, BracketPage);
+	</script>
+</dom-module>

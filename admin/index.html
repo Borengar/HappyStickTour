@@ -1,110 +1,29 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
-		<link rel="import" href="../import.html">
-		<link rel="import" href="tiers-page.html">
-		<link rel="import" href="registrations-page.html">
-		<link rel="import" href="setup-page.html">
-		<link rel="import" href="bracket-round.html">
-		<link rel="import" href="lobbies-page.html">
-		<link rel="import" href="lobby-setup.html">
-		<link rel="import" href="mappooler-page.html">
-		<link rel="import" href="tickets-page.html">
-		<link rel="import" href="blacklist-page.html">
-		<title>HappyStick Seasonal Tour</title>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning default-colors">
-			html {
-				font-family: Roboto;
-			}
-		</style>
-	</head>
-	<body class="fullbleed layout vertical">
-		<index-page class="flex layout vertical"></index-page>
-	</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Summer Tour Admin</title>
+    <meta name="description" content="Summer Tour Admin">
+    <base href="/admin/">
+    <script src="../bower_components/webcomponentsjs/webcomponents-loader.js"></script>
+    <link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+    <link rel="import" href="../import.html">
+    <link rel="import" href="index-page.html">
+    <link rel="import" href="bracket-page.html">
+    <link rel="import" href="tiers-page.html">
+    <link rel="import" href="registrations-page.html">
+    <link rel="import" href="roles-page.html">
+    <style is="custom-style" include="iron-flex iron-flex-alignment">
+      html {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        font-family: 'Roboto', 'Noto', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="fullbleed layout vertical">
+    <index-page class="flex"></index-page>
+  </body>
 </html>
-
-<dom-module id="index-page">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			app-header {
-				background-color: var(--discord-grey);
-			}
-			paper-button {
-				background-color: var(--happystick-green);
-				color: white;
-			}
-			app-drawer {
-				z-index: 999;
-			}
-			.main-title {
-				color: white;
-			}
-			.logout-button {
-				color: white;
-			}
-		</style>
-		<iron-ajax id="userAjax" url="../api/users/@me" method="GET" on-response="userResponse"></iron-ajax>
-		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}"></iron-ajax>
-		<app-header>
-			<app-toolbar>
-				<paper-icon-button icon="menu" onclick="drawer.toggle()" style="color:white;"></paper-icon-button>
-				<div main-title class="main-title">Admin</div>
-				<div class="flex"></div>
-				<discord-profile profile="[[discord_profile]]"></discord-profile>
-				<paper-icon-button class="logout-button" icon="power-settings-new" on-click="logout"></paper-icon-button>
-			</app-toolbar>
-		</app-header>
-		<iron-pages attr-for-selected="value" selected="[[page_selected]]">
-			<tiers-page value="Tiers" tiers="[[tiers]]" on-tierschanged="tiersChanged"></tiers-page>
-			<registrations-page value="Registrations" tiers="[[tiers]]"></registrations-page>
-			<setup-page value="Setup" tiers="[[tiers]]"></setup-page>
-			<lobbies-page value="Lobbies" tiers="[[tiers]]"></lobbies-page>
-			<tickets-page value="Tickets"></tickets-page>
-			<blacklist-page value="Blacklist"></blacklist-page>
-		</iron-pages>
-		<app-drawer id="drawer" swipe-open>
-			<paper-menu attr-for-selected="value" selected="{{page_selected}}">
-				<paper-item value="Tiers">Tiers</paper-item>
-				<paper-item value="Registrations">Registrations</paper-item>
-				<paper-item value="Setup">Setup</paper-item>
-				<paper-item value="Lobbies">Lobbies</paper-item>
-				<paper-item value="Tickets">Tickets</paper-item>
-				<paper-item value="Blacklist">Blacklist</paper-item>
-			</paper-menu>
-		</app-drawer>
-	</template>
-	<script>
-		addEventListener('WebComponentsReady', () => {
-			Polymer({
-				is: 'index-page',
-				properties: {
-					page_selected: {
-						type: String,
-						value: 'Tiers'
-					}
-				},
-				ready: function() {
-					this.$.userAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.userAjax.generateRequest();
-					this.$.tiersAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.tiersAjax.generateRequest();
-				},
-				userResponse: function(e) {
-					var user = e.detail.response;
-					this.discord_profile = user.discord_profile;
-				},
-				tiersChanged: function() {
-					this.$.tiersAjax.generateRequest();
-				},
-				logout: function() {
-					window.location = '../index.html';
-				}
-			});
-		});
-	</script>
-</dom-module>

@@ -1,0 +1,139 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="roles-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			paper-dropdown-menu {
+				width: 500px;
+			}
+			.wrapper {
+				margin: 10px;
+			}
+			.header {
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+			}
+		</style>
+		<iron-ajax id="getRolesAjax" url="../api/discordroles" method="GET" last-response="{{discordRoles}}" auto></iron-ajax>
+		<iron-ajax id="postRolesAjax" url="../api/discordroles" method="POST" on-response="_postRolesResponse"></iron-ajax>
+		<iron-ajax id="getSettingsAjax" url="../api/settings" method="GET" last-response="{{settings}}" auto></iron-ajax>
+		<iron-ajax id="putSettingsAjax" url="../api/settings" method="PUT" content-type="application/json" on-response="_putSettingsResponse"></iron-ajax>
+		<div class="wrapper layout vertical">
+			<div class="header">Roles</div>
+			<paper-dropdown-menu label="Admin" style="--paper-input-container-input-color:[[_toColor(roleAdmin.color)]];">
+				<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{roleAdmin}}">
+					<template is="dom-repeat" items="[[discordRoles]]" as="role">
+						<paper-item value="[[role]]" style="color:[[_toColor(role.color)]];">[[role.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-dropdown-menu label="Headpooler" style="--paper-input-container-input-color:[[_toColor(roleHeadpooler.color)]];">
+				<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{roleHeadpooler}}">
+					<template is="dom-repeat" items="[[discordRoles]]" as="role">
+						<paper-item value="[[role]]" style="color:[[_toColor(role.color)]];">[[role.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-dropdown-menu label="Mappooler" style="--paper-input-container-input-color:[[_toColor(roleMappooler.color)]];">
+				<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{roleMappooler}}">
+					<template is="dom-repeat" items="[[discordRoles]]" as="role">
+						<paper-item value="[[role]]" style="color:[[_toColor(role.color)]];">[[role.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-dropdown-menu label="Referee" style="--paper-input-container-input-color:[[_toColor(roleReferee.color)]];">
+				<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{roleReferee}}">
+					<template is="dom-repeat" items="[[discordRoles]]" as="role">
+						<paper-item value="[[role]]" style="color:[[_toColor(role.color)]];">[[role.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-dropdown-menu label="Player" style="--paper-input-container-input-color:[[_toColor(rolePlayer.color)]];">
+				<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{rolePlayer}}">
+					<template is="dom-repeat" items="[[discordRoles]]" as="role">
+						<paper-item value="[[role]]" style="color:[[_toColor(role.color)]];">[[role.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<div class="layout horizontal">
+				<paper-button class="action-button" raised on-click="_save">Save</paper-button>
+				<paper-button class="action-button" raised on-click="_cancel">Cancel</paper-button>
+				<paper-button class="action-button" raised on-click="_reload">Reload Discord Roles</paper-button>
+			</div>
+		</div>
+	</template>
+	<script>
+		class RolesPage extends Polymer.Element {
+			static get is() { return 'roles-page' }
+
+			static get properties() {
+				return {
+					
+				};
+			}
+
+			static get observers() {
+				return [
+					'_rolesReady(discordRoles, settings)'
+				]
+			}
+
+			_toColor(num) {
+				num >>>= 0;
+		    var b = num & 0xFF,
+		        g = (num & 0xFF00) >>> 8,
+		        r = (num & 0xFF0000) >>> 16;
+		    return 'rgba(' + [r, g, b, 255].join(',') + ')';
+			}
+
+			_rolesReady(discordRoles, settings) {
+				if (discordRoles && settings) {
+					for (var i = 0; i < discordRoles.length; i++) {
+						switch (discordRoles[i].id) {
+							case settings.roleAdmin: this.roleAdmin = discordRoles[i]; break;
+							case settings.roleHeadpooler: this.roleHeadpooler = discordRoles[i]; break;
+							case settings.roleMappooler: this.roleMappooler = discordRoles[i]; break;
+							case settings.roleReferee: this.roleReferee = discordRoles[i]; break;
+							case settings.rolePlayer: this.rolePlayer = discordRoles[i]; break;
+						}
+					}
+				}
+			}
+
+			_save() {
+				this.$.putSettingsAjax.body = {
+					'roleAdmin': this.roleAdmin.id,
+					'roleHeadpooler': this.roleHeadpooler.id,
+					'roleMappooler': this.roleMappooler.id,
+					'roleReferee': this.roleReferee.id,
+					'rolePlayer': this.rolePlayer.id
+				};
+				this.$.putSettingsAjax.generateRequest();
+			}
+
+			_cancel() {
+				this.$.getSettingsAjax.generateRequest();
+			}
+
+			_reload() {
+				this.$.postRolesAjax.generateRequest();
+			}
+
+			_postRolesResponse() {
+				this.$.getRolesAjax.generateRequest();
+			}
+
+			_putSettingsResponse() {
+				this.$.getSettingsAjax.generateRequest();
+			}
+		}
+
+		window.customElements.define(RolesPage.is, RolesPage);
+	</script>
+</dom-module>

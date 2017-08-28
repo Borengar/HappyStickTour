@@ -1,0 +1,59 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="index-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			app-header {
+				background-color: var(--discord-grey);
+				color: white;
+			}
+			paper-icon-button {
+				color: white;
+			}
+			.drawer-wrapper {
+				height: 100%;
+				overflow: auto;
+			}
+		</style>
+		<app-drawer-layout force-narrow>
+			<app-drawer slot="drawer">
+				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
+					<paper-item value="Tiers">Tiers</paper-item>
+					<paper-item value="Bracket">Bracket</paper-item>
+					<paper-item value="Registrations">Registrations</paper-item>
+					<paper-item value="Roles">Roles</paper-item>
+				</paper-listbox>
+			</app-drawer>
+			<app-header-layout>
+				<app-header slot="header">
+					<app-toolbar>
+						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
+						<div main-title>Admin</div>
+					</app-toolbar>
+				</app-header>
+				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value">
+					<tiers-page class="flex layout vertical" value="Tiers"></tiers-page>
+					<bracket-page class="flex layout vertical" value="Bracket"></bracket-page>
+					<registrations-page class="flex layout vertical" value="Registrations"></registrations-page>
+					<roles-page class="flex layout vertical" value="Roles"></roles-page>
+				</iron-pages>
+			</app-header-layout>
+		</app-drawer-layout>
+	</template>
+	<script>
+		class IndexPage extends Polymer.Element {
+			static get is() { return 'index-page' }
+
+			static get properties() {
+				return {
+					pageSelected: {
+						type: String,
+						value: 'Bracket'
+					}
+				};
+			}
+		}
+
+		window.customElements.define(IndexPage.is, IndexPage);
+	</script>
+</dom-module>
