@@ -1,0 +1,298 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="index-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			app-header {
+				background-color: var(--discord-grey);
+				color: white;
+			}
+			paper-icon-button {
+				color: white;
+			}
+			osu-profile {
+				margin-top: 10px;
+			}
+			twitch-profile {
+				margin-top: 10px;
+			}
+			.wrapper {
+				margin: 20px;
+			}
+			.heading {
+				font-size: 40px;
+				color: var(--happystick-green);
+				margin-bottom: 20px;
+			}
+			.search-wrapper {
+				flex-shrink: 0;
+				margin-top: 20px;
+			}
+			.search-input {
+				--paper-input-container-focus-color: var(--happystick-green);
+			}
+			.search-button {
+				background-color: var(--happystick-green);
+				color: white;
+				height: 35px;
+				margin-top: 15px;
+			}
+			.tier-wrapper {
+				flex-shrink: 0;
+				margin-top: 10px;
+			}
+			.register-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin-top: 10px;
+				width: 400px;
+			}
+			.twitch-button {
+				background-color: var(--twitch-purple);
+				color: white;
+				margin-top: 10px;
+				width: 400px;
+			}
+		</style>
+		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{discordProfile}}"></iron-ajax>
+		<iron-ajax id="osuProfileAjax" url="../api/osuprofile/" method="GET" last-response="{{osuProfile}}"></iron-ajax>
+		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" on-response="_getTiersResponse" auto></iron-ajax>
+		<iron-ajax id="getRegistrationAjax" url="../api/registrations" method="GET" on-response="_getRegistrationResponse"></iron-ajax>
+		<iron-ajax id="postRegistrationAjax" url="../api/registrations" method="POST" content-type="application/json" on-response="_postRegistrationResponse"></iron-ajax>
+		<iron-ajax id="getTwitchLoginAjax" url="../api/twitchlogin" method="GET" content-type="application/json" on-response="_getTwitchLoginResponse"></iron-ajax>
+		<iron-ajax id="postTwitchLoginAjax" url="../api/twitchlogin" method="POST" content-type="application/json" on-response="_postTwitchLoginResponse"></iron-ajax>
+		<app-header-layout>
+			<app-header slot="header">
+				<app-toolbar class="layout horizontal">
+					<div main-title>Registration</div>
+					<div class="flex"></div>
+					<discord-profile id="[[discordProfile.id]]" username="[[discordProfile.username]]" avatar="[[discordProfile.avatar]]" discriminator="[[discordProfile.discriminator]]"></discord-profile>
+				</app-toolbar>
+			</app-header>
+			<div class="flex layout vertical wrapper">
+				<div class="heading">HAPPYSTICK FALL TOUR REGISTRATION</div>
+				<div>Welcome to the HappyStick Fall Tour Registration!</div>
+				<div>By going through the previous page you've registered on our site with your Discord account. Input your osu! username below to link your osu! account with our site and to register for the Fall Tour.</div>
+				<div class="text">There are a limited amount of slots so the earlier you register, the more likely you'll make it in! You can come back here to check if you've been accepted when the clock strikes July 12th UTC.</div>
+				<div class="text">If your registration is accepted you will be automatically assigned the appropriate Discord role on our server.</div>
+				<div class="text">For an in-depth look into how the Fall Tour is run take a look at <a href="https://google.com" target="_blank">this document.</a> Here you'll find an overview of the prizepool, format, rules, etc.</div>
+				<template is="dom-if" if="[[showSearch]]">
+					<div class="layout horizontal search-wrapper">
+						<paper-input class="search-input" label="osu! ID or Username" value="{{osuId}}" on-keydown="_searchKeyDown"></paper-input>
+						<paper-button class="search-button" raised on-click="_searchOsuProfile">Search</paper-button>
+					</div>
+				</template>
+				<osu-profile avatar-url="[[osuProfile.avatarUrl]]" username="[[osuProfile.username]]" pp="[[osuProfile.pp]]" hit-accuracy="[[osuProfile.hitAccuracy]]" play-count="[[osuProfile.playCount]]" level="[[osuProfile.level]]" rank="[[osuProfile.rank]]"></osu-profile>
+				<template is="dom-if" if="[[tier]]">
+					<div class="layout horizontal tier-wrapper">
+						<div>Your tier: <span>[[tier.name]]</span></div>
+					</div>
+				</template>
+				<template is="dom-if" if="[[showRegister]]">
+					<paper-button class="register-button" raised on-click="_register">Register</paper-button>
+				</template>
+				<template is="dom-if" if="[[showTwitchLink]]">
+					<paper-button class="twitch-button" raised on-click="_twitchLink">Link Twitch</paper-button>
+				</template>
+				<template is="dom-if" if="[[showTwitchProfile]]">
+					<twitch-profile avatar="[[twitchProfile.avatar]]" display-name="[[twitchProfile.displayName]]" sub-since="[[twitchProfile.subSince]]"></twitch-profile>
+				</template>
+			</div>
+		</app-header-layout>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
+	</template>
+	<script>
+		class IndexPage extends Polymer.Element {
+			static get is() { return 'index-page' }
+
+			static get properties() {
+				return {
+					osuProfile: {
+						type: Object,
+						observer: '_osuProfileChanged'
+					},
+					showRegister: {
+						type: Boolean,
+						value: false
+					},
+					showSearch: {
+						type: Boolean,
+						value: true
+					},
+					showTwitchLink: {
+						type: Boolean,
+						value: false
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getUserAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getUserAjax.generateRequest();
+				this.$.getRegistrationAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getRegistrationAjax.generateRequest();
+
+				var code = this._getUriParams('code');
+				var state = this._getUriParams('state');
+				if (code && state) {
+					this.$.postTwitchLoginAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
+					this.$.postTwitchLoginAjax.body = {
+						'code': code,
+						'state': state
+					}
+					this.$.postTwitchLoginAjax.generateRequest();
+				}
+			}
+
+			_getHashParams() {
+				var hashParams = {};
+		    var e,
+		        a = /\+/g,  // Regex for replacing addition symbol with a space
+		        r = /([^&;=]+)=?([^&;]*)/g,
+		        d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
+		        q = window.location.hash.substring(1);
+
+		    while (e = r.exec(q))
+		       hashParams[d(e[1])] = d(e[2]);
+
+		    return hashParams;
+			}
+
+			_getUriParams(name) {
+				var url = window.location.href;
+		    name = name.replace(/[\[\]]/g, "\\$&");
+		    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+		        results = regex.exec(url);
+		    if (!results) return null;
+		    if (!results[2]) return '';
+		    return decodeURIComponent(results[2].replace(/\+/g, " "));
+			}
+
+			_searchKeyDown(e) {
+				if (e.keyCode == 13) {
+					this._searchOsuProfile();
+				}
+			}
+
+			_searchOsuProfile() {
+				this.$.osuProfileAjax.url = '../api/osuprofile/' + this.osuId;
+				this.$.osuProfileAjax.generateRequest();
+			}
+
+			_osuProfileChanged(e) {
+				this.tier = null;
+				this.showRegister = false;
+				if (this.tiers) {
+					for (var i = 0; i < this.tiers.length; i++) {
+						if (parseInt(e.rank) >= parseInt(this.tiers[i].lowerEndpoint) && parseInt(e.rank) <= parseInt(this.tiers[i].upperEndpoint)) {
+							this.tier = this.tiers[i];
+							if (this.showSearch == true) {
+								this.showRegister = true;
+							}
+						}
+					}
+					if (!this.tier) {
+						this.tier = { name: 'No tier found' };
+					}
+				}
+			}
+
+			_getRegistrationResponse(e) {
+				var response = e.detail.response;
+				if (response) {
+					this.showSearch = false;
+					this.osuProfile = {
+						'avatarUrl': response.osuAvatarUrl,
+						'username': response.osuUsername,
+						'pp': response.osuPp,
+						'hitAccuracy': response.osuHitAccuracy,
+						'playCount': response.osuPlayCount,
+						'level': response.osuLevel,
+						'rank': response.osuRank
+					}
+					if (response.twitchId) {
+						this.showTwitchLink = false;
+						this.showTwitchProfile = true;
+						this.twitchProfile = {
+							'avatar': response.twitchAvatar,
+							'displayName': response.twitchDisplayName ? response.twitchDisplayName : response.twitchUsername,
+							'subSince': response.twitchSubSince
+						}
+					} else {
+						this.showTwitchLink = true;
+						this.showTwitchProfile = false;
+					}
+				}
+			}
+
+			_getTiersResponse(e) {
+				if (this.osuProfile) {
+					for (var i = 0; i < this.tiers.length; i++) {
+						if (parseInt(this.osuProfile.rank) >= parseInt(this.tiers[i].lowerEndpoint) && parseInt(this.osuProfile.rank) <= parseInt(this.tiers[i].upperEndpoint)) {
+							this.tier = this.tiers[i];
+							if (this.showSearch == true) {
+								this.showRegister = true;
+							}
+						}
+					}
+					if (!this.tier) {
+						this.tier = { name: 'No tier found' };
+					}
+				}
+			}
+
+			_register() {
+				this.$.postRegistrationAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.postRegistrationAjax.body = {
+					'osuId': this.osuProfile.id
+				}
+				this.$.postRegistrationAjax.generateRequest();
+			}
+
+			_postRegistrationResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getRegistrationAjax.generateRequest();
+				}
+			}
+
+			_twitchLink() {
+				this.$.getTwitchLoginAjax.generateRequest();
+			}
+
+			_getTwitchLoginResponse(e) {
+				var response = e.detail.response;
+				window.location = response.uri;
+			}
+
+			_postTwitchLoginResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+					this.$.getRegistrationAjax.generateRequest();
+				}
+			}
+		}
+
+		window.customElements.define(IndexPage.is, IndexPage);
+	</script>
+</dom-module>
