@@ -317,6 +317,7 @@ function getRegistrations() {
 
 function putRegistration() {
 	global $db;
+	global $discordApi;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -332,6 +333,14 @@ function putRegistration() {
 				WHERE id = :id_old');
 			$stmt->bindValue(':id_new', $body->idNew, PDO::PARAM_INT);
 			$stmt->bindValue(':id_old', $body->idOld, PDO::PARAM_INT);
+			$stmt->execute();
+			$member = $discordApi->getGuildMember($body->idNew);
+			$stmt = $db->prepare('INSERT INTO discord_users (id, username, discriminator, avatar)
+				VALUES (:id, :username, :discriminator, :avatar)');
+			$stmt->bindValue(':id', $body->idNew, PDO::PARAM_INT);
+			$stmt->bindValue(':username', $member->user->username, PDO::PARAM_STR);
+			$stmt->bindValue(':discriminator', $member->user->discriminator, PDO::PARAM_STR);
+			$stmt->bindValue(':avatar', $member->user->avatar, PDO::PARAM_STR);
 			$stmt->execute();
 			echoError(0, 'Discord account changed');
 			return;
