@@ -34,6 +34,9 @@
 				width: 500px;
 				padding: 10px;
 			}
+			.edit-wrapper {
+				padding: 10px;
+			}
 			.edit-section {
 				margin-top: 10px;
 				margin-bottom: 10px;
@@ -49,6 +52,8 @@
 		</style>
 		<iron-ajax id="getSettingsAjax" url="../api/settings" method="GET" on-response="_settingsResponse" auto></iron-ajax>
 		<iron-ajax id="putSettingsAjax" url="../api/settings" method="PUT" content-type="application/json" on-response="_putSettingsResponse"></iron-ajax>
+		<iron-ajax id="getRegistrationsAjax" url="../api/registrations" method="GET" last-response="{{registrations}}"></iron-ajax>
+		<iron-ajax id="putRegistrationAjax" url="../api/registrations" method="PUT" content-type="application/json" on-response="_putRegistrationResponse"></iron-ajax>
 		<div class="wrapper layout vertical">
 			<div class="header">Settings</div>
 			<div class="edit-section">
@@ -75,10 +80,50 @@
 			<div class="action-wrapper layout horizontal">
 				<paper-button class="action-button" raised on-click="_saveSettings">Save</paper-button>
 			</div>
-			<div class="header">Registrations</div>
 			<div class="layout horizontal">
 				<div class="list-wrapper layout vertical">
-
+					<div class="header">Registrations</div>
+					<vaadin-grid class="registrations-grid" items="[[registrations]]" active-item="{{selectedRegistration}}">
+						<vaadin-grid-column width="100px">
+							<template class="header">Time</template>
+							<template>[[item.registrationTime]]</template>
+						</vaadin-grid-column>
+						<vaadin-grid-column flex-grow="1">
+							<template class="header">osu! username</template>
+							<template>[[item.osuUsername]]</template>
+						</vaadin-grid-column>
+						<vaadin-grid-column flex-grow="1">
+							<template class="header">Discord username</template>
+							<template>[[item.discordUsername]]</template>
+						</vaadin-grid-column>
+					</vaadin-grid>
+				</div>
+				<div class="edit-wrapper layout vertical">
+					<div hidden$="[[!editVisible]]">
+						<div class="header">Registration <span>[[discordId]]</span></div>
+						<div class="edit-section">
+							<discord-profile id="[[discordId]]" avatar="[[discordAvatar]]" username="[[discordUsername]]" discriminator="[[discordDiscriminator]]" on-click="_showChangeDiscordId"></discord-profile>
+							<div hidden$="[[!newDiscordIdVisible]]">
+								<paper-input label="New Discord ID" value="{{newDiscordId}}"></paper-input>
+								<div class="action-wrapper layout horizontal">
+									<paper-button class="action-button" on-click="_cancelNewDiscordId">Cancel</paper-button>
+									<paper-button class="action-button" on-click="_changeNewDiscordId">Change</paper-button>
+								</div>
+							</div>
+						</div>
+						<template is="dom-if" if="[[twitchId]]">
+							<div class="edit-section">
+								<a href="https://twitch.tv/[[twitchUsername]]" target="_blank">
+									<twitch-profile avatar="[[twitchAvatar]]" display-name="[[twitchDisplayName]]" sub-since="[[twitchSubSince]]"></twitch-profile>
+								</a>
+							</div>
+						</template>
+						<div class="edit-section">
+							<a href="https://osu.ppy.sh/users/[[osuId]]" target="_blank">
+								<osu-profile avatar-url="[[osuAvatarUrl]]" username="[[osuUsername]]" pp="[[osuPp]]" hit-accuracy="[[osuHitAccuracy]]" play-count="[[osuPlayCount]]" level="[[osuLevel]]" rank="[[osuRank]]"></osu-profile>
+							</a>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -91,8 +136,26 @@
 
 			static get properties() {
 				return {
-
+					editVisible: {
+						type: Boolean,
+						value: false
+					},
+					newDiscordIdVisible: {
+						type: Boolean,
+						value: false
+					},
+					selectedRegistration: {
+						observer: '_selectedRegistrationChanged'
+					}
 				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getRegistrationsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getRegistrationsAjax.generateRequest();
 			}
 
 			_settingsCreated() {
@@ -165,6 +228,69 @@
 					this.$.errorToast.open();
 				} else {
 					this.$.successToast.open();
+				}
+			}
+
+			_selectedRegistrationChanged(e) {
+				if (e) {
+					this.discordAvatar = e.discordAvatar;
+					this.discordDiscriminator = e.discordDiscriminator;
+					this.discordId = e.discordId;
+					this.discordUsername = e.discordUsername;
+					this.osuAvatarUrl = e.osuAvatarUrl;
+					this.osuBestScore = e.osuBestScore;
+					this.osuCountry = e.osuCountry;
+					this.osuHitAccuracy = e.osuHitAccuracy;
+					this.osuId = e.osuId;
+					this.osuJoinDate = e.osuJoinDate;
+					this.osuLevel = e.osuLevel;
+					this.osuPlayCount = e.osuPlayCount;
+					this.osuPlaystyle = e.osuPlaystyle;
+					this.osuPp = e.osuPp;
+					this.osuRank = e.osuRank;
+					this.osuRankHistory = e.osuRankHistory.split(',');
+					this.osuUsername = e.osuUsername;
+					this.registrationTime = e.registrationTime;
+					this.twitchAvatar = e.twitchAvatar;
+					this.twitchDisplayName = e.twitchDisplayName;
+					this.twitchId = e.twitchId;
+					this.twitchSubPlan = e.twitchSubPlan;
+					this.twitchSubSince = e.twitchSubSince;
+					this.twitchUsername = e.twitchUsername;
+					this.editVisible = true;
+				}
+			}
+
+			_showChangeDiscordId() {
+				this.newDiscordId = null;
+				this.newDiscordIdVisible = true;
+			}
+
+			_cancelNewDiscordId() {
+				this.newDiscordIdVisible = false;
+			}
+
+			_changeNewDiscordId() {
+				this.$.putRegistrationAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putRegistrationAjax.body = {
+					'idOld': this.discordId,
+					'idNew': this.newDiscordId
+				}
+				this.$.putRegistrationAjax.generateRequest();
+			}
+
+			_putRegistrationResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this._cancelNewDiscordId();
+					this.editVisible = false;
+					this.$.getRegistrationsAjax.generateRequest();
 				}
 			}
 		}
