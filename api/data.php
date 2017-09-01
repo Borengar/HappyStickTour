@@ -61,6 +61,7 @@ switch ($_GET['query']) {
 	case 'lobbies':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'GET': getLobbies(); break; // get a list of lobbies in a round
+			case 'PUT': putLobbies(); break; // update lobbies
 			case 'POST': postLobbies(); break; // create lobbies for a round
 			case 'DELETE': deleteLobbies(); break; // delete all lobbies of a round
 		}
@@ -401,6 +402,32 @@ function deleteRegistration() {
 function getPlayers() {
 	global $db;
 
+	$user = checkToken();
+
+	if (isset($user) && $user->scope == 'ADMIN') {
+		if (isset($_GET['round']) && isset($_GET['tier'])) {
+			$stmt = $db->prepare('SELECT players.id as userId, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
+				FROM players INNER JOIN osu_users ON players.osu_id = osu_users.id
+				WHERE players.tier = :tier AND next_round = :next_round');
+			$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
+			$stmt->bindValue(':next_round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->execute();
+			$players = $stmt->fetchAll(PDO::FETCH_OBJ);
+			foreach ($players as &$player) {
+				$stmt = $db->prepare('SELECT time_from as timeFrom, time_to as timeTo
+					FROM availabilities
+					WHERE round = :round AND user_id = :user_id
+					ORDER BY time_from ASC');
+				$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+				$stmt->bindValue(':user_id', $player->userId, PDO::PARAM_INT);
+				$stmt->execute();
+				$player->availabilities = $stmt->fetchAll(PDO::FETCH_OBJ);
+			}
+			echo json_encode($players);
+			return;
+		}
+	}
+
 	$stmt = $db->prepare('SELECT osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, tiers.id as tierId, tiers.name as tierName
 		FROM players INNER JOIN osu_users ON players.osu_id = osu_users.id INNER JOIN tier ON players.tier = tiers.id');
 	$stmt->execute();
@@ -670,15 +697,13 @@ function deleteTier() {
 function getLobbies() {
 	global $db;
 
-	$body = json_decode(file_get_contents('php://input'));
-
 	$user = checkToken();
 	if (!isset($user) || $user->scope == 'PLAYER' || $user->scope == 'REFEREE') {
 		$stmt = $db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.round LIKE :round AND lobbies.tier LIKE :tier AND rounds.lobbies_released = 1');
-		$stmt->bindValue(':round', isset($body->round) ? $body->round : '%', PDO::PARAM_STR);
-		$stmt->bindValue(':tier', isset($body->tier) ? $body->tier : '%', PDO::PARAM_STR);
+		$stmt->bindValue(':round', isset($_GET['round']) ? $_GET['round'] : '%', PDO::PARAM_STR);
+		$stmt->bindValue(':tier', isset($_GET['tier']) ? $_GET['tier'] : '%', PDO::PARAM_STR);
 		$stmt->execute();
 		$lobbies = $stmt->fetchAll(PDO::FETCH_OBJ);
 		foreach ($lobbies as &$lobby) {
@@ -696,14 +721,14 @@ function getLobbies() {
 		$stmt = $db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.round LIKE :round AND lobbies.tier LIKE :tier');
-		$stmt->bindValue(':round', isset($body->round) ? $body->round : '%', PDO::PARAM_STR);
-		$stmt->bindValue(':tier', isset($body->tier) ? $body->tier : '%', PDO::PARAM_STR);
+		$stmt->bindValue(':round', isset($_GET['round']) ? $_GET['round'] : '%', PDO::PARAM_STR);
+		$stmt->bindValue(':tier', isset($_GET['tier']) ? $_GET['tier'] : '%', PDO::PARAM_STR);
 		$stmt->execute();
 		$lobbies = $stmt->fetchAll(PDO::FETCH_OBJ);
 		foreach ($lobbies as &$lobby) {
 			$stmt = $db->prepare('SELECT lobby_slots.id, lobby_slots.user_id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
 				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id
-				WHERE lobby_slots.id = :id');
+				WHERE lobby_slots.lobby = :id');
 			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
@@ -716,11 +741,45 @@ function getLobbies() {
 					$stmt->bindValue(':round', $lobby->round, PDO::PARAM_INT);
 					$stmt->bindValue(':user_id', $slot->userId, PDO::PARAM_INT);
 					$stmt->execute();
-					$slot->availabilites = $stmt->fetchAll(PDO::FETCH_OBJ);
+					$slot->availabilities = $stmt->fetchAll(PDO::FETCH_OBJ);
+				} else {
+					$slot->availabilities = [];
 				}
 			}
 		}
 		echo json_encode($lobbies);
+		return;
+	}
+}
+
+function putLobbies() {
+	global $db;
+
+	$user = checkToken();
+	if (!isset($user)) {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'ADMIN') {
+		foreach ($body->lobbies as $lobby) {
+			$stmt = $db->prepare('UPDATE lobbies
+				SET match_time = :match_time
+				WHERE id = :id');
+			$stmt->bindValue(':match_time', $lobby->matchTime, PDO::PARAM_STR);
+			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
+			$stmt->execute();
+			foreach ($lobby->slots as $slot) {
+				$stmt = $db->prepare('UPDATE lobby_slots
+					SET user_id = :user_id
+					WHERE id = :id');
+				$stmt->bindValue(':user_id', $slot->userId, PDO::PARAM_INT);
+				$stmt->bindValue(':id', $slot->id, PDO::PARAM_INT);
+				$stmt->execute();
+			}
+		}
+		echoError(0, 'Lobbies updated');
 		return;
 	}
 }
@@ -834,20 +893,6 @@ function putLobby() {
 	}
 
 	$body = json_decode(file_get_contents('php://input'));
-
-	if ($user->scope == 'ADMIN') {
-		if (isset($body->matchTime)) {
-			$stmt = $db->prepare('UPDATE lobbies
-				SET match_time = :match_time
-				WHERE id = :id');
-			$stmt->bindValue(':match_time', $body->matchTime, PDO::PARAM_STR);
-			$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
-			$stmt->execute();
-		}
-
-		echoError(0, 'Lobby updated');
-		return;
-	}
 
 	if ($user->scope == 'REFEREE') {
 		if (isset($body->matchId)) {
