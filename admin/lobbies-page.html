@@ -1,253 +1,455 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="lobbies-page">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			paper-button[dialog-confirm] {
-				color: var(--error-red);
+		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				margin: 10px;
 			}
-			.create-button {
+			.filter-wrapper {
+				flex-shrink: 0;
+			}
+			.action-button {
 				background-color: var(--happystick-green);
 				color: white;
-				margin-left: 50px;
-				margin-top: 10px;
-				width: 200px;
+				margin: 10px;
+				width: 300px;
+				flex-shrink: 0;
 			}
-			.delete-button {
-				background-color: var(--error-red);
-				color: white;
-				margin-left: 50px;
-				width: 200px;
-			}
-			.tier-selector {
-				width: 200px;
-				margin-left: 50px;
-				margin-top: 10px;
-			}
-			#deleteDialog {
+			.players-wrapper {
 				width: 500px;
+				min-width: 500px;
+				overflow-y: scroll;
 			}
-			#successToast {
-				background-color: var(--happystick-green);
+			.player-wrapper {
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.availability-wrapper {
+				margin: 5px;
+				flex-shrink: 0;
+			}
+			.lobbies-wrapper {
+				overflow-y: scroll;
+			}
+			.lobby-wrapper {
+				width: 450px;
+				margin: 10px;
+			}
+			.player-drop-wrapper {
+				margin: 10px auto;
+				width: 400px;
+			}
+			.player-empty {
+				height: 100px;
+				flex-shrink: 0;
+				background-color: #090909;
 				color: white;
+			}
+			paper-dropdown-menu {
+				margin: 10px;
 			}
 			#errorToast {
-				background-color: var(--error-red);
-				color: white;
+				--paper-toast-background-color: var(--error-red);
 			}
 		</style>
-		<iron-ajax id="roundsAjax" url="../api/tiers//rounds" method="GET" on-response="roundsResponse" last-response="{{rounds}}"></iron-ajax>
-		<iron-ajax id="lobbiesAjax" url="../api/rounds//lobbies" method="GET" on-response="lobbiesResponse" last-response="{{lobbies}}"></iron-ajax>
-		<iron-ajax id="createLobbiesAjax" url="../api/rounds//lobbies" method="POST" on-response="createLobbiesResponse"></iron-ajax>
-		<iron-ajax id="deleteLobbiesAjax" url="../api/rounds//lobbies" method="DELETE" on-response="deleteLobbiesResponse"></iron-ajax>
-		<iron-ajax id="finalizeLobbiesAjax" url="../api/rounds//lobbies" method="PUT" on-response="finalizeLobbiesResponse"></iron-ajax>
-		<div class="layout vertical">
-			<paper-dropdown-menu class="tier-selector" label="Tier">
-				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
-					<template is="dom-repeat" items="[[tiers]]" as="tier">
-						<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
-					</template>
-				</paper-listbox>
-			</paper-dropdown-menu>
-			<div class="layout vertical" hidden$="[[rounds_hidden]]">
-				<paper-dropdown-menu class="tier-selector" label="Round">
-					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_round}}">
-						<template is="dom-repeat" items="[[rounds]]" as="round" filter="isActive">
+		<iron-ajax id="roundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
+		<iron-ajax id="getLobbiesAjax" url="../api/lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}" on-response="_getLobbiesResponse"></iron-ajax>
+		<iron-ajax id="putLobbiesAjax" url="../api/lobbies" method="PUT" content-type="application/json" on-response="_putLobbiesResponse"></iron-ajax>
+		<iron-ajax id="postLobbiesAjax" url="../api/lobbies" method="POST" content-type="application/json" on-response="_postLobbiesResponse"></iron-ajax>
+		<iron-ajax id="getPlayersAjax" url="../api/players" method="GET" content-type="application/json" last-response="{{players}}" on-response="_getPlayersResponse"></iron-ajax>
+		<div class="wrapper flex layout vertical">
+			<div class="filter-wrapper layout horizontal">
+				<paper-dropdown-menu label="Round">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedRound}}">
+						<paper-item value="0">All</paper-item>
+						<template is="dom-repeat" items="[[rounds]]" as="round">
 							<paper-item value="[[round.id]]">[[round.name]]</paper-item>
 						</template>
 					</paper-listbox>
 				</paper-dropdown-menu>
-				<div class="layout vertical" hidden$="[[lobbies_hidden]]">
-					<div class="layout vertical" hidden$="[[create_lobbies_hidden]]">
-						<paper-button raised class="create-button" on-click="createLobbies">Create Lobbies</paper-button>
-					</div>
-					<div class="layout vertical" hidden$="[[lobby_list_hidden]]">
-						<div class="layout vertical" hidden$="[[actions_hidden]]">
-							<paper-button raised class="delete-button" on-click="showDeleteLobbies">Delete Lobbies</paper-button>
-							<!--<paper-button raised class="create-button" on-click="showFinalizeLobbies">Finalize</paper-button>-->
-						</div>
-						<div class="layout horizontal" style="margin-top:20px;">
-							<template is="dom-repeat" items="[[lobbies]]" as="lobby">
-								<lobby-setup lobby_id="[[lobby.id]]" slots="[[lobby.slots]]" play_time_setter="[[lobby.match_time]]" round="[[selected_round]]" locked="[[actions_hidden]]" on-changed="lobbyChanged"></lobby-setup>
+				<paper-dropdown-menu label="Tier">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedTier}}">
+						<paper-item value="0">All</paper-item>
+						<template is="dom-repeat" items="[[tiers]]" as="tier">
+							<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+			</div>
+			<div class="layout horizontal">
+				<paper-button class="action-button" on-click="_createLobbies" hidden$="[[!createVisible]]">Create lobbies</paper-button>
+				<paper-button class="action-button" on-click="_saveLobbies" hidden$="[[!saveVisible]]">Save lobbies</paper-button>
+				<paper-button class="action-button" on-click="_deleteLobbies" hidden$="[[!deleteVisible]]">Delete lobbies</paper-button>
+			</div>
+			<div class="flex layout horizontal">
+				<div class="lobbies-wrapper layout horizontal wrap">
+					<template is="dom-repeat" items="{{lobbies}}" as="lobby" mutable-data>
+						<div class="lobby-wrapper layout vertical">
+							<div>Lobby <span>[[lobby.id]]</span></div>
+							<paper-input label="Match time" value="{{lobby.matchTime}}"></paper-input>
+							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
+								<div hidden$="[[!slot.userId]]">
+									<div class="player-drop-wrapper layout vertical">
+										<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]" draggable="true" on-dragover="_dragOver" on-drop="_dropOnPlayer" on-dragstart="_dragFromLobbies"></osu-profile>
+										<template is="dom-repeat" items="[[slot.availabilities]]" as="availability">
+											<div class="availability-wrapper">
+												<div><span>[[availability.timeFrom]]</span> - <span>[[availability.timeTo]]</span></div>
+											</div>
+										</template>
+									</div>
+								</div>
+								<div hidden$="[[slot.userId]]">
+									<div class="player-drop-wrapper layout vertical" on-dragover="_dragOver" on-drop="_dropOnEmpty">
+										<div class="player-empty layout horizontal">
+											<div class="flex"></div>
+											<div class="layout vertical">
+												<div class="flex"></div>
+												<div>EMPTY</div>
+												<div class="flex"></div>
+											</div>
+											<div class="flex"></div>
+										</div>
+									</div>
+								</div>
 							</template>
 						</div>
-					</div>
+					</template>
+				</div>
+				<div class="players-wrapper layout vertical" on-dragover="_dragOver" on-drop="_dropOnList">
+					<template is="dom-repeat" items="[[players]]" as="player">
+						<div class="player-wrapper layout vertical">
+							<osu-profile avatar-url="[[player.osuAvatarUrl]]" username="[[player.osuUsername]]" pp="[[player.osuPp]]" hit-accuracy="[[player.osuHitAccuracy]]" play-count="[[player.osuPlayCount]]" level="[[player.osuLevel]]" rank="[[player.osuRank]]" draggable="true" on-dragstart="_dragFromPlayers"></osu-profile>
+							<template is="dom-repeat" items="[[player.availabilities]]" as="availability">
+								<div class="availability-wrapper">
+									<div><span>[[availability.timeFrom]]</span> - <span>[[availability.timeTo]]</span></div>
+								</div>
+							</template>
+						</div>
+					</template>
 				</div>
 			</div>
 		</div>
-		<paper-dialog id="deleteDialog" modal>
-			<h2>Delete lobbies</h2>
-			<div class="layout vertical">
-				<div>Do you really want to delete these lobbies?</div>
-			</div>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="deleteLobbies">Delete</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-dialog id="finalizeDialog" modal>
-			<h2>Finalize lobbies</h2>
-			<div class="layout vertical">
-				<div>Do you really want to finalize these lobbies?</div>
-				<div>This will remove the ability to change lobbies/matches and put players into the next round.</div>
-			</div>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="finalizeLobbies">Finalize</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-toast id="successToast" text="[[toast_message]]"></paper-toast>
-		<paper-toast id="errorToast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
-		Polymer({
-			is: 'lobbies-page',
-			properties: {
-				selected_tier: {
-					type: Number,
-					observer: 'selected_tierChanged'
-				},
-				rounds_hidden: {
-					type: Boolean,
-					value: true
-				},
-				selected_round: {
-					type: Number,
-					observer: 'selected_roundChanged'
-				},
-				lobbies_hidden: {
-					type: Boolean,
-					value: true
-				},
-				create_lobbies_hidden: {
-					type: Boolean,
-					value: true
-				},
-				lobby_list_hidden: {
-					type: Boolean,
-					value: true
-				},
-				actions_hidden: {
-					type: Boolean,
-					value: false
+		class LobbiesPage extends Polymer.Element {
+			static get is() { return 'lobbies-page' }
+
+			static get properties() {
+				return {
+					createVisible: {
+						type: Boolean,
+						value: false
+					},
+					deleteVisible: {
+						type: Boolean,
+						value: false
+					},
+					saveVisible: {
+						type: Boolean,
+						value: false
+					},
+					selectedRound: {
+						observer: '_getLobbies'
+					},
+					selectedTier: {
+						observer: '_getLobbies'
+					}
 				}
-			},
-			selected_tierChanged: function() {
-				if (this.selected_tier) {
-					this.$.roundsAjax.url = '../api/tiers/' + this.selected_tier + '/rounds';
-					this.$.roundsAjax.headers = {
+			}
+
+			_getLobbies() {
+				if (this.selectedRound && this.selectedTier) {
+					this.set('lobbies', []);
+					this.set('players', []);
+					this.$.getLobbiesAjax.url = '../api/lobbies/' + this.selectedRound + '/' + this.selectedTier
+					this.$.getLobbiesAjax.headers = {
 						'Authorization': localStorage.getItem('token')
-					};
-					this.$.roundsAjax.generateRequest();
+					}
+					this.$.getLobbiesAjax.generateRequest();
+				}
+			}
+
+			_getLobbiesResponse(e) {
+				if (this.lobbies.length == 0) {
+					this.createVisible = true;
+					this.saveVisible = false;
+					this.deleteVisible = false;
 				} else {
-					this.rounds_hidden = true;
-				}
-			},
-			roundsResponse: function() {
-				if (this.rounds) {
-					this.rounds_hidden = false;
-				}
-			},
-			selected_roundChanged: function() {
-				if (this.selected_round) {
-					this.$.lobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
-					this.$.lobbiesAjax.headers = {
+					this.createVisible = false;
+					this.saveVisible = true;
+					this.deleteVisible = true;
+					this.$.getPlayersAjax.url = '../api/players/' + this.selectedRound + '/' + this.selectedTier
+					this.$.getPlayersAjax.headers = {
 						'Authorization': localStorage.getItem('token')
-					};
-					this.$.lobbiesAjax.generateRequest();
-					this.actions_hidden = false;
-					for (var i = 0; i < this.rounds.length; i++) {
-						if (this.rounds[i].id == this.selected_round) {
-							this.actions_hidden = this.rounds[i].closed == '1';
+					}
+					this.$.getPlayersAjax.generateRequest();
+				}
+			}
+
+			_getPlayersResponse() {
+				for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+					for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+						if (this.lobbies[lobby].slots[slot].userId) {
+							for (var player = 0; player < this.players.length; player++) {
+								if (this.lobbies[lobby].slots[slot].userId == this.players[player].userId) {
+									this.splice('players', player, 1);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			_createLobbies() {
+				this.$.postLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.postLobbiesAjax.body = {
+					'round': this.selectedRound,
+					'tier': this.selectedTier
+				}
+				this.$.postLobbiesAjax.generateRequest();
+			}
+
+			_postLobbiesResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getLobbiesAjax.generateRequest();
+				}
+			}
+
+			_saveLobbies() {
+				this.$.putLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putLobbiesAjax.body = {
+					'lobbies': this.lobbies
+				}
+				this.$.putLobbiesAjax.generateRequest();
+			}
+
+			_putLobbiesResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+			}
+
+			_dragOver(e) {
+				e.preventDefault();
+			}
+
+			_dropOnEmpty(e) {
+				if (this.dragFromPlayers) {
+					lobby_loop:
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
+								break lobby_loop;
+							}
+						}
+					}
+					for (var player = 0; player < this.players.length; player++) {
+						if (this.players[player].userId == this.dragObject.userId) {
+							this.splice('players', player, 1);
 							break;
 						}
 					}
-				} else {
-					this.lobbies_hidden = true;
-				}
-			},
-			lobbiesResponse: function() {
-				if (this.lobbies) {
-					this.lobbies_hidden = false;
-					if (this.lobbies.length == 0) {
-						this.create_lobbies_hidden = false;
-						this.lobby_list_hidden = true;
-					} else {
-						this.create_lobbies_hidden = true;
-						this.lobby_list_hidden = false;
+				} else if (this.dragFromLobbies) {
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].userId == this.dragObject.userId) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', []);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', null);
+							}
+						}
+					}
+					lobby_loop:
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
+								break lobby_loop;
+							}
+						}
 					}
 				}
-			},
-			createLobbies: function() {
-				this.$.createLobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
-				this.$.createLobbiesAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.createLobbiesAjax.generateRequest();
-			},
-			createLobbiesResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.$.lobbiesAjax.generateRequest();
-			},
-			showDeleteLobbies: function() {
-				this.$.deleteDialog.open();
-			},
-			deleteLobbies: function() {
-				this.$.deleteLobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
-				this.$.deleteLobbiesAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.deleteLobbiesAjax.generateRequest();
-			},
-			deleteLobbiesResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.$.lobbiesAjax.generateRequest();
-			},
-			tiersChanged: function() {
-				this.selected_tier = null;
-				this.selected_round = null;
-				this.$.tiersAjax.generateRequest();
-			},
-			lobbyChanged: function() {
-				this.$.lobbiesAjax.generateRequest();
-			},
-			isActive: function(round) {
-				if (round.input_amount == round.total_continue_to_upper || round.input_amount == round.total_drop_down) {
-					return false;
-				}
-				return true;
-			},
-			showFinalizeLobbies: function() {
-				this.$.finalizeDialog.open();
-			},
-			finalizeLobbies: function() {
-				this.$.finalizeLobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
-				this.$.finalizeLobbiesAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.finalizeLobbiesAjax.generateRequest();
-			},
-			finalizeLobbiesResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.actions_hidden = true;
-					this.$.roundsAjax.generateRequest();
+			}
+
+			_dropOnList(e) {
+				if (this.dragFromLobbies) {
+					this.push('players', this.dragObject);
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].userId == this.dragObject.userId) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', []);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', null);
+							}
+						}
+					}
 				}
 			}
-		});
+
+			_dropOnPlayer(e) {
+				if (this.dragFromPlayers) {
+					for (var player = 0; player < this.players.length; player++) {
+						if (this.players[player].userId == this.dragObject.userId) {
+							this.splice('players', player, 1);
+							break;
+						}
+					}
+					this.push('players', {
+						availabilities: e.model.slot.availabilities,
+						osuAvatarUrl: e.model.slot.osuAvatarUrl,
+						osuHitAccuracy: e.model.slot.osuHitAccuracy,
+						osuId: e.model.slot.osuId,
+						osuLevel: e.model.slot.osuLevel,
+						osuPlayCount: e.model.slot.osuPlayCount,
+						osuPp: e.model.slot.osuPp,
+						osuRank: e.model.slot.osuRank,
+						osuUsername: e.model.slot.osuUsername,
+						userId: e.model.slot.userId
+					});
+					lobby_loop:
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
+								break lobby_loop;
+							}
+						}
+					}
+				} else if (this.dragFromLobbies) {
+					lobby_loop:
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].id == this.slotId) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', e.model.slot.availabilities);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', e.model.slot.osuAvatarUrl);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', e.model.slot.osuHitAccuracy);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', e.model.slot.osuId);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', e.model.slot.osuLevel);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', e.model.slot.osuPlayCount);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', e.model.slot.osuPp);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', e.model.slot.osuRank);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', e.model.slot.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', e.model.slot.userId);
+								break lobby_loop;
+							}
+						}
+					}
+					lobby_loop2:
+					for (var lobby = 0; lobby < this.lobbies.length; lobby++) {
+						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
+							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
+								break lobby_loop2;
+							}
+						}
+					}
+				}
+			}
+
+			_dragFromPlayers(e) {
+				this.dragFromPlayers = true;
+				this.dragFromLobbies = false;
+				this.dragObject = {
+					availabilities: e.model.player.availabilities,
+					osuAvatarUrl: e.model.player.osuAvatarUrl,
+					osuHitAccuracy: e.model.player.osuHitAccuracy,
+					osuId: e.model.player.osuId,
+					osuLevel: e.model.player.osuLevel,
+					osuPlayCount: e.model.player.osuPlayCount,
+					osuPp: e.model.player.osuPp,
+					osuRank: e.model.player.osuRank,
+					osuUsername: e.model.player.osuUsername,
+					userId: e.model.player.userId
+				}
+			}
+
+			_dragFromLobbies(e) {
+				this.slotId = e.model.slot.id;
+				this.dragFromPlayers = false;
+				this.dragFromLobbies = true;
+				this.dragObject = {
+					availabilities: e.model.slot.availabilities,
+					osuAvatarUrl: e.model.slot.osuAvatarUrl,
+					osuHitAccuracy: e.model.slot.osuHitAccuracy,
+					osuId: e.model.slot.osuId,
+					osuLevel: e.model.slot.osuLevel,
+					osuPlayCount: e.model.slot.osuPlayCount,
+					osuPp: e.model.slot.osuPp,
+					osuRank: e.model.slot.osuRank,
+					osuUsername: e.model.slot.osuUsername,
+					userId: e.model.slot.userId
+				}
+			}
+		}
+
+		window.customElements.define(LobbiesPage.is, LobbiesPage);
 	</script>
 </dom-module>

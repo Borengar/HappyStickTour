@@ -7,6 +7,12 @@
 				background-color: var(--discord-grey);
 				color: white;
 			}
+			app-drawer-layout {
+				height: 100%;
+			}
+			app-header-layout {
+				height: 100%;
+			}
 			paper-icon-button {
 				color: white;
 			}
@@ -22,9 +28,10 @@
 					<paper-item value="Bracket">Bracket</paper-item>
 					<paper-item value="Registrations">Registrations</paper-item>
 					<paper-item value="Roles">Roles</paper-item>
+					<paper-item value="Lobbies">Lobbies</paper-item>
 				</paper-listbox>
 			</app-drawer>
-			<app-header-layout>
+			<app-header-layout fullbleed has-scrolling-region>
 				<app-header slot="header">
 					<app-toolbar>
 						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
@@ -36,6 +43,7 @@
 					<bracket-page class="flex layout vertical" value="Bracket"></bracket-page>
 					<registrations-page class="flex layout vertical" value="Registrations"></registrations-page>
 					<roles-page class="flex layout vertical" value="Roles"></roles-page>
+					<lobbies-page class="flex layout vertical" value="Lobbies"></lobbies-page>
 				</iron-pages>
 			</app-header-layout>
 		</app-drawer-layout>
