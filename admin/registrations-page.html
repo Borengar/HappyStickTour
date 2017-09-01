@@ -31,10 +31,11 @@
 				flex-shrink: 0;
 			}
 			.list-wrapper {
-				width: 500px;
+				width: 800px;
 				padding: 10px;
 			}
 			.edit-wrapper {
+				width: 600px;
 				padding: 10px;
 			}
 			.edit-section {
@@ -84,17 +85,25 @@
 				<div class="list-wrapper layout vertical">
 					<div class="header">Registrations</div>
 					<vaadin-grid class="registrations-grid" items="[[registrations]]" active-item="{{selectedRegistration}}">
-						<vaadin-grid-column width="100px">
+						<vaadin-grid-column width="180px" flex-grow="0">
 							<template class="header">Time</template>
 							<template>[[item.registrationTime]]</template>
 						</vaadin-grid-column>
 						<vaadin-grid-column flex-grow="1">
-							<template class="header">osu! username</template>
-							<template>[[item.osuUsername]]</template>
+							<template class="header">Discord</template>
+							<template>[[item.discordUsername]]</template>
 						</vaadin-grid-column>
 						<vaadin-grid-column flex-grow="1">
-							<template class="header">Discord username</template>
-							<template>[[item.discordUsername]]</template>
+							<template class="header">osu!</template>
+							<template>[[item.osuUsername]]</template>
+						</vaadin-grid-column>
+						<vaadin-grid-column width="100px" flex-grow="0">
+							<template class="header">Rank</template>
+							<template>[[item.osuRank]]</template>
+						</vaadin-grid-column>
+						<vaadin-grid-column width="50px" flex-grow="0">
+							<template class="header">Sub</template>
+							<template>[[item.twitchSubPlan]]</template>
 						</vaadin-grid-column>
 					</vaadin-grid>
 				</div>
