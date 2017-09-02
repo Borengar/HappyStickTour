@@ -67,6 +67,8 @@
 				<paper-button class="action-button" raised on-click="_reload">Reload Discord Roles</paper-button>
 			</div>
 		</div>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
 		class RolesPage extends Polymer.Element {
@@ -126,11 +128,24 @@
 			}
 
 			_postRolesResponse() {
-				this.$.getRolesAjax.generateRequest();
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getRolesAjax.generateRequest();
+				}
 			}
 
 			_putSettingsResponse() {
-				this.$.getSettingsAjax.generateRequest();
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
 			}
 		}
 
