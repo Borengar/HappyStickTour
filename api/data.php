@@ -139,6 +139,17 @@ switch ($_GET['query']) {
 			case 'POST': postTwitchLogin(); break; // try to login with code
 		}
 		break;
+	case 'mappoolers':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'GET': getMappoolers(); break; // get mappoolers
+			case 'POST': postMappoolers(); break; // refresh list of mappoolers
+		}
+		break;
+	case 'mappooler':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'PUT': putMappooler(); break; // update mappooler
+		}
+		break;
 }
 
 function generateToken() {
@@ -1658,6 +1669,120 @@ function postTwitchLogin() {
 			return;
 		}
 	}
+}
+
+function getMappoolers() {
+	global $db;
+
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
+	$stmt = $db->prepare('SELECT discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, mappoolers.tier as tierId, tiers.name as tierName
+		FROM mappoolers INNER JOIN discord_users ON mappoolers.discord_id = discord_users.id LEFT JOIN tiers ON mappoolers.tier = tiers.id
+		ORDER BY tiers.lower_endpoint ASC, discord_users.username');
+	$stmt->execute();
+	echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+}
+
+function postMappoolers() {
+	global $db;
+	global $discordApi;
+
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
+	$stmt = $db->prepare('SELECT role_mappooler as roleMappooler
+		FROM settings');
+	$stmt->execute();
+	$roleId = $stmt->fetch(PDO::FETCH_OBJ)->roleMappooler;
+
+	$allMembersDone = false;
+	$highestId = null;
+	$mappoolers = [];
+	while (!$allMembersDone) {
+		$members = $discordApi->getGuildMembers($highestId);
+		foreach ($members as $member) {
+			$highestId = $member->user->id;
+			if (in_array($roleId, $member->roles)) {
+				$mappoolers[] = $member;
+			}
+		}
+		if (count($members) == 0) {
+			$allMembersDone = true;
+		}
+	}
+
+	$stmt = $db->prepare('SELECT id, discord_id as discordId, tiers
+		FROM mappoolers');
+	$stmt->execute();
+	$existingMappoolers = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+	// remove mappoolers from the website that got the role removed
+	foreach ($existingMappoolers as $existingMappooler) {
+		$found = false;
+		foreach ($mappoolers as $mappooler) {
+			if ($existingMappoolers->discordId == $mappooler->user->id) {
+				$found = true;
+				break;
+			}
+		}
+		if (!$found) {
+			$stmt = $db->prepare('DELETE FROM mappoolers
+				WHERE discord_id = :discord_id');
+			$stmt->bindValue(':discord_id', $existingMappooler->discordId, PDO::PARAM_INT);
+			$stmt->execute();
+		}
+	}
+
+	// insert new mappoolers into the website that got the role
+	foreach ($mappoolers as $mappooler) {
+		$found = false;
+		foreach ($existingMappoolers as $existingMappooler) {
+			if ($mappooler->user->id == $existingMappooler->discordId) {
+				$found = true;
+				break;
+			}
+		}
+		if (!$found) {
+			$stmt = $db->prepare('INSERT INTO mappoolers (discord_id)
+				VALUES (:discord_id)');
+			$stmt->bindValue(':discord_id', $mappooler->user->id, PDO::PARAM_INT);
+			$stmt->execute();
+			$stmt = $db->prepare('INSERT INTO discord_users (id, username, discriminator, avatar)
+				VALUES (:id, :username, :discriminator, :avatar)');
+			$stmt->bindValue(':id', $mappooler->user->id, PDO::PARAM_INT);
+			$stmt->bindValue(':username', $mappooler->user->username, PDO::PARAM_STR);
+			$stmt->bindValue(':discriminator', $mappooler->user->discriminator, PDO::PARAM_STR);
+			$stmt->bindValue(':avatar', $mappooler->user->avatar, PDO::PARAM_STR);
+			$stmt->execute();
+		}
+	}
+
+	echoError(0, 'Mappoolers refreshed');
+}
+
+function putMappooler() {
+	global $db;
+
+	$user = checkToken();
+	if (!isset($user) || $user->scope != 'ADMIN') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	$stmt = $db->prepare('UPDATE mappoolers
+		SET tier = :tier
+		WHERE discord_id = :discord_id');
+	$stmt->bindValue(':tier', $body->tier, PDO::PARAM_INT);
+	$stmt->bindValue(':discord_id', $_GET['id'], PDO::PARAM_INT);
+	$stmt->execute();
+
+	echoError(0, 'Mappoolers updated');
 }
 
 ?>

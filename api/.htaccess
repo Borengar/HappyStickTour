@@ -22,3 +22,5 @@ RewriteRule ^settings/?$ data.php?query=settings
 RewriteRule ^discordlogin/?$ data.php?query=discordlogin
 RewriteRule ^discordroles/?$ data.php?query=discordroles
 RewriteRule ^twitchlogin/?$ data.php?query=twitchlogin
+RewriteRule ^mappoolers/([^/]+)/?$ data.php?query=mappooler&id=$1
+RewriteRule ^mappoolers/?$ data.php?query=mappoolers

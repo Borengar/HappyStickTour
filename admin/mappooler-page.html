@@ -1,128 +1,163 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="mappooler-page">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			.tier-selector {
-				width: 200px;
-				margin-left: 50px;
+		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				margin: 10px;
+			}
+			.list-wrapper {
+				width: 500px;
 				margin-top: 10px;
 			}
+			.edit-wrapper {
+				margin: 10px;
+			}
+			.header {
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				width: 300px;
+				flex-shrink: 0;
+			}
+			.action-wrapper {
+				flex-shrink: 0;
+			}
+			paper-dropdown-menu {
+				margin-left: 10px;
+			}
 		</style>
-		<iron-ajax id="allMappoolersAjax" url="../api/mappoolers" method="GET" last-response="{{all_mappoolers}}"></iron-ajax>
-		<iron-ajax id="mappoolersAjax" url="../api/tiers//mappoolers" method="GET" last-response="{{mappoolers}}"></iron-ajax>
-		<iron-ajax id="deleteMappoolerAjax" url="../api/tiers//mappoolers/" method="DELETE" on-response="deleteMappoolerResponse"></iron-ajax>
-		<iron-ajax id="addMappoolerAjax" url="../api/tiers//mappoolers/" method="POST" on-response="addMappoolerResponse"></iron-ajax>
-		<div class="layout vertical">
-			<paper-dropdown-menu class="tier-selector" label="Tier">
-				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
-					<template is="dom-repeat" items="[[tiers]]" as="tier">
-						<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
-					</template>
-				</paper-listbox>
-			</paper-dropdown-menu>
-			<paper-button raised style="background-color:#65B309;color:white;width:200px;margin:20px;" on-click="showAddMappooler">Add Mappooler</paper-button>
-			<template is="dom-repeat" items="[[mappoolers]]" as="mappooler">
-				<discord-profile profile="[[mappooler.discord_profile]]" style="margin:20px;width:300px;" on-click="showRemoveMappooler"></discord-profile>
-			</template>
+		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
+		<iron-ajax id="getMappoolersAjax" url="../api/mappoolers" method="GET" last-response="{{mappoolers}}"></iron-ajax>
+		<iron-ajax id="putMappoolersAjax" url="../api/mappoolers" method="PUT" content-type="application/json" on-response="_putMappoolersResponse"></iron-ajax>
+		<iron-ajax id="postMappoolersAjax" url="../api/mappoolers" method="POST" on-response="_postMappoolersResponse"></iron-ajax>
+		<div class="wrapper flex layout horizontal">
+			<div class="list-wrapper layout vertical">
+				<div class="header">Mappoolers</div>
+				<vaadin-grid class="mappoolers-grid" items="[[mappoolers]]" active-item="{{selectedMappooler}}">
+					<vaadin-grid-column>
+						<template class="header">Discord</template>
+						<template>[[item.discordUsername]]</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column>
+						<template class="header">Tier</template>
+						<template>[[item.tierName]]</template>
+					</vaadin-grid-column>
+				</vaadin-grid>
+				<div class="action-wrapper layout horizontal">
+					<paper-button raised class="action-button" on-click="_reload">Reload From Discord</paper-button>
+				</div>
+			</div>
+			<div class="edit-wrapper layout vertical">
+				<div hidden$="[[!editVisible]]">
+					<div class="header">Edit Mappooler</div>
+					<div class="edit-section">
+						<discord-profile id="[[discordId]]" avatar="[[discordAvatar]]" username="[[discordUsername]]" discriminator="[[discordDiscriminator]]"></discord-profile>
+					</div>
+					<div class="edit-section">
+						<paper-dropdown-menu label="Tier">
+							<paper-listbox slot="dropdown-content" selected="{{tierId}}" attr-for-selected="value">
+								<template is="dom-repeat" items="[[tiers]]" as="tier">
+									<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+								</template>
+							</paper-listbox>
+						</paper-dropdown-menu>
+					</div>
+					<div class="action-wrapper layout horizontal">
+						<paper-button raised class="action-button" on-click="_save">Save</paper-button>
+						<paper-button raised class="action-button" on-click="_cancel">Cancel</paper-button>
+					</div>
+				</div>
+			</div>
 		</div>
-		<paper-dialog id="removeMappoolerDialog" modal>
-			<h2>Remove Mappooler</h2>
-			<div>Remove <span>[[remove_mappooler_name]]</span> from tier <span>[[remove_mappooler_tier]]</span>?</div>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="removeMappooler" style="color:red;">Remove</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-dialog id="addMappoolerDialog" modal style="width:400px;">
-			<h2>Add Mappooler</h2>
-			<div class="layout vertical" style="height:300px;overflow:auto;">
-				<template is="dom-repeat" items="[[all_mappoolers]]" as="mappooler">
-					<discord-profile profile="[[mappooler.discord_profile]]" style="margin:20px;width:300px;" on-click="addMappooler"></discord-profile>
-				</template>
-			</div>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-toast id="successToast" text="[[toast_message]]" style="background-color:#65B309;color:white;"></paper-toast>
-		<paper-toast id="errorToast" text="[[toast_message]]" style="background-color:#d32f2f;color:white;"></paper-toast>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
-		Polymer({
-			is: 'mappooler-page',
-			properties: {
-				selected_tier: {
-					type: Number,
-					observer: 'selected_tierChanged'
-				}
-			},
-			ready: function() {
-				this.$.allMappoolersAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.allMappoolersAjax.generateRequest();
-			},
-			selected_tierChanged: function() {
-				if (this.selected_tier) {
-					this.$.mappoolersAjax.url = '../api/tiers/' + this.selected_tier + '/mappoolers';
-					this.$.mappoolersAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.mappoolersAjax.generateRequest();
-				} else {
-					this.mappoolers = [];
-				}
-			},
-			showRemoveMappooler: function(e) {
-				this.remove_mappooler_name = e.model.mappooler.discord_profile.username + '#' + e.model.mappooler.discord_profile.discriminator;
-				this.remove_mappooler_id = e.model.mappooler.discord_profile.id;
-				for (var i = 0; i < this.tiers.length; i++) {
-					if (this.tiers[i].id == this.selected_tier) {
-						this.remove_mappooler_tier = this.tiers[i].lower_endpoint + ' - ' + this.tiers[i].upper_endpoint;
+		class MappoolerPage extends Polymer.Element {
+			static get is() { return 'mappooler-page' }
+
+			static get properties() {
+				return {
+					editVisible: {
+						type: Boolean,
+						value: false
+					},
+					selectedMappooler: {
+						observer: '_selectedMappoolerChanged'
 					}
 				}
-				this.$.removeMappoolerDialog.open();
-			},
-			removeMappooler: function() {
-				this.$.deleteMappoolerAjax.url = '../api/tiers/' + this.selected_tier + '/mappoolers/' + this.remove_mappooler_id;
-				this.$.deleteMappoolerAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.deleteMappoolerAjax.generateRequest();
-			},
-			deleteMappoolerResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.$.mappoolersAjax.generateRequest();
-			},
-			showAddMappooler: function() {
-				this.$.addMappoolerDialog.open();
-			},
-			addMappooler: function(e) {
-				this.$.addMappoolerDialog.close();
-				this.$.addMappoolerAjax.url = '../api/tiers/' + this.selected_tier + '/mappoolers/' + e.model.mappooler.discord_profile.id;
-				this.$.addMappoolerAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.addMappoolerAjax.generateRequest();
-			},
-			addMappoolerResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-				this.$.mappoolersAjax.generateRequest();
-			},
-			tiersChanged: function() {
-				this.selectedTier = null;
 			}
-		});
+
+			ready() {
+				super.ready();
+				this.$.getMappoolersAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getMappoolersAjax.generateRequest();
+			}
+
+			_selectedMappoolerChanged(e) {
+				if (e) {
+					this.discordId = e.discordId;
+					this.discordUsername = e.discordUsername;
+					this.discordAvatar = e.discordAvatar;
+					this.discordDiscriminator = e.discordDiscriminator;
+					this.tierId = e.tierId;
+					this.editVisible = true;
+				}
+			}
+
+			_save() {
+				this.$.putMappoolersAjax.url = '../api/mappoolers/' + this.discordId;
+				this.$.putMappoolersAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putMappoolersAjax.body = {
+					'tier': this.tierId
+				}
+				this.$.putMappoolersAjax.generateRequest();
+			}
+
+			_cancel() {
+				this.editVisible = false;
+			}
+
+			_reload() {
+				this.$.postMappoolersAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.postMappoolersAjax.generateRequest();
+			}
+
+			_putMappoolersResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getMappoolersAjax.generateRequest();
+					this.editVisible = false;
+				}
+			}
+
+			_postMappoolersResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getMappoolersAjax.generateRequest();
+				}
+			}
+		}
+
+		window.customElements.define(MappoolerPage.is, MappoolerPage);
 	</script>
 </dom-module>
