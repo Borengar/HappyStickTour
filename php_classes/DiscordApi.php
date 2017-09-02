@@ -121,6 +121,22 @@ class DiscordApi {
 		return $response;
 	}
 
+	public function getGuildMembers($after = null) {
+		$curl = curl_init();
+		curl_setopt_array($curl, array(
+			CURLOPT_SSL_VERIFYPEER => false,
+			CURLOPT_FOLLOWLOCATION => false,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_URL => empty($after) ? 'https://discordapp.com/api/guilds/' . $this->guildId . '/members?limit=1000' : 'https://discordapp.com/api/guilds/' . $this->guildId . '/members?limit=1000&after=' . $after,
+			CURLOPT_HTTPHEADER => array(
+				'Authorization: Bot ' . $this->botToken
+				)
+			)
+		);
+		$response = json_decode(curl_exec($curl));
+		curl_close($curl);
+		return $response;
+	}
 }
 
 ?>
