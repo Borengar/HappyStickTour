@@ -777,6 +777,14 @@ function putLobbies() {
 				$stmt->bindValue(':user_id', $slot->userId, PDO::PARAM_INT);
 				$stmt->bindValue(':id', $slot->id, PDO::PARAM_INT);
 				$stmt->execute();
+				if (!empty($slot->userId)) {
+					$stmt = $db->prepare('UPDATE players
+						SET current_lobby = :current_lobby
+						WHERE id = :id');
+					$stmt->bindValue(':current_lobby', $lobby->id, PDO::PARAM_INT);
+					$stmt->bindValue(':id', $slot->userId, PDO::PARAM_INT);
+					$stmt->execute();
+				}
 			}
 		}
 		echoError(0, 'Lobbies updated');
