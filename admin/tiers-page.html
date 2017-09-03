@@ -158,6 +158,9 @@
 
 			_saveTier() {
 				if (this.isNewTier) {
+					this.$.postTierAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
 					this.$.postTierAjax.body = {
 						'name': this.name,
 						'lowerEndpoint': this.lowerEndpoint,
@@ -169,6 +172,9 @@
 					this.$.postTierAjax.generateRequest();
 				} else {
 					this.$.putTierAjax.url = '../api/tiers/' + this.id;
+					this.$.putTierAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
 					this.$.putTierAjax.body = {
 						'name': this.name,
 						'lowerEndpoint': this.lowerEndpoint,
@@ -211,6 +217,9 @@
 			_deleteTier() {
 				if (this.id && !this.isNewTier) {
 					this.$.deleteTierAjax.url = '../api/tiers/' + this.id;
+					this.$.deleteTierAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
 					this.$.deleteTierAjax.generateRequest();
 				}
 			}

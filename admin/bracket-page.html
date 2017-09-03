@@ -329,6 +329,9 @@
 
 			_saveRound() {
 				if (this.isNewRound) {
+					this.$.postRoundAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
 					this.$.postRoundAjax.body = {
 						'name': this.name,
 						'lobbySize': this.lobbySize,
@@ -352,6 +355,9 @@
 					this.$.postRoundAjax.generateRequest();
 				} else {
 					this.$.putRoundAjax.url = '../api/rounds/' + this.id;
+					this.$.putRoundAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
 					this.$.putRoundAjax.body = {
 						'name': this.name,
 						'lobbySize': this.lobbySize,
@@ -485,6 +491,9 @@
 			_deleteRound() {
 				if (this.id && !this.isNewRound) {
 					this.$.deleteRoundAjax.url = '../api/rounds/' + this.id;
+					this.$.deleteRoundAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
 					this.$.deleteRoundAjax.generateRequest();
 				}
 			}
