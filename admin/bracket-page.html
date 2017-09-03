@@ -185,6 +185,19 @@
 						</template>
 					</div>
 					<div class="edit-section">
+						<paper-checkbox checked="{{copyMappool}}">Copy mappool from other round</paper-checkbox>
+						<template is="dom-if" if="[[copyMappool]]">
+							<div class="indented layout horizontal">
+								<paper-icon-button icon="add" class="choose-round-button" on-click="_chooseCopyRound"></paper-icon-button>
+								<template is="dom-if" if="[[copyRoundId]]">
+									<paper-icon-button icon="remove" class="choose-round-button" on-click="_removeCopyRound"></paper-icon-button>
+								</template>
+								<div style="width:50px;margin-top:20px;">[[copyRoundId]]</div>
+								<div style="margin-top:20px;">[[copyRoundName]]</div>
+							</div>
+						</template>
+					</div>
+					<div class="edit-section">
 						<paper-checkbox checked="{{mappoolsReleased}}">Mappools released</paper-checkbox>
 					</div>
 					<div class="edit-section">
@@ -350,7 +363,9 @@
 						'hasBracketReset': this.hasBracketReset,
 						'mappoolsReleased': this.mappoolsReleased,
 						'lobbiesReleased': this.lobbiesReleased,
-						'times': this.times
+						'times': this.times,
+						'copyMappool': this.copyMappool,
+						'copyMappoolFrom': this.copyRoundId
 					}
 					this.$.postRoundAjax.generateRequest();
 				} else {
@@ -376,7 +391,9 @@
 						'hasBracketReset': this.hasBracketReset,
 						'mappoolsReleased': this.mappoolsReleased,
 						'lobbiesReleased': this.lobbiesReleased,
-						'times': this.times
+						'times': this.times,
+						'copyMappool': this.copyMappool,
+						'copyMappoolFrom': this.copyRoundId
 					}
 					this.$.putRoundAjax.generateRequest();
 				}
@@ -441,6 +458,14 @@
 					this.mappoolsReleased = e.mappoolsReleased == '1';
 					this.lobbiesReleased = e.lobbiesReleased == '1';
 					this.times = e.times;
+					this.copyMappool = e.copyMappool == '1';
+					this.copyRoundId = e.copyMappoolFrom;
+					for (var i = 0; i < this.rounds.length; i++) {
+						if (this.rounds[i].id == this.copyRoundId) {
+							this.copyRoundName = this.rounds[i].name;
+							break;
+						}
+					}
 					this.editVisible = true;
 				}
 			}
@@ -456,23 +481,31 @@
 			}
 
 			_chooseContinueRound() {
-				this.isChooseContinueRound = true;
+				this.chooseRound = 'continue';
 				this._prepareChooseRoundDialog();
 			}
 
 			_chooseDropDownRound() {
-				this.isChooseContinueRound = false;
+				this.chooseRound = 'dropdown';
+				this._prepareChooseRoundDialog();
+			}
+
+			_chooseCopyRound() {
+				this.chooseRound = 'copy';
 				this._prepareChooseRoundDialog();
 			}
 
 			_chosenRoundChanged(e) {
 				if (e) {
-					if (this.isChooseContinueRound) {
+					if (this.chooseRound == 'continue') {
 						this.continueRoundId = e.id;
 						this.continueRoundName = e.name;
-					} else {
+					} else if (this.chooseRound == 'dropdown') {
 						this.dropDownRoundId = e.id;
 						this.dropDownRoundName = e.name;
+					} else if (this.chooseRound == 'copy') {
+						this.copyRoundId = e.id;
+						this.copyRoundName = e.name;
 					}
 					this.$.chooseRoundDialog.close();
 				}
@@ -486,6 +519,11 @@
 			_removeDropDownRound() {
 				this.dropDownRoundId = null;
 				this.dropDownRoundName = null;
+			}
+
+			_removeCopyRound() {
+				this.copyRoundId = null;
+				this.copyRoundName = null;
 			}
 
 			_deleteRound() {
