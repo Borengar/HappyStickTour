@@ -6,6 +6,10 @@ require_once '../php_classes/TwitchApi.php';
 require_once '../php_classes/DiscordApi.php';
 $database = new Database();
 $db = $database->getConnection();
+
+// show errors
+$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+
 $osuApi = new OsuApi();
 $twitchApi = new TwitchApi();
 $discordApi = new DiscordApi();
@@ -449,7 +453,7 @@ function getRounds() {
 	global $database;
 	$db = $database->getConnection();
 
-	$stmt = $db->prepare('SELECT id, name, lobby_size as lobbySize, best_of as bestOf, is_first_round as isFirstRound, player_amount as playerAmount, is_start_round as isStartRound, has_continue as hasContinue, continue_amount as continueAmount, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_amount as dropDownAmount, drop_down_round as dropDownRound, has_elimination as hasElimination, eliminated_amount as eliminatedAmount, has_bracket_reset as hasBracketReset, mappools_released as mappoolsReleased, lobbies_released as lobbiesReleased
+	$stmt = $db->prepare('SELECT id, name, lobby_size as lobbySize, best_of as bestOf, is_first_round as isFirstRound, player_amount as playerAmount, is_start_round as isStartRound, has_continue as hasContinue, continue_amount as continueAmount, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_amount as dropDownAmount, drop_down_round as dropDownRound, has_elimination as hasElimination, eliminated_amount as eliminatedAmount, has_bracket_reset as hasBracketReset, mappools_released as mappoolsReleased, lobbies_released as lobbiesReleased, copy_mappool as copyMappool, copy_mappool_from as copyMappoolFrom
 		FROM rounds
 		ORDER BY id ASC');
 	$stmt->execute();
@@ -475,8 +479,8 @@ function postRound() {
 
 	$body = json_decode(file_get_contents('php://input'));
 
-	$stmt = $db->prepare('INSERT INTO rounds (name, lobby_size, best_of, is_first_round, player_amount, is_start_round, has_continue, continue_amount, continue_round, has_drop_down, drop_down_amount, drop_down_round, has_elimination, eliminated_amount, has_bracket_reset, mappools_released, lobbies_released)
-		VALUES (:name, :lobby_size, :best_of, :is_first_round, :player_amount, :is_start_round, :has_continue, :continue_amount, :continue_round, :has_drop_down, :drop_down_amount, :drop_down_round, :has_elimination, :eliminated_amount, :has_bracket_reset, :mappools_released, :lobbies_released)');
+	$stmt = $db->prepare('INSERT INTO rounds (name, lobby_size, best_of, is_first_round, player_amount, is_start_round, has_continue, continue_amount, continue_round, has_drop_down, drop_down_amount, drop_down_round, has_elimination, eliminated_amount, has_bracket_reset, mappools_released, lobbies_released, copy_mappool, copy_mappool_from)
+		VALUES (:name, :lobby_size, :best_of, :is_first_round, :player_amount, :is_start_round, :has_continue, :continue_amount, :continue_round, :has_drop_down, :drop_down_amount, :drop_down_round, :has_elimination, :eliminated_amount, :has_bracket_reset, :mappools_released, :lobbies_released, :copy_mappool, :copy_mappool_from)');
 	$stmt->bindValue(':name', $body->name, PDO::PARAM_STR);
 	$stmt->bindValue(':lobby_size', $body->lobbySize, PDO::PARAM_INT);
 	$stmt->bindValue(':best_of', $body->bestOf, PDO::PARAM_INT);
@@ -494,6 +498,8 @@ function postRound() {
 	$stmt->bindValue(':has_bracket_reset', $body->hasBracketReset, PDO::PARAM_BOOL);
 	$stmt->bindValue(':mappools_released', $body->mappoolsReleased, PDO::PARAM_BOOL);
 	$stmt->bindValue(':lobbies_released', $body->lobbiesReleased, PDO::PARAM_BOOL);
+	$stmt->bindValue(':copy_mappool', $body->copyMappool, PDO::PARAM_BOOL);
+	$stmt->bindValue(':copy_mappool_from', $body->copyMappoolFrom, PDO::PARAM_INT);
 	$stmt->execute();
 
 	$round = $db->lastInsertId();
@@ -515,7 +521,7 @@ function postRound() {
 function getRound() {
 	global $db;
 
-	$stmt = $db->prepare('SELECT id, name, lobby_size as lobbySize, best_of as bestOf, is_first_round as isFirstRound, player_amount as playerAmount, is_start_round as isStartRound, has_continue as hasContinue, continue_amount as continueAmount, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_amount as dropDownAmount, drop_down_round as dropDownRound, has_elimination as hasElimination, eliminated_amount as eliminatedAmount, has_bracket_reset as hasBracketReset, mappools_released as mappoolsReleased, lobbies_released as lobbiesReleased
+	$stmt = $db->prepare('SELECT id, name, lobby_size as lobbySize, best_of as bestOf, is_first_round as isFirstRound, player_amount as playerAmount, is_start_round as isStartRound, has_continue as hasContinue, continue_amount as continueAmount, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_amount as dropDownAmount, drop_down_round as dropDownRound, has_elimination as hasElimination, eliminated_amount as eliminatedAmount, has_bracket_reset as hasBracketReset, mappools_released as mappoolsReleased, lobbies_released as lobbiesReleased, copy_mappool as copyMappool, copy_mappool_from as copyMappoolFrom
 		FROM rounds
 		WHERE id = :id');
 	$stmt->bindValue(':id', $_GET['round'], PDO::PARAM_INT);
@@ -541,7 +547,7 @@ function putRound() {
 	$body = json_decode(file_get_contents('php://input'));
 
 	$stmt = $db->prepare('UPDATE rounds
-		SET name = :name, lobby_size = :lobby_size, best_of = :best_of, is_first_round = :is_first_round, player_amount = :player_amount, is_start_round = :is_start_round, has_continue = :has_continue, continue_amount = :continue_amount, continue_round = :continue_round, has_drop_down = :has_drop_down, drop_down_amount = :drop_down_amount, drop_down_round = :drop_down_round, has_elimination = :has_elimination, eliminated_amount = :eliminated_amount, has_bracket_reset = :has_bracket_reset, mappools_released = :mappools_released, lobbies_released = :lobbies_released
+		SET name = :name, lobby_size = :lobby_size, best_of = :best_of, is_first_round = :is_first_round, player_amount = :player_amount, is_start_round = :is_start_round, has_continue = :has_continue, continue_amount = :continue_amount, continue_round = :continue_round, has_drop_down = :has_drop_down, drop_down_amount = :drop_down_amount, drop_down_round = :drop_down_round, has_elimination = :has_elimination, eliminated_amount = :eliminated_amount, has_bracket_reset = :has_bracket_reset, mappools_released = :mappools_released, lobbies_released = :lobbies_released, copy_mappool = :copy_mappool, copy_mappool_from = :copy_mappool_from
 		WHERE id = :id');
 	$stmt->bindValue(':name', $body->name, PDO::PARAM_STR);
 	$stmt->bindValue(':lobby_size', $body->lobbySize, PDO::PARAM_INT);
@@ -560,6 +566,8 @@ function putRound() {
 	$stmt->bindValue(':has_bracket_reset', $body->hasBracketReset, PDO::PARAM_BOOL);
 	$stmt->bindValue(':mappools_released', $body->mappoolsReleased, PDO::PARAM_BOOL);
 	$stmt->bindValue(':lobbies_released', $body->lobbiesReleased, PDO::PARAM_BOOL);
+	$stmt->bindValue(':copy_mappool', $body->copyMappool, PDO::PARAM_BOOL);
+	$stmt->bindValue(':copy_mappool_from', $body->copyMappoolFrom, PDO::PARAM_INT);
 	$stmt->bindValue(':id', $_GET['round'], PDO::PARAM_INT);
 	$stmt->execute();
 
