@@ -270,7 +270,16 @@ function getUser() {
 			WHERE id = :id');
 		$stmt->bindValue(':id', $user->id, PDO::PARAM_INT);
 		$stmt->execute();
-		echo json_encode($stmt->fetch(PDO::FETCH_OBJ));
+		$profile = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($user->scope == 'MAPPOOLER') {
+			$stmt = $db->prepare('SELECT tier
+				FROM mappoolers
+				WHERE discord_id = :discord_id');
+			$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+			$stmt->execute();
+			$profile->tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
+		}
+		echo json_encode($profile);
 		return;
 	} else {
 		$stmt = $db->prepare('SELECT id, username, discriminator, avatar
@@ -1053,7 +1062,16 @@ function getMappool() {
 		$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
 		$stmt->execute();
 		$row = $stmt->fetch(PDO::FETCH_OBJ);
-		$id = $row->id;
+		if (empty($row)) {
+			$stmt = $db->prepare('INSERT INTO mappools (tier, round)
+				VALUES (:tier, :round)');
+			$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
+			$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->execute();
+			$id = $db->lastInsertId();
+		} else {
+			$id = $row->id;
+		}
 	} else {
 		$id = $_GET['mappool'];
 	}
@@ -1077,13 +1095,13 @@ function getMappool() {
 		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
 		$stmt->execute();
 		$mappooler = $stmt->fetch(PDO::FETCH_OBJ);
-		$stmt = $db->prepare('SELECT tier
+		$stmt = $db->prepare('SELECT tier, mappack
 			FROM mappools
 			WHERE id = :id');
 		$stmt->bindValue(':id', $id, PDO::PARAM_INT);
 		$stmt->execute();
-		$mappool = $stmt->fetch(PDD::FETCH_OBJ);
-		if ($mappooler->tier != $mappool->tier) {
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($mappooler->tier != $row->tier) {
 			return;
 		}
 	}
@@ -1091,40 +1109,12 @@ function getMappool() {
 	$mappool = new stdClass;
 	$mappool->id = $id;
 	$mappool->mappack = $row->mappack;
-	$stmt = $db->prepare('SELECT mappool_slots.id, mappool_slots.beatmap_id as beatmapId, mappool_slots.tiebreaker, mappool_slots.freemod, mappool_slots.hardrock, mappool_slots.doubletime, mappool_slots.hidden, osu_beatmaps.beatmapset_id as beatmapsetId, osu_beatmaps.title, osu_beatmaps.artist, osu_beatmaps.version, osu_beatmaps.cover, osu_beatmaps.preview_url as previewUrl, osu_beatmaps.total_length as totalLength, osu_beatmaps.bpm, osu_beatmaps.count_circles as countCircles, osu_beatmaps.count_sliders as countSliders, osu_beatmaps.cs, osu_beatmaps.drain, osu_beatmaps.accuracy, osu_beatmaps.ar, osu_beatmaps.difficulty_rating as difficultyRating
+	$stmt = $db->prepare('SELECT mappool_slots.id, mappool_slots.beatmap_id as beatmapId, mappool_slots.mod, osu_beatmaps.beatmapset_id as beatmapsetId, osu_beatmaps.title, osu_beatmaps.artist, osu_beatmaps.version, osu_beatmaps.cover, osu_beatmaps.preview_url as previewUrl, osu_beatmaps.total_length as totalLength, osu_beatmaps.bpm, osu_beatmaps.count_circles as countCircles, osu_beatmaps.count_sliders as countSliders, osu_beatmaps.cs, osu_beatmaps.drain, osu_beatmaps.accuracy, osu_beatmaps.ar, osu_beatmaps.difficulty_rating as difficultyRating
 		FROM mappool_slots INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
 		WHERE mappool_slots.mappool = :mappool');
 	$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
 	$stmt->execute();
-	$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
-	$mappool->slots = [];
-	foreach ($rows as $beatmap) {
-		$slot = new stdClass;
-		$slot->id = $beatmap->id;
-		$slot->tiebreaker = $beatmap->tiebreaker;
-		$slot->freemod = $beatmap->freemod;
-		$slot->hardrock = $beatmap->hardrock;
-		$slot->doubletime = $beatmap->doubletime;
-		$slot->hidden = $beatmap->hidden;
-		$slot->beatmap = new stdClass;
-		$slot->beatmap->id = $beatmap->beatmapId;
-		$slot->beatmap->beatmapsetId = $beatmap->beatmapsetId;
-		$slot->beatmap->title = $beatmap->title;
-		$slot->beatmap->artist = $beatmap->artist;
-		$slot->beatmap->version = $beatmap->version;
-		$slot->beatmap->cover = $beatmap->cover;
-		$slot->beatmap->previewUrl = $beatmap->previewUrl;
-		$slot->beatmap->totalLength = $beatmap->totalLength;
-		$slot->beatmap->bpm = $beatmap->bpm;
-		$slot->beatmap->countCircles = $beatmap->countCircles;
-		$slot->beatmap->countSliders = $beatmap->countSliders;
-		$slot->beatmap->cs = $beatmap->cs;
-		$slot->beatmap->drain = $beatmap->drain;
-		$slot->beatmap->accuracy = $beatmap->accuracy;
-		$slot->beatmap->ar = $beatmap->ar;
-		$slot->beatmap->difficultyRating = $beatmap->difficultyRating;
-		$mappools->slots[] = $slot;
-	}
+	$mappool->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
 
 	echo json_encode($mappool);
 }
@@ -1188,15 +1178,11 @@ function putMappool() {
 			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
 			$stmt->execute();
 			foreach ($body->slots as $slot) {
-				$stmt = $db->prepare('INSERT INTO mappool_slots (mappool, beatmap_id, tiebreaker, freemod, hardrock, doubletime, hidden)
-					VALUES (:mappool, :beatmap_id, :tiebreaker, :freemod, :hardrock, :doubletime, :hidden)');
+				$stmt = $db->prepare('INSERT INTO mappool_slots (mappool, beatmap_id, `mod`)
+					VALUES (:mappool, :beatmap_id, :mod)');
 				$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
-				$stmt->bindValue(':beatmap_id', $body->beatmapId, PDO::PARAM_INT);
-				$stmt->bindValue(':tiebreaker', $body->tiebreaker, PDO::PARAM_BOOL);
-				$stmt->bindValue(':freemod', $body->freemod, PDO::PARAM_BOOL);
-				$stmt->bindValue(':hardrock', $body->hardrock, PDO::PARAM_BOOL);
-				$stmt->bindValue(':doubletime', $body->doubletime, PDO::PARAM_BOOL);
-				$stmt->bindValue(':hidden', $body->hidden, PDO::PARAM_BOOL);
+				$stmt->bindValue(':beatmap_id', $slot->beatmapId, PDO::PARAM_INT);
+				$stmt->bindValue(':mod', $slot->mod, PDO::PARAM_STR);
 				$stmt->execute();
 			}
 		}
@@ -1212,15 +1198,11 @@ function putMappool() {
 			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
 			$stmt->execute();
 			foreach ($body->slots as $slot) {
-				$stmt = $db->prepare('INSERT INTO mappool_slots (mappool, beatmap_id, tiebreaker, freemod, hardrock, doubletime, hidden)
-					VALUES (:mappool, :beatmap_id, :tiebreaker, :freemod, :hardrock, :doubletime, :hidden)');
+				$stmt = $db->prepare('INSERT INTO mappool_slots (mappool, beatmap_id, `mod`)
+					VALUES (:mappool, :beatmap_id, :mod)');
 				$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
-				$stmt->bindValue(':beatmap_id', $body->beatmapId, PDO::PARAM_INT);
-				$stmt->bindValue(':tiebreaker', $body->tiebreaker, PDO::PARAM_BOOL);
-				$stmt->bindValue(':freemod', $body->freemod, PDO::PARAM_BOOL);
-				$stmt->bindValue(':hardrock', $body->hardrock, PDO::PARAM_BOOL);
-				$stmt->bindValue(':doubletime', $body->doubletime, PDO::PARAM_BOOL);
-				$stmt->bindValue(':hidden', $body->hidden, PDO::PARAM_BOOL);
+				$stmt->bindValue(':beatmap_id', $slot->beatmapId, PDO::PARAM_INT);
+				$stmt->bindValue(':mod', $slot->mod, PDO::PARAM_BOOL);
 				$stmt->execute();
 			}
 		}
