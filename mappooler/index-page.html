@@ -1,0 +1,486 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="index-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			app-header {
+				background-color: var(--discord-grey);
+				color: white;
+			}
+			app-header-layout {
+				height: 100%;
+			}
+			paper-icon-button {
+				color: white;
+			}
+			paper-input {
+				--paper-input-container-focux-color: var(--happystick-green);
+			}
+			paper-radio-button {
+				display: inline-block;
+				--paper-radio-button-checked-color: var(--happystick-green);
+				--paper-radio-button-checked-ink-color: var(--happystick-green);
+			}
+			.header {
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.wrapper {
+				margin: 10px;
+			}
+			.list-wrapper {
+				width: 500px;
+				padding: 10px;
+			}
+			.edit-wrapper {
+				width: 1000px;
+			}
+			.edit-section {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				flex-shrink: 0;
+			}
+			.round-dropdown {
+				width: 300px;
+			}
+			.action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.action-wrapper {
+				flex-shrink: 0;
+			}
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
+			}
+			.wait-spinner {
+				margin-left: 10px;
+				margin-top: 15px;
+			}
+			.beatmap-link {
+				width: 500px;
+			}
+			.beatmap-links {
+				width: 500px;
+			}
+			.links-failed {
+				color: red;
+			}
+			.links-done {
+				color: green;
+			}
+		</style>
+		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
+		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<iron-ajax id="putMappoolAjax" url="../api/mappools" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
+		<iron-ajax id="getBeatmapAjax" url="../api/osubeatmap" method="GET" last-response="{{beatmap}}" on-response="_getBeatmapResponse"></iron-ajax>
+		<app-header-layout fullbleed has-scrolling-region>
+			<app-header slot="header">
+				<app-toolbar>
+					<div main-title>Mappooler</div>
+					<div class="flex"></div>
+					<discord-profile id="[[user.id]]" avatar="[[user.avatar]]" username="[[user.username]]" discriminator="[[user.discriminator]]"></discord-profile>
+				</app-toolbar>
+			</app-header>
+			<div class="wrapper flex layout vertical">
+				<paper-dropdown-menu label="Round" class="round-dropdown">
+					<paper-listbox slot="dropdown-content" selected="{{selectedRound}}" attr-for-selected="value">
+						<template is="dom-repeat" items="[[rounds]]" as="round">
+							<paper-item value="[[round]]">[[round.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				<div hidden$="[[!copyRound]]">
+					<div>Mappool is copied from <span>[[copyRoundName]]</span></div>
+				</div>
+				<div hidden$="[[copyRound]]">
+					<div class="layout horizontal">
+						<div class="list-wrapper layout vertical">
+							<div hidden$="[[!listVisible]]">
+								<div class="header">Mappool</div>
+								<vaadin-grid class="slots-grid" items="[[mappool.slots]]" active-item="{{selectedSlot}}">
+									<vaadin-grid-column width="100px" flex-grow="0">
+										<template class="header">Mod</template>
+										<template>[[item.mod]]</template>
+									</vaadin-grid-column>
+									<vaadin-grid-column>
+										<template class="header">Beatmap</template>
+										<template>[[item.title]]</template>
+									</vaadin-grid-column>
+								</vaadin-grid>
+								<div class="layout horizontal">
+									<paper-icon-button icon="add" class="action-button" on-click="_add"></paper-icon-button>
+									<paper-icon-button icon="av:library-add" class="action-button" on-click="_batchAdd"></paper-icon-button>
+									<paper-icon-button icon="save" class="action-button" on-click="_save"></paper-icon-button>
+								</div>
+							</div>
+						</div>
+						<div class="edit-wrapper layout vertical">
+							<div hidden$="[[!editVisible]]">
+								<div hidden$="[[!isNewSlot]]">
+									<div class="header">Add New Beatmap</div>
+									<div class="edit-section layout horizontal">
+										<paper-input class="beatmap-link" label="Beatmap" value="{{beatmapLink}}"></paper-input>
+										<paper-spinner class="wait-spinner" active$="[[addWaiting]]"></paper-spinner>
+									</div>
+								</div>
+								<div hidden$="[[isNewSlot]]">
+									<div class="header">Edit Beatmap</div>
+								</div>
+								<div hidden$="[[!beatmapFound]]">
+									<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[mod]]"></beatmap-info>
+									<div class="edit-section">
+										<paper-radio-group selected="{{mod}}">
+											<paper-radio-button name="Nomod">Nomod</paper-radio-button>
+											<paper-radio-button name="HD">HD</paper-radio-button>
+											<paper-radio-button name="HR">HR</paper-radio-button>
+											<paper-radio-button name="DT">DT</paper-radio-button>
+											<paper-radio-button name="Freemod">Freemod</paper-radio-button>
+											<paper-radio-button name="Tiebreaker">Tiebreaker</paper-radio-button>
+										</paper-radio-group>
+									</div>
+								</div>
+								<div class="layout horizontal">
+									<div hidden$="[[!beatmapFound]]">
+										<paper-button class="action-button" raised on-click="_saveSlot">Save</paper-button>
+									</div>
+									<div hidden$="[[isNewSlot]]">
+										<paper-button class="action-button" raised on-click="_deleteSlot">Delete</paper-button>
+									</div>
+									<paper-button class="action-button" raised on-click="_cancelSlot">Cancel</paper-button>
+								</div>
+							</div>
+							<div hidden$="[[!batchAddVisible]]">
+								<div class="header">Add New Beatmaps</div>
+								<div class="edit-section">
+									<paper-textarea label="Beatmap Links" value="{{beatmapLinks}}"></paper-textarea>
+								</div>
+								<template is="dom-repeat" items="[[batchLinks]]" as="link">
+									<div class="layout horizontal">
+										<div class="links-id">[[link.id]]</div>
+										<div hidden$="[[!link.failed]]">
+											<iron-icon class="links-failed" icon="clear"></iron-icon>
+										</div>
+										<div hidden$="[[!link.done]]">
+											<iron-icon class="links-done" icon="done"></iron-icon>
+										</div>
+										<paper-spinner class="links-spinner" active$="[[link.active]]"></paper-spinner>
+									</div>
+								</template>
+								<div class="layout horizontal">
+									<paper-button class="action-button" raised on-click="_saveBatch">Save</paper-button>
+									<paper-button class="action-button" raised on-click="_closeBatch">Close</paper-button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</app-header-layout>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
+	</template>
+	<script>
+		class IndexPage extends Polymer.Element {
+			static get is() { return 'index-page' }
+
+			static get properties() {
+				return {
+					selectedRound: {
+						observer: '_selectedRoundChanged'
+					},
+					copyRound: {
+						type: Boolean,
+						value: false
+					},
+					editVisible: {
+						type: Boolean,
+						value: false
+					},
+					beatmapLink: {
+						observer: '_beatmapLinkChanged'
+					},
+					beatmapFound: {
+						type: Boolean,
+						value: false
+					},
+					listVisible: {
+						type: Boolean,
+						value: false
+					},
+					selectedSlot: {
+						observer: '_selectedSlotChanged'
+					},
+					beatmapLinks: {
+						observer: '_beatmapLinksChanged'
+					},
+					batchAddVisible: {
+						type: Boolean,
+						value: false
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getUserAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getUserAjax.generateRequest();
+			}
+
+			_selectedRoundChanged(e) {
+				if (e) {
+					if (e.copyMappool == '1') {
+						for (var i = 0; i < this.rounds.length; i++) {
+							if (this.rounds[i].id == e.copyMappoolFrom) {
+								this.copyRoundName = this.rounds[i].name;
+								break;
+							}
+						}
+						this.copyRound = true;
+						this.listVisible = false;
+					} else {
+						this.copyRound = false;
+						this.$.getMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
+						this.$.getMappoolAjax.headers = {
+							'Authorization': localStorage.getItem('token')
+						}
+						this.$.getMappoolAjax.generateRequest();
+						this.listVisible = true;
+					}
+				}
+			}
+
+			_selectedSlotChanged(e) {
+				if (e) {
+					this.editVisible = true;
+					this.batchAddVisible = false;
+					this.isNewSlot = false;
+					this.beatmapLink = e.beatmapId;
+					this.mod = e.mod;
+					this.slotId = e.id;
+				}
+			}
+
+			_beatmapLinkChanged(e) {
+				if (e) {
+					var regexp = new RegExp('^[0-9]+$');
+					if (regexp.test(e)) {
+						this.addWaiting = true;
+						this.beatmapFound = false;
+						this.$.getBeatmapAjax.url = '../api/osubeatmap/' + e;
+						this.$.getBeatmapAjax.generateRequest();
+					} else {
+						var regexp = new RegExp('^https://osu.ppy.sh/b/[0-9]+.*$');
+						if (regexp.test(e)) {
+							var regexp = /b\/[0-9]+/g
+							var match = regexp.exec(e);
+							this.beatmapLink = match[0].substring(2);
+						} else {
+							var regexp = new RegExp('^https://osu.ppy.sh/beatmapsets/[0-9]+#osu/[0-9]+$');
+							if (regexp.test(e)) {
+								var regexp = /#osu\/[0-9]+/g
+								var match = regexp.exec(e);
+								this.beatmapLink = match[0].substring(5);
+							} else {
+								this.beatmapFound = false;
+							}
+						}
+					}
+				} else {
+					this.beatmapFound = false;
+				}
+			}
+
+			_getBeatmapResponse(e) {
+				this.addWaiting = false;
+				var response = e.detail.response;
+				if (response && response.beatmapId) {
+					if (this.isNewSlot) {
+						this.mod = 'Nomod';
+					}
+					this.beatmapFound = true;
+					if (this.batchAddVisible) {
+						var id = 1;
+						for (var i = 0; i < this.mappool.slots.length; i++) {
+							if (this.mappool.slots[i].id >= id) {
+								id = this.mappool.slots[i].id + 1;
+							}
+						}
+						this.push('mappool.slots', {
+							id: id,
+							accuracy: this.beatmap.accuracy,
+							ar: this.beatmap.ar,
+							artist: this.beatmap.artist,
+							beatmapId: this.beatmap.beatmapId,
+							beatmapsetId: this.beatmap.beatmapsetId,
+							bpm: this.beatmap.bpm,
+							countCircles: this.beatmap.countCircles,
+							countSliders: this.beatmap.countSliders,
+							cover: this.beatmap.cover,
+							cs: this.beatmap.cs,
+							difficultyRating: this.beatmap.difficultyRating,
+							drain: this.beatmap.drain,
+							previewUrl: this.beatmap.previewUrl,
+							title: this.beatmap.title,
+							totalLength: this.beatmap.totalLength,
+							version: this.beatmap.version,
+							mod: 'Nomod'
+						});
+						this.set('batchLinks.' + this.batchNextId + '.active', false);
+						this.set('batchLinks.' + this.batchNextId + '.done', true);
+						if (this.batchNextId < this.batchLinks.length - 1) {
+							this.batchNextId++;
+							this._saveBatchNext();
+						}
+					}
+				} else {
+					this.beatmapFound = false;
+					if (this.batchAddVisible) {
+						this.set('batchLinks.' + this.batchNextId + '.active', false);
+						this.set('batchLinks.' + this.batchNextId + '.failed', true);
+						if (this.batchNextId < this.batchLinks.length - 1) {
+							this.batchNextId++;
+							this._saveBatchNext();
+						}
+					}
+				}
+			}
+
+			_add() {
+				this.isNewSlot = true;
+				this.beatmapLink = null;
+				this.editVisible = true;
+			}
+
+			_cancelSlot() {
+				this.editVisible = false;
+			}
+
+			_saveSlot() {
+				if (this.isNewSlot) {
+					var id = 1;
+					for (var i = 0; i < this.mappool.slots.length; i++) {
+						if (this.mappool.slots[i].id >= id) {
+							id = this.mappool.slots[i].id + 1;
+						}
+					}
+					this.push('mappool.slots', {
+						id: id,
+						accuracy: this.beatmap.accuracy,
+						ar: this.beatmap.ar,
+						artist: this.beatmap.artist,
+						beatmapId: this.beatmap.beatmapId,
+						beatmapsetId: this.beatmap.beatmapsetId,
+						bpm: this.beatmap.bpm,
+						countCircles: this.beatmap.countCircles,
+						countSliders: this.beatmap.countSliders,
+						cover: this.beatmap.cover,
+						cs: this.beatmap.cs,
+						difficultyRating: this.beatmap.difficultyRating,
+						drain: this.beatmap.drain,
+						previewUrl: this.beatmap.previewUrl,
+						title: this.beatmap.title,
+						totalLength: this.beatmap.totalLength,
+						version: this.beatmap.version,
+						mod: this.mod
+					});
+				} else {
+					for (var i = 0; i < this.mappool.slots.length; i++) {
+						if (this.mappool.slots[i].id == this.slotId) {
+							this.set('mappool.slots.' + i + '.mod', this.mod);
+							break;
+						}
+					}
+				}
+				this.editVisible = false;
+			}
+
+			_deleteSlot() {
+				for (var i = 0; i < this.mappool.slots.length; i++) {
+					if (this.mappool.slots[i].id == this.slotId) {
+						this.splice('mappool.slots', i, 1);
+						break;
+					}
+				}
+				this.editVisible = false;
+			}
+
+			_save() {
+				this.$.putMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
+				this.$.putMappoolAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putMappoolAjax.body = this.mappool;
+				this.$.putMappoolAjax.generateRequest();
+			}
+
+			_putMappoolResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+				}
+			}
+
+			_batchAdd() {
+				this.editVisible = false;
+				this.batchAddVisible = true;
+			}
+
+			_beatmapLinksChanged(e) {
+				var linkArray = e.split('\n');
+				this.set('batchLinks', []);
+				for (var i = 0; i < linkArray.length; i++) {
+					var regexp = new RegExp('^[0-9]+$');
+					if (regexp.test(linkArray[i])) {
+						this.push('batchLinks', { id: linkArray[i], active: false, failed: false, done: false });
+					} else {
+						var regexp = new RegExp('^https://osu.ppy.sh/b/[0-9]+.*$');
+						if (regexp.test(linkArray[i])) {
+							var regexp = /b\/[0-9]+/g
+							var match = regexp.exec(linkArray[i]);
+							this.push('batchLinks', { id: match[0].substring(2), active: false, failed: false, done: false });
+						} else {
+							var regexp = new RegExp('^https://osu.ppy.sh/beatmapsets/[0-9]+#osu/[0-9]+$');
+							if (regexp.test(linkArray[i])) {
+								var regexp = /#osu\/[0-9]+/g
+								var match = regexp.exec(linkArray[i]);
+								this.push('batchLinks', { id: match[0].substring(5), active: false, failed: false, done: false });
+							} else {
+
+							}
+						}
+					}
+				}
+			}
+
+			_saveBatch() {
+				this.batchNextId = 0;
+				this._saveBatchNext();
+			}
+
+			_saveBatchNext() {
+				this.set('batchLinks.' + this.batchNextId + '.active', true);
+				this.$.getBeatmapAjax.url = '../api/osubeatmap/' + this.batchLinks[this.batchNextId].id;
+				this.$.getBeatmapAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getBeatmapAjax.generateRequest();
+			}
+
+			_closeBatch() {
+				this.batchAddVisible = false;
+			}
+		}
+
+		window.customElements.define(IndexPage.is, IndexPage);
+	</script>
+</dom-module>
