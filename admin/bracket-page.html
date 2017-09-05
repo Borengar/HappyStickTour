@@ -198,7 +198,7 @@
 						</template>
 					</div>
 					<div class="edit-section">
-						<paper-checkbox checked="{{mappoolsReleased}}">Mappools released</paper-checkbox>
+						<paper-checkbox checked="{{mappoolsReleased}}" disabled$="[[copyMappool]]">Mappools released</paper-checkbox>
 					</div>
 					<div class="edit-section">
 						<paper-checkbox checked="{{lobbiesReleased}}">Lobbies released</paper-checkbox>
@@ -333,6 +333,9 @@
 				this.hasBracketReset = false;
 				this.mappoolsReleased = false;
 				this.lobbiesReleased = false;
+				this.copyMappool = false;
+				this.copyRoundId = null;
+				this.copyRoundName = null;
 				this.times = [];
 			}
 
@@ -463,6 +466,7 @@
 					for (var i = 0; i < this.rounds.length; i++) {
 						if (this.rounds[i].id == this.copyRoundId) {
 							this.copyRoundName = this.rounds[i].name;
+							this.mappoolsReleased = this.rounds[i].mappoolsReleased == '1';
 							break;
 						}
 					}
