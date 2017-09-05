@@ -74,7 +74,7 @@
 		</style>
 		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
 		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
-		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
 		<iron-ajax id="putMappoolAjax" url="../api/mappools" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
 		<iron-ajax id="getBeatmapAjax" url="../api/osubeatmap" method="GET" last-response="{{beatmap}}" on-response="_getBeatmapResponse"></iron-ajax>
 		<app-header-layout fullbleed has-scrolling-region>
@@ -233,6 +233,7 @@
 			}
 
 			_selectedRoundChanged(e) {
+				this.listVisible = false;
 				if (e) {
 					if (e.copyMappool == '1') {
 						for (var i = 0; i < this.rounds.length; i++) {
@@ -242,7 +243,6 @@
 							}
 						}
 						this.copyRound = true;
-						this.listVisible = false;
 					} else {
 						this.copyRound = false;
 						this.$.getMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
@@ -250,8 +250,13 @@
 							'Authorization': localStorage.getItem('token')
 						}
 						this.$.getMappoolAjax.generateRequest();
-						this.listVisible = true;
 					}
+				}
+			}
+
+			_getMappoolResponse(e) {
+				if (e) {
+					this.listVisible = true;
 				}
 			}
 
