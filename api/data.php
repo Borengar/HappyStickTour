@@ -279,6 +279,31 @@ function getUser() {
 			$stmt->execute();
 			$profile->tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
 		}
+		if ($user->scope == 'PLAYER') {
+			$stmt = $db->prepare('SELECT id as userId, osu_id as osuId, tier, current_lobby as currentLobby, next_round as nextRound, trivia
+				FROM players
+				WHERE discord_id = :discord_id');
+			$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+			$stmt->execute();
+			$row = $stmt->fetch(PDO::FETCH_OBJ);
+			$profile->userId = $row->userId;
+			$profile->osuId = $row->osuId;
+			$profile->tier = $row->tier;
+			$profile->trivia = $row->trivia;
+			$stmt = $db->prepare('SELECT username, avatar_url as avatarUrl, hit_accuracy as hitAccuracy, level, play_count as playCount, pp, rank
+				FROM osu_users
+				WHERE id = :id');
+			$stmt->bindValue(':id', $profile->osuId, PDO::PARAM_INT);
+			$stmt->execute();
+			$row = $stmt->fetch(PDO::FETCH_OBJ);
+			$profile->osuUsername = $row->username;
+			$profile->osuAvatarUrl = $row->avatarUrl;
+			$profile->osuHitAccuracy = $row->hitAccuracy;
+			$profile->osuLevel = $row->level;
+			$profile->osuPlayCount = $row->playCount;
+			$profile->osuPp = $row->pp;
+			$profile->osuRank = $row->rank;
+		}
 		echo json_encode($profile);
 		return;
 	} else {
@@ -302,15 +327,30 @@ function putUser() {
 
 	$body = json_decode(file_get_contents('php://input'));
 
-	if ($user->scope == 'PLAYER') {
+	if ($user->scope == 'ADMIN') {
 		if (isset($body->discordId)) {
 			$stmt = $db->prepare('UPDATE players
 				SET discord_id = :discord_id
 				WHERE id = :id');
 			$stmt->bindValue(':discord_id', $body->discordId, PDO::PARAM_INT);
-			$stmt->bindValue(':id', $body->id, PDO::PARAM_INT);
+			$stmt->bindValue(':id', $_GET['user'], PDO::PARAM_INT);
 			$stmt->execute();
 		}
+		echoError(0, 'User updated');
+		return;
+	}
+
+	if ($user->scope == 'PLAYER' && $_GET['user'] == '@me') {
+		if (isset($body->trivia)) {
+			$stmt = $db->prepare('UPDATE players
+				SET trivia = :trivia
+				WHERE discord_id = :discord_id');
+			$stmt->bindValue(':trivia', $body->trivia, PDO::PARAM_STR);
+			$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+			$stmt->execute();
+		}
+		echoError(0, 'Profile updated');
+		return;
 	}
 }
 
