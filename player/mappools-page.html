@@ -1,0 +1,86 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="mappools-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment quill-core quill-snow">
+			.wrapper {
+				margin: 10px;
+			}
+			.header {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.ql-toolbar, #editor {
+				max-width: 1000px;
+			}
+			.ql-toolbar {
+				margin-top: 10px;
+			}
+			#editor {
+				height: 400px;
+			}
+			.action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+				width: 300px;
+			}
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
+			}
+			.round-dropdown {
+				width: 300px;
+			}
+			beatmap-info {
+				margin: 10px;
+				flex-shrink: 0;
+			}
+		</style>
+		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<div class="wrapper flex layout vertical">
+			<div class="header">Mappools</div>
+			<paper-dropdown-menu label="Round" class="round-dropdown">
+				<paper-listbox slot="dropdown-content" selected="{{selectedRound}}" attr-for-selected="value">
+					<template is="dom-repeat" items="[[rounds]]" as="round">
+						<paper-item value="[[round]]">[[round.name]]</paper-item>
+					</template>
+				</paper-listbox>
+			</paper-dropdown-menu>
+			<paper-button class="action-button" raised on-click="_downloadMappack" hidden$="[[!mappool.mappack]]">Download Mappack</paper-button>
+			<template is="dom-repeat" items="[[mappool.slots]]" as="beatmap">
+				<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
+			</template>
+		</div>
+	</template>
+	<script>
+		class MappoolsPage extends Polymer.Element {
+			static get is() { return 'mappools-page' }
+
+			static get properties() {
+				return {
+					selectedRound: {
+						observer: '_selectedRoundChanged'
+					}
+				}
+			}
+
+			_selectedRoundChanged(e) {
+				this.$.getMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
+				this.$.getMappoolAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getMappoolAjax.generateRequest();
+			}
+
+			_downloadMappack() {
+				window.open(this.mappool.mappack, '_blank');
+			}
+		}
+
+		window.customElements.define(MappoolsPage.is, MappoolsPage);
+	</script>
+</dom-module>
