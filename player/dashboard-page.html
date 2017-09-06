@@ -1,0 +1,97 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="dashboard-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment quill-core quill-snow">
+			.wrapper {
+				margin: 10px;
+			}
+			.header {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			osu-profile {
+				margin-top: 10px;
+			}
+			.ql-toolbar, #editor {
+				max-width: 1000px;
+			}
+			.ql-toolbar {
+				margin-top: 10px;
+			}
+			#editor {
+				height: 400px;
+			}
+			.action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+				width: 200px;
+			}
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
+			}
+		</style>
+		<iron-ajax id="putUserAjax" url="../api/users/@me" method="PUT" content-type="application/json" on-response="_putUserResponse"></iron-ajax>
+		<div class="wrapper flex layout vertical">
+			<div class="header">My Profile</div>
+			<osu-profile avatar-url="[[user.osuAvatarUrl]]" username="[[user.osuUsername]]" pp="[[user.osuPp]]" hit-accuracy="[[user.osuHitAccuracy]]" play-count="[[user.osuPlayCount]]" level="[[user.osuLevel]]" rank="[[user.osuRank]]"></osu-profile>
+			<div class="header">Trivia</div>
+			<div id="editor"></div>
+			<paper-button class="action-button" raised on-click="_saveTrivia">Save</paper-button>
+		</div>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
+	</template>
+	<script>
+		class DashboardPage extends Polymer.Element {
+			static get is() { return 'dashboard-page' }
+
+			static get properties() {
+				return {
+					user: {
+						observer: '_userChanged'
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.editor = new Quill(this.$.editor, {
+					theme: 'snow',
+					placeholder: 'Fill out some fun facts about yourself that we can use while casting matches to let people know a bit more about you! (playstyle, favorite mappers, mod specialties, other hobbies, etc)'
+				});
+			}
+
+			_userChanged(e) {
+				this.editor.setContents(JSON.parse(e.trivia));
+			}
+
+			_saveTrivia() {
+				this.$.putUserAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putUserAjax.body = {
+					'trivia': JSON.stringify(this.editor.getContents())
+				}
+				this.$.putUserAjax.generateRequest();
+			}
+
+			_putUserResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+				}
+			}
+		}
+
+		window.customElements.define(DashboardPage.is, DashboardPage);
+	</script>
+</dom-module>
