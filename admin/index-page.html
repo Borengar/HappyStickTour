@@ -21,6 +21,7 @@
 				overflow: auto;
 			}
 		</style>
+		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
 		<app-drawer-layout force-narrow>
 			<app-drawer slot="drawer">
 				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
@@ -37,6 +38,8 @@
 					<app-toolbar>
 						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
 						<div main-title>Admin</div>
+						<div class="flex"></div>
+						<discord-profile id="[[user.id]]" avatar="[[user.avatar]]" username="[[user.username]]" discriminator="[[user.discriminator]]"></discord-profile>
 					</app-toolbar>
 				</app-header>
 				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value">
@@ -60,7 +63,15 @@
 						type: String,
 						value: 'Bracket'
 					}
-				};
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getUserAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getUserAjax.generateRequest();
 			}
 		}
 
