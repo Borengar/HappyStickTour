@@ -13,6 +13,7 @@
 				color: var(--happystick-green);
 			}
 			.ql-toolbar, #editor {
+				margin-left: 10px;
 				max-width: 1000px;
 			}
 			.ql-toolbar {
@@ -40,7 +41,8 @@
 			}
 		</style>
 		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
-		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
+		<iron-ajax id="putMappoolAjax" url="../api/mappools" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="header">Mappools</div>
 			<paper-dropdown-menu label="Round" class="round-dropdown">
@@ -54,7 +56,13 @@
 			<template is="dom-repeat" items="[[mappool.slots]]" as="beatmap">
 				<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
 			</template>
+			<div hidden$="[[!mappool]]">
+				<div id="editor"></div>
+				<paper-button class="action-button" raised on-click="_saveFeedback">Save</paper-button>
+			</div>
 		</div>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
 		class MappoolsPage extends Polymer.Element {
@@ -68,12 +76,49 @@
 				}
 			}
 
+			ready() {
+				super.ready();
+				this.mappool = null;
+				this.editor = new Quill(this.$.editor, {
+					theme: 'snow',
+					placeholder: 'Give us some feedback about this mappool'
+				});
+			}
+
 			_selectedRoundChanged(e) {
 				this.$.getMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
 				this.$.getMappoolAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.getMappoolAjax.generateRequest();
+			}
+
+			_getMappoolResponse(e) {
+				if (this.mappool && this.mappool.feedback) {
+					this.editor.setContents(JSON.parse(this.mappool.feedback));
+				}
+			}
+
+			_saveFeedback() {
+				this.$.putMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
+				this.$.putMappoolAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putMappoolAjax.body = {
+					'feedback': JSON.stringify(this.editor.getContents())
+				}
+				this.$.putMappoolAjax.generateRequest();
+			}
+
+			_putMappoolResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+				}
 			}
 
 			_downloadMappack() {
