@@ -42,6 +42,7 @@
 			}
 			.round-dropdown {
 				width: 300px;
+				margin-right: 10px;
 			}
 			.action-button {
 				background-color: var(--happystick-green);
@@ -71,6 +72,9 @@
 			.links-done {
 				color: green;
 			}
+			.dropdown-wrapper {
+				flex-shrink: 0;
+			}
 		</style>
 		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
 		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
@@ -87,7 +91,7 @@
 				</app-toolbar>
 			</app-header>
 			<div class="wrapper flex layout vertical">
-				<div class="layout horizontal">
+				<div class="dropdown-wrapper layout horizontal">
 					<paper-dropdown-menu label="Round" class="round-dropdown">
 						<paper-listbox slot="dropdown-content" selected="{{selectedRound}}" attr-for-selected="value">
 							<template is="dom-repeat" items="[[rounds]]" as="round">
@@ -186,6 +190,12 @@
 								</div>
 							</div>
 						</div>
+					</div>
+					<div hidden$="[[!listVisible]]">
+						<div class="header">Feedback</div>
+						<template is="dom-repeat" items="[[mappool.feedback]]" as="feedback">
+							<feedback-item feedback="[[feedback]]"></feedback-item>
+						</template>
 					</div>
 				</div>
 			</div>

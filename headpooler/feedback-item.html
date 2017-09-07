@@ -1,0 +1,68 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="feedback-item">
+	<template>
+		<style include="iron-flex iron-flex-alignment quill-core quill-snow">
+			.editor-wrapper {
+				max-width: 1000px;
+			}
+			.header {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.ql-toolbar, #editor {
+				margin-left: 10px;
+				min-width: 400px;
+				max-width: 1000px;
+			}
+			.ql-toolbar {
+				margin-top: 10px;
+				display: none;
+			}
+			#editor {
+				height: 400px;
+			}
+			discord-profile, osu-profile {
+				margin-left: 10px;
+				margin-top: 10px;
+			}
+		</style>
+		<div class="wrapper layout horizontal">
+			<div class="editor-wrapper flex layout vertical">
+				<div id="editor"></div>
+			</div>
+			<div class="profiles-wrapper layout vertical">
+				<discord-profile id="[[feedback.discordId]]" avatar="[[feedback.discordAvatar]]" username="[[feedback.discordUsername]]" discriminator="[[feedback.discordDiscriminator]]"></discord-profile>
+				<osu-profile avatar-url="[[feedback.osuAvatarUrl]]" username="[[feedback.osuUsername]]" pp="[[feedback.osuPp]]" hit-accuracy="[[feedback.osuHitAccuracy]]" play-count="[[feedback.osuPlayCount]]" level="[[feedback.osuLevel]]" rank="[[feedback.osuRank]]"></osu-profile>
+			</div>
+		</div>
+	</template>
+	<script>
+		class FeedbackItem extends Polymer.Element {
+			static get is() { return 'feedback-item' }
+
+			static get properties() {
+				return {
+					feedback: {
+						type: Object,
+						observer: '_feedbackChanged'
+					}
+				}
+			}
+
+			_feedbackChanged(e) {
+				if (e && e.feedback) {
+					this.editor = new Quill(this.$.editor, {
+						theme: 'snow',
+						readOnly: true
+					});
+					this.editor.setContents(JSON.parse(e.feedback));
+				}
+			}
+		}
+
+		window.customElements.define(FeedbackItem.is, FeedbackItem);
+	</script>
+</dom-module>
