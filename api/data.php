@@ -1104,10 +1104,22 @@ function getMappool() {
 	$user = checkToken();
 
 	if (!isset($_GET['mappool'])) {
+		$stmt = $db->prepare('SELECT copy_mappool as copyMappool, copy_mappool_from as copyMappoolFrom
+			FROM rounds
+			WHERE id = :id');
+		$stmt->bindValue(':id', $_GET['round'], PDO::PARAM_INT);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($row->copyMappool) {
+			$round = $row->copyMappoolFrom;
+		} else {
+			$round = $_GET['round'];
+		}
+
 		$stmt = $db->prepare('SELECT id
 			FROM mappools
 			WHERE round = :round AND tier = :tier');
-		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':round', $round, PDO::PARAM_INT);
 		$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
 		$stmt->execute();
 		$row = $stmt->fetch(PDO::FETCH_OBJ);
@@ -1115,7 +1127,7 @@ function getMappool() {
 			$stmt = $db->prepare('INSERT INTO mappools (tier, round)
 				VALUES (:tier, :round)');
 			$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
-			$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->bindValue(':round', $round, PDO::PARAM_INT);
 			$stmt->execute();
 			$id = $db->lastInsertId();
 		} else {
@@ -1192,17 +1204,29 @@ function putMappool() {
 	$user = checkToken();
 
 	if (!isset($_GET['mappool'])) {
+		$stmt = $db->prepare('SELECT copy_mappool as copyMappool, copy_mappool_from as copyMappoolFrom
+			FROM rounds
+			WHERE id = :id');
+		$stmt->bindValue(':id', $_GET['round'], PDO::PARAM_INT);
+		$stmt->execute();
+		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		if ($row->copyMappool) {
+			$round = $row->copyMappoolFrom;
+		} else {
+			$round = $_GET['round'];
+		}
+
 		$stmt = $db->prepare('SELECT id
 			FROM mappools
 			WHERE round = :round AND tier = :tier');
-		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':round', $round, PDO::PARAM_INT);
 		$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
 		$stmt->execute();
 		$row = $stmt->fetch(PDO::FETCH_OBJ);
 		if (!isset($row->id)) {
 			$stmt = $db->prepare('INSERT INTO mappools (round, tier)
 				VALUES (:round, :tier)');
-			$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->bindValue(':round', $round, PDO::PARAM_INT);
 			$stmt->bindValue(':tier', $_GET['tier'], PDO::PARAM_INT);
 			$stmt->execute();
 			$id = $db->lastInsertId();
