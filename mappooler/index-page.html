@@ -177,6 +177,12 @@
 							</div>
 						</div>
 					</div>
+					<div hidden$="[[!listVisible]]">
+						<div class="header">Feedback</div>
+						<template is="dom-repeat" items="[[mappool.feedback]]" as="feedback">
+							<feedback-item feedback="[[feedback]]"></feedback-item>
+						</template>
+					</div>
 				</div>
 			</div>
 		</app-header-layout>
