@@ -1165,6 +1165,24 @@ function getMappool() {
 	$stmt->execute();
 	$mappool->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
 
+	if ($user->scope == 'PLAYER') {
+		$stmt = $db->prepare('SELECT feedback
+			FROM mappool_feedback
+			WHERE mappool = :mappool AND user_id = :user_id');
+		$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+		$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+		$stmt->execute();
+		$mappool->feedback = $stmt->fetch(PDO::FETCH_OBJ)->feedback;
+	}
+	if ($user->scope == 'MAPPOOLER' || $user->scope == 'HEADPOOLER') {
+		$stmt = $db->prepare('SELECT mappool_feedback.feedback, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank
+			FROM mappool_feedback INNER JOIN players ON mappool_feedback.user_id = players.id INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN osu_users ON players.osu_id = osu_users.id
+			WHERE mappool_feedback.mappool = :mappool');
+		$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+		$stmt->execute();
+		$mappool->feedback = $stmt->fetchAll(PDO::FETCH_OBJ);
+	}
+
 	echo json_encode($mappool);
 }
 
@@ -1195,11 +1213,29 @@ function putMappool() {
 		$id = $_GET['mappool'];
 	}
 
-	if (!isset($user) || $user->scope == 'PLAYER' || $user->scope == 'REFEREE' || $user->scope == 'ADMIN') {
+	if (!isset($user) || $user->scope == 'REFEREE' || $user->scope == 'ADMIN') {
 		return;
 	}
 
 	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'PLAYER') {
+		if (isset($body->feedback)) {
+			$stmt = $db->prepare('DELETE FROM mappool_feedback
+				WHERE mappool = :mappool AND user_id = :user_id');
+			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+			$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+			$stmt->execute();
+			$stmt = $db->prepare('INSERT INTO mappool_feedback (mappool, user_id, feedback)
+				VALUES (:mappool, :user_id, :feedback)');
+			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+			$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+			$stmt->bindValue(':feedback', $body->feedback, PDO::PARAM_STR);
+			$stmt->execute();
+		}
+		echoError(0, 'Feedback saved');
+		return;
+	}
 
 	if ($user->scope == 'MAPPOOLER') {
 		$stmt = $db->prepare('SELECT rounds.mappools_released as mappoolsReleased, mappools.tier
