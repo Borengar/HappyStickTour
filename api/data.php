@@ -184,9 +184,18 @@ function checkToken() {
 		WHERE token = :token');
 	$stmt->bindValue(':token', $token, PDO::PARAM_STR);
 	$stmt->execute();
-	$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
-	if (count($rows) > 0) {
-		return $rows[0];
+	$user = $stmt->fetch(PDO::FETCH_OBJ);
+	if ($user) {
+		if ($user->scope == 'PLAYER') {
+			$stmt = $db->prepare('SELECT id
+				FROM players
+				WHERE discord_id = :discord_id');
+			$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
+			$stmt->execute();
+			$row = $stmt->fetch(PDO::FETCH_OBJ);
+			$user->userId = $row->id;
+		}
+		return $user;
 	}
 	return null;
 }
