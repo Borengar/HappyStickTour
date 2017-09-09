@@ -1,0 +1,90 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="index-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			app-header {
+				background-color: var(--discord-grey);
+				color: white;
+			}
+			app-drawer-layout {
+				height: 100%;
+			}
+			app-header-layout {
+				height: 100%;
+			}
+			paper-icon-button {
+				color: white;
+			}
+			.drawer-wrapper {
+				height: 100%;
+				overflow: auto;
+			}
+		</style>
+		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
+		<app-drawer-layout force-narrow>
+			<app-drawer slot="drawer">
+				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
+					<paper-item value="Lobbies">Lobbies</paper-item>
+					<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+						<paper-item value="[[lobby.id]]">Lobby&nbsp;<span>[[lobby.id]]</span></paper-item>
+					</template>
+				</paper-listbox>
+			</app-drawer>
+			<app-header-layout fullbleed has-scrolling-region>
+				<app-header slot="header">
+					<app-toolbar>
+						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
+						<div main-title>Referee</div>
+						<div class="flex"></div>
+						<discord-profile id="[[user.id]]" avatar="[[user.avatar]]" username="[[user.username]]" discriminator="[[user.discriminator]]"></discord-profile>
+					</app-toolbar>
+				</app-header>
+				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value">
+					<lobbies-page id="lobbyPage" value="Lobbies"></lobbies-page>
+					<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+						<lobby-page value="[[lobby.id]]" lobby="[[lobby]]"></lobby-page>
+					</template>
+				</iron-pages>
+			</app-header-layout>
+		</app-drawer-layout>
+	</template>
+	<script>
+		class IndexPage extends Polymer.Element {
+			static get is() { return 'index-page' }
+
+			static get properties() {
+				return {
+					lobbies: {
+						type: Array,
+						value: function() { return []; }
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getUserAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getUserAjax.generateRequest();
+				this.$.lobbyPage.addEventListener('openLobby', (e) => {
+					var lobbyFound = false;
+					for (var i = 0; i < this.lobbies.length; i++) {
+						if (this.lobbies[i].id == e.detail.id) {
+							lobbyFound = true;
+							break;
+						}
+					}
+					if (!lobbyFound) {
+						this.push('lobbies', e.detail);
+					}
+					this.pageSelected = e.detail.id;
+				});
+				this.pageSelected = 'Lobbies';
+			}
+		}
+
+		window.customElements.define(IndexPage.is, IndexPage);
+	</script>
+</dom-module>

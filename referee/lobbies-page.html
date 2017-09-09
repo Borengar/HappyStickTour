@@ -1,188 +1,149 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="lobbies-page">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			.tier-selector {
-				width: 200px;
-				margin-left: 50px;
-				margin-top: 10px;
+		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				margin: 10px;
+			}
+			.filter-wrapper {
+				flex-shrink: 0;
+			}
+			paper-dropdown-menu {
+				margin: 10px;
+			}
+			.lobby-wrapper {
+				width: 450px;
+				margin: 10px;
+			}
+			.player-drop-wrapper {
+				margin: 10px auto;
+				width: 400px;
+			}
+			.player-empty {
+				height: 100px;
+				flex-shrink: 0;
+				background-color: #090909;
+				color: white;
+			}
+			.action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px auto;
+				width: 400px;
+				flex-shrink: 0;
+			}
+			.header {
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.lobby-header {
+				font-size: 24px;
+				color: var(--happystick-green);
+				margin-left: 30px;
+			}
+			.lobby-time {
+				margin-left: 30px;
+			}
+			paper-checkbox {
+				--paper-checkbox-checked-color: var(--happystick-green);
+			}
+			#showPlayersCheckbox {
+				margin-top: 40px;
+				margin-left: 10px;
 			}
 		</style>
-		<iron-ajax id="tiersAjax" url="../api/tiers" last-response="{{tiers}}"></iron-ajax>
-		<iron-ajax id="roundsAjax" url="../api/tiers//rounds" on-response="roundsResponse" last-response="{{rounds}}"></iron-ajax>
-		<iron-ajax id="lobbiesAjax" url="../api/rounds//lobbies" on-response="lobbiesResponse" last-response="{{lobbies}}"></iron-ajax>
-		<div class="layout vertical">
-			<paper-dropdown-menu class="tier-selector" label="Tier">
-				<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_tier}}">
-					<template is="dom-repeat" items="[[tiers]]" as="tier">
-						<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
-					</template>
-				</paper-listbox>
-			</paper-dropdown-menu>
-			<div class="layout vertical" hidden$="[[rounds_hidden]]">
-				<paper-dropdown-menu class="tier-selector" label="Round">
-					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{selected_round}}">
+		<iron-ajax id="roundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
+		<iron-ajax id="getLobbiesAjax" url="../api/lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}"></iron-ajax>
+		<div class="wrapper flex layout vertical">
+			<div class="header">Lobbies</div>
+			<div class="filter-wrapper layout horizontal">
+				<paper-dropdown-menu label="Round">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedRound}}">
 						<template is="dom-repeat" items="[[rounds]]" as="round">
 							<paper-item value="[[round.id]]">[[round.name]]</paper-item>
 						</template>
 					</paper-listbox>
 				</paper-dropdown-menu>
-				<div class="layout horizontal" hidden$="[[lobbies_hidden]]">
-					<template is="dom-repeat" items="[[lobbies]]" as="lobby">
-						<lobby-item lobby_id="[[lobby.id]]" slots="[[lobby.slots]]" play_time_setter="[[lobby.match_time]]"></lobby-item>
-					</template>
-				</div>
+				<paper-dropdown-menu label="Tier">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedTier}}">
+						<template is="dom-repeat" items="[[tiers]]" as="tier">
+							<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				<paper-checkbox id="showPlayersCheckbox" checked="{{showPlayers}}">Show Players</paper-checkbox>
+			</div>
+			<div class="flex layout horizontal wrap">
+				<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+					<div class="lobby-wrapper layout vertical">
+						<div class="lobby-header">Lobby <span>[[lobby.id]]</span></div>
+						<div class="lobby-time">Time: <span>[[lobby.matchTime]]</span></div>
+						<paper-button class="action-button" raised on-click="_openLobby">Open</paper-button>
+						<template is="dom-if" if="[[showPlayers]]">
+							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
+								<div hidden$="[[!slot.osuId]]">
+									<div class="player-drop-wrapper layout vertical">
+										<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]"></osu-profile>
+									</div>
+								</div>
+								<div hidden$="[[slot.osuId]]">
+									<div class="player-drop-wrapper layout vertical">
+										<div class="player-empty layout horizontal">
+											<div class="flex"></div>
+											<div class="layout vertical">
+												<div class="flex"></div>
+												<div>EMPTY</div>
+												<div class="flex"></div>
+											</div>
+											<div class="flex"></div>
+										</div>
+									</div>
+								</div>
+							</template>
+						</template>
+					</div>
+				</template>
 			</div>
 		</div>
 	</template>
 	<script>
-		Polymer({
-			is: 'lobbies-page',
-			properties: {
-				selected_tier: {
-					type: Number,
-					observer: 'selected_tierChanged'
-				},
-				rounds_hidden: {
-					type: Boolean,
-					value: true
-				},
-				selected_round: {
-					type: Number,
-					observer: 'selected_roundChanged'
-				},
-				lobbies_hidden: {
-					type: Boolean,
-					value: true
-				}
-			},
-			ready: function() {
-				this.$.tiersAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.tiersAjax.generateRequest();
-			},
-			selected_tierChanged: function() {
-				if (this.selected_tier) {
-					this.$.roundsAjax.url = '../api/tiers/' + this.selected_tier + '/rounds';
-					this.$.roundsAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.roundsAjax.generateRequest();
-				} else {
-					this.rounds_hidden = true;
-				}
-			},
-			roundsResponse: function() {
-				if (this.rounds) {
-					this.rounds_hidden = false;
-				}
-			},
-			selected_roundChanged: function() {
-				if (this.selected_round) {
-					this.$.lobbiesAjax.url = '../api/rounds/' + this.selected_round + '/lobbies';
-					this.$.lobbiesAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.lobbiesAjax.generateRequest();
-				} else {
-					this.lobbies_hidden = true;
-				}
-			},
-			lobbiesResponse: function() {
-				if (this.lobbies) {
-					this.lobbies_hidden = false;
-				}
-			}
-		});
-	</script>
-</dom-module>
+		class LobbiesPage extends Polymer.Element {
+			static get is() { return 'lobbies-page' }
 
-<dom-module id="lobby-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<div class="layout vertical" style="width:450px;margin:10px;background-color:#65B309;">
-			<div style="margin:10px;font-size:20px;">Lobby <span>[[lobby_id]]</span></div>
-			<div class="layout horizontal">
-				<div class="flex"></div>
-				<div class="layout vertical" style="width:400px;">
-					<paper-datetime-picker-item placeholder="Lobby play time" date-format="YYYY-MM-DD" date="{{play_time}}" disabled></paper-datetime-picker-item>
-					<paper-button raised style="background-color:white;margin-bottom:10px;" on-click="openRef">Open</paper-button>
-					<template is="dom-repeat" items="[[slots]]" as="slot">
-						<lobby-item-slot id="[[slot.id]]" osu_profile="[[slot.user.osu_profile]]" sub-since="[[slot.user.twitch_profile.sub_since]]"></lobby-item-slot>
-					</template>
-				</div>
-				<div class="flex"></div>
-			</div>
-			<div style="height:10px;"></div>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'lobby-item',
-			properties: {
-				lobby_id: Number,
-				slots: Array,
-				play_time: Date,
-				play_time_setter: {
-					type: Date,
-					observer: 'play_time_setterChanged'
+			static get properties() {
+				return {
+					selectedRound: {
+						observer: '_getLobbies'
+					},
+					selectedTier: {
+						observer: '_getLobbies'
+					},
+					showPlayers: {
+						type: Boolean,
+						value: false
+					}
 				}
-			},
-			play_time_setterChanged: function() {
-				if (this.play_time_setter) {
-					var play_time_utc = new Date(this.play_time_setter);
-					this.play_time = new Date(Date.UTC(play_time_utc.getFullYear(), play_time_utc.getMonth(), play_time_utc.getDate(), play_time_utc.getHours(), play_time_utc.getMinutes(), 0));
-				}
-			},
-			openRef: function() {
-				this.fire('open', {id: this.lobby_id});
 			}
-		});
-	</script>
-</dom-module>
 
-<dom-module id="lobby-item-slot">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			:host {
-				width: 400px;
-				height: 100px;
-				background-color: white;
-			}
-		</style>
-		<div class="layout vertical" hidden$="[[empty]]">
-			<osu-profile profile="[[osu_profile]]" sub_since="[[sub_since]]"></osu-profile>
-		</div>
-		<div class="layout vertical" style="width:400px;height:100px;background-color:white;" hidden$="[[!empty]]">
-			<div class="flex"></div>
-			<div class="layout horizontal">
-				<div class="flex"></div>
-				<div>EMPTY</div>
-				<div class="flex"></div>
-			</div>
-			<div class="flex"></div>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'lobby-item-slot',
-			properties: {
-				id: Number,
-				osu_profile: {
-					type: Object,
-					observer: 'init'
-				},
-				sub_since: String,
-				empty: {
-					type: Boolean,
-					value: true
-				}
-			},
-			init: function() {
-				if (this.osu_profile) {
-					this.empty = false;
+			_getLobbies() {
+				if (this.selectedRound && this.selectedTier) {
+					this.set('lobbies', []);
+					this.$.getLobbiesAjax.url = '../api/lobbies/' + this.selectedRound + '/' + this.selectedTier;
+					this.$.getLobbiesAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
+					this.$.getLobbiesAjax.generateRequest();
 				}
 			}
-		});
+
+			_openLobby(e) {
+				var lobby = e.model.lobby;
+				this.dispatchEvent(new CustomEvent('openLobby', {detail: lobby}));
+			}
+		}
+
+		window.customElements.define(LobbiesPage.is, LobbiesPage);
 	</script>
 </dom-module>
