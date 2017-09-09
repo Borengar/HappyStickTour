@@ -1,0 +1,50 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="match-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				margin: 10px;
+			}
+			.header {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.round-name {
+				margin-bottom: 10px;
+			}
+		</style>
+		<div class="wrapper flex layout vertical">
+			<div class="header">My Next Match</div>
+			<div>Please enter when you are available. All times are displayed in UTC.</div>
+			<div class="header">Next Round</div>
+			<div>[[user.nextRoundName]]</div>
+			<availability-editor round="[[user.nextRound]]"></availability-editor>
+			<div class="header">If I win</div>
+			<template is="dom-if" if="[[user.continueRound]]">
+				<div class="round-name">[[user.continueRoundName]]</div>
+				<availability-editor round="[[user.continueRound]]"></availability-editor>
+			</template>
+			<div class="header">If I lose</div>
+			<template is="dom-if" if="[[user.dropDownRound]]">
+				<div class="round-name">[[user.dropDownRoundName]]</div>
+				<availability-editor round="[[user.dropDownRound]]"></availability-editor>
+			</template>
+		</div>
+	</template>
+	<script>
+		class MatchPage extends Polymer.Element {
+			static get is() { return 'match-page' }
+
+			static get properties() {
+				return {
+
+				}
+			}
+		}
+
+		window.customElements.define(MatchPage.is, MatchPage);
+	</script>
+</dom-module>

@@ -116,7 +116,7 @@ switch ($_GET['query']) {
 	case 'availability':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'GET': getAvailability(); break; // returns a list of availabilites for a round
-			case 'POST': postAvailability(); break; // creates a new availability for a round
+			case 'PUT': putAvailability(); break; // save availability for a round
 		}
 		break;
 	case 'settings':
@@ -289,9 +289,9 @@ function getUser() {
 			$profile->tier = $stmt->fetch(PDO::FETCH_OBJ)->tier;
 		}
 		if ($user->scope == 'PLAYER') {
-			$stmt = $db->prepare('SELECT id as userId, osu_id as osuId, tier, current_lobby as currentLobby, next_round as nextRound, trivia
-				FROM players
-				WHERE discord_id = :discord_id');
+			$stmt = $db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.tier, players.current_lobby as currentLobby, players.next_round as nextRound, players.trivia, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, rounds.name as nextRoundName
+				FROM players INNER JOIN osu_users ON players.osu_id = osu_users.id LEFT JOIN rounds ON players.next_round = rounds.id
+				WHERE players.discord_id = :discord_id');
 			$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$row = $stmt->fetch(PDO::FETCH_OBJ);
@@ -299,19 +299,32 @@ function getUser() {
 			$profile->osuId = $row->osuId;
 			$profile->tier = $row->tier;
 			$profile->trivia = $row->trivia;
-			$stmt = $db->prepare('SELECT username, avatar_url as avatarUrl, hit_accuracy as hitAccuracy, level, play_count as playCount, pp, rank
-				FROM osu_users
-				WHERE id = :id');
-			$stmt->bindValue(':id', $profile->osuId, PDO::PARAM_INT);
-			$stmt->execute();
-			$row = $stmt->fetch(PDO::FETCH_OBJ);
-			$profile->osuUsername = $row->username;
-			$profile->osuAvatarUrl = $row->avatarUrl;
-			$profile->osuHitAccuracy = $row->hitAccuracy;
-			$profile->osuLevel = $row->level;
-			$profile->osuPlayCount = $row->playCount;
-			$profile->osuPp = $row->pp;
-			$profile->osuRank = $row->rank;
+			$profile->currentLobby = $row->currentLobby;
+			$profile->nextRound = $row->nextRound;
+			$profile->nextRoundName = $row->nextRoundName;
+			$profile->osuUsername = $row->osuUsername;
+			$profile->osuAvatarUrl = $row->osuAvatarUrl;
+			$profile->osuHitAccuracy = $row->osuHitAccuracy;
+			$profile->osuLevel = $row->osuLevel;
+			$profile->osuPlayCount = $row->osuPlayCount;
+			$profile->osuPp = $row->osuPp;
+			$profile->osuRank = $row->osuRank;
+			if ($profile->nextRound) {
+				$stmt = $db->prepare('SELECT r1.has_continue as hasContinue, r1.continue_round as continueRound, r1.has_drop_down as hasDropDown, r1.drop_down_round as dropDownRound, r2.name as continueName, r3.name as dropDownName
+					FROM rounds r1 LEFT OUTER JOIN rounds r2 ON r1.continue_round = r2.id LEFT OUTER JOIN rounds r3 ON r1.drop_down_round = r3.id
+					WHERE r1.id = :id');
+				$stmt->bindValue(':id', $profile->nextRound, PDO::PARAM_INT);
+				$stmt->execute();
+				$round = $stmt->fetch(PDO::FETCH_OBJ);
+				if ($round->hasContinue) {
+					$profile->continueRound = $round->continueRound;
+					$profile->continueRoundName = $round->continueName;
+				}
+				if ($round->hasDropDown) {
+					$profile->dropDownRound = $round->dropDownRound;
+					$profile->dropDownRoundName = $round->dropDownName;
+				}
+			}
 		}
 		echo json_encode($profile);
 		return;
@@ -1433,14 +1446,22 @@ function getAvailability() {
 	}
 
 	if ($user->scope == 'PLAYER') {
-		$stmt = $db->prepare('SELECT availabilities.id, availabilities.time_from as timeFrom, availabilities.time_to as timeTo
-			FROM availabilites INNER JOIN players ON availabilites.user_id = players.id
-			WHERE availabilities.round = :round AND players.discord_id = :discord_id
-			ORDER BY availabilities.time_from ASC');
+		$returnObject = new stdClass;
+		$stmt = $db->prepare('SELECT id, time_from as timeFrom, time_to as timeTo
+			FROM round_times
+			WHERE round = :round');
 		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
-		$stmt->bindValue(':discord_id', $user->id, PDO::PARAM_INT);
 		$stmt->execute();
-		echo json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+		$returnObject->roundTimes = $stmt->fetchAll(PDO::FETCH_OBJ);
+		$stmt = $db->prepare('SELECT id, time_from as timeFrom, time_to as timeTo
+			FROM availabilities
+			WHERE round = :round AND user_id = :user_id
+			ORDER BY time_from ASC');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+		$stmt->execute();
+		$returnObject->availabilities = $stmt->fetchAll(PDO::FETCH_OBJ);
+		echo json_encode($returnObject);
 		return;
 	}
 
@@ -1466,6 +1487,26 @@ function putAvailability() {
 	}
 
 	$body = json_decode(file_get_contents('php://input'));
+
+	if ($user->scope == 'PLAYER') {
+		$stmt = $db->prepare('DELETE FROM availabilities
+			WHERE round = :round AND user_id = :user_id');
+		$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+		$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+		$stmt->execute();
+
+		foreach ($body->availabilities as $availability) {
+			$stmt = $db->prepare('INSERT INTO availabilities (round, user_id, time_from, time_to)
+				VALUES (:round, :user_id, :time_from, :time_to)');
+			$stmt->bindValue(':round', $_GET['round'], PDO::PARAM_INT);
+			$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+			$stmt->bindValue(':time_from', $availability->timeFrom, PDO::PARAM_STR);
+			$stmt->bindValue(':time_to', $availability->timeTo, PDO::PARAM_STR);
+			$stmt->execute();
+		}
+		echoError(0, 'Availability saved');
+		return;
+	}
 
 	if ($user->scope == 'ADMIN') {
 		$stmt = $db->prepare('SELECT id
