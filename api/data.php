@@ -799,8 +799,8 @@ function getLobbies() {
 		foreach ($lobbies as &$lobby) {
 			$stmt = $db->prepare('SELECT lobby_slots.id, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
 				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id
-				WHERE lobby_slots.id = :id');
-			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
+				WHERE lobby_slots.lobby = :lobby');
+			$stmt->bindValue(':lobby', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
 		}
