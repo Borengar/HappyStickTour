@@ -63,7 +63,6 @@
 			<div class="filter-wrapper layout horizontal">
 				<paper-dropdown-menu label="Round">
 					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedRound}}">
-						<paper-item value="0">All</paper-item>
 						<template is="dom-repeat" items="[[rounds]]" as="round">
 							<paper-item value="[[round.id]]">[[round.name]]</paper-item>
 						</template>
@@ -71,7 +70,6 @@
 				</paper-dropdown-menu>
 				<paper-dropdown-menu label="Tier">
 					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedTier}}">
-						<paper-item value="0">All</paper-item>
 						<template is="dom-repeat" items="[[tiers]]" as="tier">
 							<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
 						</template>
