@@ -1400,7 +1400,7 @@ function postOsuGame() {
 	$body = json_decode(file_get_contents('php://input'));
 
 	$stmt = $db->prepare('SELECT MIN(t1.ID + 1) AS nextID
-		FROM tablename t1 LEFT JOIN tablename t2 ON t1.ID + 1 = t2.ID
+		FROM osu_match_events t1 LEFT JOIN osu_match_events t2 ON t1.ID + 1 = t2.ID
 		WHERE t2.ID IS NULL');
 	$stmt->execute();
 	$freeId = $stmt->fetch(PDO::FETCH_OBJ)->nextID;
