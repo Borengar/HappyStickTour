@@ -140,6 +140,11 @@
 
 			_openLobby(e) {
 				var lobby = e.model.lobby;
+				for (var i = 0; i < this.rounds.length; i++) {
+					if (this.rounds[i].id == this.selectedRound) {
+						lobby.hasBracketReset = this.rounds[i].hasBracketReset == '1';
+					}
+				}
 				this.dispatchEvent(new CustomEvent('openLobby', {detail: lobby}));
 			}
 		}
