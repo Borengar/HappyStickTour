@@ -1,0 +1,198 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
+<dom-module id="match-game">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				width: 960px;
+				flex-shrink: 0;
+			}
+			.beatmap-wrapper {
+				width: 960px;
+				height: 100px;
+				position: relative;
+				color: white;
+				font-style: italic;
+				text-shadow: 2px 2px #000000;
+			}
+			.timestamp {
+				position: absolute;
+				top: 10px;
+				left: 10px;
+			}
+			.title {
+				position: absolute;
+				top: 45px;
+				left: 10px;
+				font-size: 26px;
+			}
+			.artist {
+				position: absolute;
+				top: 75px;
+				left: 10px;
+			}
+			.game-mods-wrapper {
+				position: absolute;
+				top: 10px;
+				right: 10px;
+			}
+			.game-mod {
+				width: 50px;
+				height: 50px;
+				margin: 5px;
+				background-size: cover;
+			}
+			.score-wrapper {
+				width: 940px;
+				height: 67px;
+				margin: 5px auto;
+				position: relative;
+				font-style: italic;
+				box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+			}
+			.player-username {
+				position: absolute;
+				top: 5px;
+				left: 30px;
+				color: blue;
+				font-size: 20px;
+			}
+			.failed {
+				color: red;
+				font-style: normal;
+			}
+			.player-flag {
+				position: absolute;
+				top: 30px;
+				left: 30px;
+				width: 30px;
+				height: 20px;
+				background-size: cover;
+			}
+			.mods-wrapper {
+				position: absolute;
+				top: 5px;
+				right: 400px;
+			}
+			.score-mod {
+				width: 40px;
+				height: 40px;
+				margin: 5px;
+				background-size: cover;
+			}
+			.combo {
+				position: absolute;
+				bottom: 38px;
+				right: 320px;
+				color: grey;
+				font-size: 12px;
+			}
+			.combo-number {
+				font-size: 16px;
+				color: #6644cc;
+			}
+			.accuracy {
+				position: absolute;
+				bottom: 38px;
+				right: 200px;
+				color: grey;
+				font-size: 12px;
+			}
+			.accuracy-number {
+				font-size: 16px;
+				color: #6644cc;
+			}
+			.score {
+				position: absolute;
+				bottom: 35px;
+				right: 10px;
+				font-size: 12px;
+				color: grey;
+			}
+			.score-number {
+				font-size: 26px;
+				color: #bb1177;
+			}
+			.count300, .count100, .count50, .countMiss {
+				position: absolute;
+				bottom: 18px;
+				font-size: 14px;
+				color: grey;
+			}
+			.count300 {
+				right: 190px;
+			}
+			.count100 {
+				right: 130px;
+			}
+			.count50 {
+				right: 70px;
+			}
+			.countMiss {
+				right: 10px;
+			}
+			.number {
+				color: #6644cc;
+			}
+		</style>
+		<div class="wrapper layout vertical">
+			<div class="beatmap-wrapper" style="background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('[[game.beatmap.cover]]') no-repeat center center;">
+				<div class="timestamp"><span>[[_formatTimestamp(game.start_time)]]</span> - <span>[[_formatTimestamp(game.end_time)]]</span></div>
+				<div class="title"><span>[[game.beatmap.title]]</span> [<span>[[game.beatmap.version]]</span>]</div>
+				<div class="artist">[[game.beatmap.artist]]</div>
+				<div class="game-mods-wrapper layout horizontal">
+					<template is="dom-repeat" items="[[_modsToArray(game.mods)]]">
+						<div class="game-mod" style="background-image:url('http://happysticktour.com/images/mod-[[game.mods]].png');"></div>
+					</template>
+				</div>
+			</div>
+			<template is="dom-repeat" items="[[game.scores]]" as="score">
+				<div class="score-wrapper">
+					<div class="player-username">[[score.player.username]] <span class="failed" hidden$="[[!_isFailed(score.pass)]]">FAILED</span></div>
+					<div class="player-flag" style="background-image:url('https://osu.ppy.sh/images/flags/[[score.player.country]].png')"></div>
+					<div class="mods-wrapper layout horizontal">
+						<template is="dom-repeat" items="[[_modsToArray(score.mods)]]" as="mod">
+							<div class="score-mod" style="background-image:url('http://happysticktour.com/images/mod-[[mod]].png')"></div>
+						</template>
+					</div>
+					<div class="combo">Combo <span class="combo-number">[[_formatScore(score.maxCombo)]]</span></div>
+					<div class="accuracy">Accuracy <span class="accuracy-number">[[score.accuracy]]%</span></div>
+					<div class="score">Score <span class="score-number">[[_formatScore(score.score)]]</span></div>
+					<div class="count300">300 <span class="number">[[_formatScore(score.count300)]]</span></div>
+					<div class="count100">100 <span class="number">[[_formatScore(score.count100)]]</span></div>
+					<div class="count50">50 <span class="number">[[_formatScore(score.count50)]]</span></div>
+					<div class="countMiss">Miss <span class="number">[[_formatScore(score.countMiss)]]</span></div>
+				</div>
+			</template>
+		</div>
+	</template>
+	<script>
+		class MatchGame extends Polymer.Element {
+			static get is() { return 'match-game' }
+
+			static get properties() {
+				return {
+					game: Object
+				}
+			}
+
+			_formatTimestamp(e) {
+				return e.substring(11, 16);
+			}
+
+			_formatScore(e) {
+				return e.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+			}
+
+			_isFailed(e) {
+				return e == '0';
+			}
+
+			_modsToArray(e) {
+				return e ? e.split(',') : [];
+			}
+		}
+
+		window.customElements.define(MatchGame.is, MatchGame);
+	</script>
+</dom-module>
