@@ -104,21 +104,24 @@ class OsuApi {
       $dom = new DOMDocument();
       @$dom->loadHTML($html);
       $user = json_decode($dom->getElementById('json-user')->textContent);
+      $rankHistory = json_decode($dom->getElementById('json-rankHistory')->textContent);
+      $statistics = json_decode($dom->getElementById('json-statistics')->textContent);
+      $scores = json_decode($dom->getElementById('json-scores')->textContent);
 
       $returnValue->id = $user->id;
       $returnValue->username = $user->username;
       $returnValue->avatarUrl = $user->avatar_url;
-      $returnValue->hitAccuracy = $user->allStatistics->osu->hit_accuracy;
-      $returnValue->level = $user->allStatistics->osu->level->current;
-      $returnValue->playCount = $user->allStatistics->osu->play_count;
-      $returnValue->pp = $user->allStatistics->osu->pp;
-      $returnValue->rank = $user->allStatistics->osu->rank->global;
-      $returnValue->rankHistory = $user->allRankHistories->osu->data;
-      $returnValue->bestScore = $user->allScoresBest->osu[0]->beatmapset->artist . ' - ' . $user->allScoresBest->osu[0]->beatmapset->title . ' [' . $user->allScoresBest->osu[0]->beatmap->version . ']';
-      if (count($user->allScoresBest->osu[0]->mods) > 0) {
-        $returnValue->bestScore .= ' +' . join(',', $user->allScoresBest->osu[0]->mods);
+      $returnValue->hitAccuracy = $statistics->hit_accuracy;
+      $returnValue->level = $statistics->level->current;
+      $returnValue->playCount = $statistics->play_count;
+      $returnValue->pp = $statistics->pp;
+      $returnValue->rank = $statistics->rank->global;
+      $returnValue->rankHistory = $rankHistory->data;
+      $returnValue->bestScore = $scores->best[0]->beatmapset->artist . ' - ' . $scores->best[0]->beatmapset->title . ' [' . $scores->best[0]->beatmap->version . ']';
+      if (count($scores->best[0]->mods) > 0) {
+        $returnValue->bestScore .= ' +' . join(',', $scores->best[0]->mods);
       }
-      $returnValue->bestScore .= ' (' . $user->allScoresBest->osu[0]->pp . 'PP)';
+      $returnValue->bestScore .= ' (' . $scores->best[0]->pp . 'PP)';
       $returnValue->playstyle = join(' + ', $user->playstyle);
       $returnValue->joinDate = (new DateTime($user->join_date))->format('Y-m-d H:i:s');
       $returnValue->country = $user->country->code;
@@ -260,7 +263,8 @@ class OsuApi {
         $event->game->beatmap = $this->getBeatmap($event->game->beatmap);
         $stmt = $db->prepare('SELECT id, user_id as userId, score, pass, max_combo as maxCombo, accuracy, mods, count_300 as count300, count_100 as count100, count_50 as count50, count_miss as countMiss
           FROM osu_match_scores
-          WHERE match_event = :match_event');
+          WHERE match_event = :match_event
+          ORDER BY pass DESC, score DESC');
         $stmt->bindValue(':match_event', $event->id, PDO::PARAM_INT);
         $stmt->execute();
         $event->game->scores = $stmt->fetchAll(PDO::FETCH_OBJ);
