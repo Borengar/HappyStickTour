@@ -797,8 +797,8 @@ function getLobbies() {
 		$stmt->execute();
 		$lobbies = $stmt->fetchAll(PDO::FETCH_OBJ);
 		foreach ($lobbies as &$lobby) {
-			$stmt = $db->prepare('SELECT lobby_slots.id as id, players.id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, lobby_slots.eliminated as eliminated, lobby_slots.forfeit as forfeit, lobby_slots.noshow as noshow, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry
-				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id
+			$stmt = $db->prepare('SELECT lobby_slots.id as id, players.id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, lobby_slots.eliminated as eliminated, lobby_slots.forfeit as forfeit, lobby_slots.noshow as noshow, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
+				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN osu_users ON players.osu_id = osu_users.id LEFT JOIN discord_users ON players.discord_id = discord_users.id
 				WHERE lobby_slots.lobby = :lobby');
 			$stmt->bindValue(':lobby', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
