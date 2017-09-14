@@ -984,6 +984,7 @@ function getLobby() {
 
 function putLobby() {
 	global $db;
+	global $discordApi;
 
 	$user = checkToken();
 	if (!isset($user)) {
@@ -1018,21 +1019,24 @@ function putLobby() {
 			$stmt->execute();
 			$rowcount = $stmt->fetch(PDO::FETCH_OBJ);
 			if ($rowcount->rowcount == 0) {
-				$stmt = $db->prepare('SELECT rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound
-					FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round
+				$stmt = $db->prepare('SELECT rounds.name as roundName, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId
+					FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round INNER JOIN tiers ON lobbies.tier = tiers.id
 					WHERE lobbies.id = :id');
 				$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
 				$stmt->execute();
 				$round = $stmt->fetch(PDO::FETCH_OBJ);
+				$roundName = $round->roundName;
+				$tierName = $round->tierName;
+				$matchId = $round->matchId;
 				foreach ($body->continues as $player) {
 					$stmt = $db->prepare('UPDATE lobby_slots
 						SET continue_to_upper = :continue_to_upper, drop_down = :drop_down, eliminated = :eliminated, forfeit = :forfeit, noshow = :noshow
 						WHERE lobby = :lobby and user_id = :user_id');
-					$stmt->bindValue(':continue_to_upper', $player->continue == 'continue', PDO::PARAM_BOOL);
-					$stmt->bindValue(':drop_down', $player->continue == 'dropdown', PDO::PARAM_BOOL);
-					$stmt->bindValue(':eliminated', $player->continue == 'eliminated', PDO::PARAM_BOOL);
-					$stmt->bindValue(':forfeit', $player->continue == 'forfeit', PDO::PARAM_BOOL);
-					$stmt->bindValue(':noshow', $player->continue == 'noshow', PDO::PARAM_BOOL);
+					$stmt->bindValue(':continue_to_upper', $player->continue == 'Continue', PDO::PARAM_BOOL);
+					$stmt->bindValue(':drop_down', $player->continue == 'Drop down', PDO::PARAM_BOOL);
+					$stmt->bindValue(':eliminated', $player->continue == 'Eliminated', PDO::PARAM_BOOL);
+					$stmt->bindValue(':forfeit', $player->continue == 'Forfeit', PDO::PARAM_BOOL);
+					$stmt->bindValue(':noshow', $player->continue == 'Noshow', PDO::PARAM_BOOL);
 					$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
 					$stmt->bindValue(':user_id', $player->userId, PDO::PARAM_INT);
 					$stmt->execute();
@@ -1050,6 +1054,21 @@ function putLobby() {
 					$stmt->execute();
 				}
 			}
+
+			$message = "**" . $roundName . " | " . $tierName . "**\r\n";
+			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n";
+			foreach ($body->overall as $player) {
+				$playerContinue = '';
+				$playerDiscordId = '';
+				foreach ($body->continues as $continue) {
+					if ($continue->osuId == $player->osuId) {
+						$playerContinue = $continue->continue;
+						$playerDiscordId = $continue->discordId;
+					}
+				}
+				$message .= $player->score . " | " . $player->osuUsername . " (<@" . $playerDiscordId . ">) | " . $playerContinue . "\r\n";
+			}
+			$discordApi->sendMessage($message);
 		}
 		echoError(0, 'Lobby updated');
 		return;
@@ -1382,6 +1401,7 @@ function putOsuGame() {
 			WHERE match_event = :match_event');
 		$stmt->bindValue(':picked_by', $body->pickedBy, PDO::PARAM_INT);
 		$stmt->bindValue(':match_event', $_GET['id'], PDO::PARAM_INT);
+		$stmt->execute();
 	}
 
 	echoError(0, 'Game updated');
