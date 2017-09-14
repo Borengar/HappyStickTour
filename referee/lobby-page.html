@@ -1,674 +1,492 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="lobby-page">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			paper-tabs {
-        background-color: var(--discord-grey);
-        color: white;
-        --paper-tabs-selection-bar-color: var(--happystick-green);
-      }
-      overall-item {
-      	margin-top: 10px;
-      }
-      .green-button {
-      	background-color: var(--happystick-green);
-      	color: white;
-      	margin: 10px;
-      	width: 300px;
-      }
-      .red-button {
-      	background-color: var(--error-red);
-      	color: white;
-      	margin: 10px;
-      	width: 300px;
-      }
-      .header {
-      	color: var(--happystick-green);
-      	font-size: 40px;
-      }
-      #successToast {
+		<style include="iron-flex iron-flex-alignment quill-core quill-snow">
+			.wrapper {
+				margin: 10px;
+			}
+			paper-input {
+				--paper-input-container-focus-color: var(--happystick-green);
+			}
+			.id-input {
+				width: 200px;
+			}
+			.action-button {
 				background-color: var(--happystick-green);
 				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.refresh-button {
+				width: 200px;
+			}
+			match-game {
+				margin-top: 20px;
+				margin-bottom: 20px;
+			}
+			.counts {
+				margin-left: 10px;
+				margin-top: 50px;
+			}
+			.picked-by {
+				margin-left: 10px;
 			}
 			#errorToast {
-				background-color: var(--error-red);
+				--paper-toast-background-color: var(--error-red);
+			}
+			.overall-wrapper {
+				margin: 5px;
+			}
+			.overall-score {
+				margin-left: 5px;
+				font-size: 30px;
+			}
+			paper-tabs {
+				--paper-tabs-selection-bar-color: var(--happystick-green);
+				background-color: var(--discord-grey);
 				color: white;
 			}
+			.player-wrapper {
+				margin: 5px;
+			}
+			.player-invite {
+				margin-left: 5px;
+				font-size: 20px;
+			}
+			.player-continues {
+				margin-top: 10px;
+				margin-left: 5px;
+			}
+			beatmap-info {
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.command-frame {
+				width: 1000px;
+			}
+			.command {
+				margin: 5px;
+				color: var(--happystick-green);
+			}
+			.explanation {
+				color: #000000;
+			}
+			.save-continue-button {
+				width: 300px;
+			}
+			.ql-toolbar, #editor {
+				max-width: 1000px;
+				margin-left: 10px;
+			}
+			.ql-toolbar {
+				margin-top: 30px;
+			}
+			#editor {
+				height: 400px;
+			}
+			.save-comment-button {
+				width: 300px;
+			}
 		</style>
-		<iron-ajax id="lobbyAjax" url="../api/lobbies/" method="GET" on-response="lobbyResponse" last-response="{{lobby}}"></iron-ajax>
-		<iron-ajax id="mappoolAjax" url="../api/rounds//mappool" method="GET" last-response="{{mappool}}" on-response="mappoolResponse"></iron-ajax>
-		<iron-ajax id="saveLobbyAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="saveLobbyResponse"></iron-ajax>
-		<iron-ajax id="matchAjax" url="../api/matches/" method="GET" on-response="matchResponse"></iron-ajax>
-		<iron-ajax id="saveContinuesAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="saveContinuesResponse"></iron-ajax>
-		<iron-ajax id="saveCommentAjax" url="../api/lobbies/" method="PUT" content-type="application/json"></iron-ajax>
-		<iron-ajax id="bansAjax" url="../api/matches//bans" method="GET" on-response="bansResponse"></iron-ajax>
-		<iron-ajax id="saveBanAjax" url="../api/matches//bans" method="POST" content-type="application/json" on-response="saveBanResponse"></iron-ajax>
-		<iron-ajax id="deleteBanAjax" url="../api/matches//bans" method="DELETE" content-type="application/json" on-response="deleteBanResponse"></iron-ajax>
-		<div class="layout vertical">
-			<paper-tabs attr-for-selected="value" selected="{{tabSelected}}">
-				<paper-tab value="Overview">Overview</paper-tab>
-				<paper-tab value="Players">Players</paper-tab>
-				<paper-tab value="Mappool">Mappool</paper-tab>
-				<paper-tab value="Guidelines">Guidelines</paper-tab>
-				<paper-tab value="IRC">IRC</paper-tab>
+		<iron-ajax id="putLobbyAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="_putLobbyResponse"></iron-ajax>
+		<iron-ajax id="getMatchAjax" url="../api/osumatch/" method="GET" last-response="{{matchHistory}}" on-response="_getMatchResponse"></iron-ajax>
+		<iron-ajax id="putGameAjax" url="../api/osugame/" method="PUT" content-type="application/json" on-response="_putGameResponse"></iron-ajax>
+		<iron-ajax id="postGameAjax" url="../api/osumatch//games" method="POST" content-type="application/json" on-response="_postGameResponse"></iron-ajax>
+		<iron-ajax id="deleteGameAjax" url="../api/osugame/" method="DELETE" on-response="_deleteGameResponse"></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/mappools/" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<div class="flex layout vertical">
+			<paper-tabs selected="{{tabSelected}}" attr-for-selected="value">
+				<paper-tab value="match">MATCH</paper-tab>
+				<paper-tab value="players">PLAYERS</paper-tab>
+				<paper-tab value="mappool">MAPPOOL</paper-tab>
+				<paper-tab value="commands">REF COMMANDS</paper-tab>
 			</paper-tabs>
-			<iron-pages attr-for-selected="value" selected="[[tabSelected]]" class="layout vertical">
-				<div value="Overview" class="layout vertical">
-					<div class="layout vertical" style="margin:20px;" hidden$="[[new_match]]">
-						<div class="header">Lobby <span>[[id]]</span></div>
-						<div>Match name: <span>[[match_name]]</span></div>
-						<div>MP link: <a href="https://osu.ppy.sh/mp/[[match_id]]" target="_blank">https://osu.ppy.sh/mp/[[match_id]]</a></div>
-						<paper-button raised class="green-button" on-click="refreshLobby" hidden$="[[closed]]">Refresh</paper-button>
-						<paper-button raised class="red-button" on-click="showChangeMatchId" hidden$="[[closed]]">Change match ID</paper-button>
-						<div class="header" style="margin-top:50px;">Players</div>
-						<div class="layout horizontal">
-							<div class="layout vertical">
-								<template is="dom-repeat" items="{{overall}}">
-									<overall-item overall_item="{{item}}" closed="[[closed]]"></overall-item>
-								</template>
-							</div>
-							<div class="layout vertical" style="margin-left:100px;">
-								<div>Lobby size: <span>[[lobby.lobby_size]]</span></div>
-								<div>Amount players continue: <span>[[lobby.amount_continue_to_upper]]</span></div>
-								<div>Amount players drop down: <span>[[lobby.amount_drop_down]]</span></div>
-								<div>Amount players eliminated: <span>[[lobby.amount_eliminated]]</span></div>
-							</div>
-						</div>
-						<paper-button raised class="green-button" on-click="saveContinues">Save</paper-button>
-						<div class="header" style="margin-top:50px;">Games</div>
-						<template is="dom-repeat" items="[[games]]">
-							<game-item game_item="[[item]]" players="[[players]]" closed="[[closed]]" style="margin-top:10px;" on-changed="refreshLobby"></game-item>
+			<iron-pages selected="[[tabSelected]]" attr-for-selected="value">
+				<div class="wrapper flex layout vertical" value="match">
+					<div class="layout horizontal">
+						<paper-input class="id-input" label="Match ID" value="{{lobby.matchId}}"></paper-input>
+						<paper-button class="action-button" raised on-click="_matchIdChanged">Change</paper-button>
+					</div>
+					<paper-button class="action-button refresh-button" raised on-click="_loadMatch">Refresh</paper-button>
+					<template is="dom-repeat" items="{{matchHistory}}">
+						<template is="dom-if" if="[[_isMatchCreated(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> Match created</div>
 						</template>
-						<div class="header" style="margin-top:50px;">Ref Comments</div>
-						<paper-textarea label="Comments" value="{{ref_comments}}" style="width:900px;"></paper-textarea>
-						<paper-button raised class="green-button" on-click="saveComment">Save Comment</paper-button>
-					</div>
-					<div class="layout vertical" style="margin:20px;" hidden$="[[!new_match]]">
-						<div class="header">Lobby <span>[[id]]</span></div>
-						<div>Match name: <span>[[name_schema]]</span> #<span>[[id]]</span></div>
-						<paper-input label="Match ID" value="{{match_id_new}}" style="width:300px;"></paper-input>
-						<paper-button raised class="green-button" on-click="saveMatchId">Save match ID</paper-button>
-					</div>
-				</div>
-				<div value="Players" class="layout vertical">
-					<div class="layout vertical">
-						<template is="dom-repeat" items="[[players]]" as="player">
-							<div class="layout horizontal" style="margin:20px;">
-								<osu-profile profile="[[player.user.osu_profile]]" sub_since="[[player.user.sub_since]]"></osu-profile>
-								<div class="layout vertical" style="margin-left:20px;">
-									<discord-profile profile="[[player.user.discord_profile]]"></discord-profile>
-									<div class="flex"></div>
-									<div>!mp invite #<span>[[player.user.osu_profile.user_id]]</span></div>
+						<template is="dom-if" if="[[_isPlayerJoined(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> <span>[[item.player.username]]</span> joined the match</div>
+						</template>
+						<template is="dom-if" if="[[_isOther(item.type)]]">
+							<div class="layout horizontal">
+								<div class="layout vertical">
+									<match-game game="[[item.game]]"></match-game>
+									<template is="dom-if" if="[[lobby.hasBracketReset]]">
+										<paper-button class="action-button" raised on-click="_insertBracketReset">Insert Bracket Reset</paper-button>
+									</template>
+								</div>
+								<div class="layout vertical">
+									<paper-toggle-button class="counts" checked="[[_counts(item.game.counts)]]" on-checked-changed="_countsChanged">Counts</paper-toggle-button>
+									<vaadin-combo-box class="picked-by" label="Picked by" items="[[players]]" value="{{item.game.picked_by}}" item-value-path="userId" item-label-path="osuUsername" on-change="_pickedByChanged"></vaadin-combo-box>
 								</div>
 							</div>
 						</template>
-					</div>
-				</div>
-				<div value="Mappool" class="layout vertical">
-					<div class="layout vertical">
-						<template is="dom-repeat" items="[[mappool.slots]]" as="slot">
+						<template is="dom-if" if="[[_isPlayerLeft(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> <span>[[item.player.username]]</span> left the match</div>
+						</template>
+						<template is="dom-if" if="[[_isMatchDisbanded(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> Match disbanded</div>
+						</template>
+						<template is="dom-if" if="[[_isBracketReset(item.type)]]">
 							<div class="layout horizontal">
-								<mappool-item beatmap-id="[[slot.beatmap.beatmap_id]]" map="[[slot.beatmap]]" mods="[[slot.mods]]" freemod="[[slot.freemod]]" tiebreaker="[[slot.tiebreaker]]" picked$="[[slot.picked]]" banned$="[[slot.banned]]" style="margin:20px;"></mappool-item>
 								<div class="layout vertical">
 									<div class="flex"></div>
-									<div>!mp map <span>[[slot.beatmap.beatmap_id]]</span></div>
-									<div>!mp mods <span>[[slot.mods_string]]</span></div>
+									<div><span>[[_convertTimestamp(item.timestamp)]]</span> Bracket Reset</div>
 									<div class="flex"></div>
 								</div>
-								<div class="layout vertical" style="margin-left:20px;">
-									<div class="flex"></div>
-									<paper-dropdown-menu label="Banned by" disabled$="[[closed]]">
-										<paper-listbox class="dropdown-content" attr-for-selected="value" selected="[[slot.banned_by]]" on-selected-changed="bannedByChanged">
-											<paper-item value=""></paper-item>
-											<template is="dom-repeat" items="[[players]]" as="player">
-												<paper-item value="[[player.user.discord_profile.id]]">[[player.user.osu_profile.username]]</paper-item>
-											</template>
-										</paper-listbox>
-									</paper-dropdown-menu>
-									<div class="flex"></div>
+								<paper-button class="action-button" raised on-click="_deleteBracketReset">Remove</paper-button>
+							</div>
+						</template>
+						<template is="dom-if" if="[[_isOverall(item.type)]]">
+							<template is="dom-repeat" items="[[item.slots]]" as="slot">
+								<div class="overall-wrapper layout horizontal">
+									<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]"></osu-profile>
+									<div class="layout vertical">
+										<div class="flex"></div>
+										<div class="overall-score">[[slot.score]]</div>
+										<div class="flex"></div>
+									</div>
+								</div>
+							</template>
+						</template>
+					</template>
+				</div>
+				<div class="wrapper flex layout vertical" value="players">
+					<template is="dom-repeat" items="{{lobby.slots}}" as="slot">
+						<template is="dom-if" if="[[slot.osuId]]">
+							<div class="player-wrapper layout horizontal">
+								<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]"></osu-profile>
+								<div class="layout vertical">
+									<div class="player-invite">!mp invite #[[slot.osuId]]</div>
+									<vaadin-combo-box class="player-continues" label="Continues" items='["Continue","Drop down","Eliminated","Forfeit","Noshow"]' value="{{slot.continue}}"></vaadin-combo-box>
 								</div>
 							</div>
 						</template>
-					</div>
+					</template>
+					<paper-button class="action-button save-continue-button" raised on-click="_saveContinues">Save</paper-button>
+					<div id="editor"></div>
+					<paper-button class="action-button save-comment-button" raised on-click="_saveComment">Save</paper-button>
 				</div>
-				<div value="Guidelines" class="layout vertical">
-
+				<div class="wrapper flex layout vertical" value="mappool">
+					<template is="dom-repeat" items="[[mappool.slots]]" as="beatmap">
+						<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
+					</template>
 				</div>
-				<div value="IRC" class="layout vertical">
-					<div class="layout vertical" style="margin-left:20px;">
-						<div style="margin-top:20px;">If you don't have an IRC client, get one <a href="https://hexchat.github.io/downloads.html">here.</a></div>
-            <div style="margin-top:10px;"><a href="https://osu.ppy.sh/p/irc">Click here</a> to get your password for the IRC connection.</div>
-            <div style="margin-top:10px;">Connect with your osu username and the password you just got to irc.ppy.sh</div>
-            <div style="margin-top:10px;">A complete list of IRC commands can be found on the <a href="https://osu.ppy.sh/wiki/Osu!tourney#IRC_Commands_.28optional.29">osu wiki.</a></div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp make &lt;name&gt;</div>
-              <div>Create the multiplayer lobby</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp lock</div>
-              <div>Locks the room so that players can't change their team and slot</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp unlock</div>
-              <div>Unlocks the room</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp size &lt;size&gt;</div>
-              <div>Sets the amount of available slots in the room</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp invite &lt;username&gt;</div>
-              <div>Adds the player to the room</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp kick &lt;username&gt;</div>
-              <div>Kicks the player from the room</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp map &lt;mapid&gt;</div>
-              <div>Changes the beatmap of the room</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp mods &lt;mod&gt; [&lt;mod&gt;] ...</div>
-              <div>Applies these mods to the room<br>HR, DT, HD, Freemod, None</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp start [&lt;time&gt;]</div>
-              <div>Starts the match after &lt;time&gt; seconds<br>Default is 0 seconds</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp timer [&lt;time&gt;]</div>
-              <div>Begins a countdown timer<br>Default is 30 seconds</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp aborttimer</div>
-              <div>Stops the current timer</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp settings</div>
-              <div>Display full match details</div>
-            </div>
-            <div style="margin-top:20px;" class="layout horizontal">
-              <div style="width:250px;">!mp close</div>
-              <div>Close the multiplayer lobby (do this after the match is finished!)</div>
-            </div>
-            <div style="margin-top:20px;"><em>&lt;username&gt; can be replaced with #&lt;user id&gt;</em></div>
-					</div>
+				<div class="wrapper flex layout vertical" value="commands">
+					<div class="command">!mp make &lt;name&gt; <span class="explanation">Creates a tournament room</span></div>
+					<div class="command">!mp close <span class="explanation">Closes the room</span></div>
+					<div class="command">!mp invite &lt;username&gt; <span class="explanation">Invites a player to the room</span></div>
+					<div class="command">!mp kick &lt;username&gt; <span class="explanation">Kicks a player from the room</span></div>
+					<div class="command">!mp lock/unlock <span class="explanation">Locks/Unlocks a room so players can't change their slot</span></div>
+					<div class="command">!mp size &lt;size&gt; <span class="explanation">Sets the amount of available slots</span></div>
+					<div class="command">!mp host &lt;username&gt; <span class="explanation">Gives a player host</span></div>
+					<div class="command">!mp clearhost <span class="explanation">Resets host</span></div>
+					<div class="command">!mp settings <span class="explanation">Displays room details</span></div>
+					<div class="command">!mp start &lt;time&gt; <span class="explanation">Starts the match after &lt;time&gt; seconds</span></div>
+					<div class="command">!mp timer &lt;time&gt; <span class="explanation">Starts a countdown timer</span></div>
+					<div class="command">!mp aborttimer <span class="explanation">Stops the current timer (timer or start)</span></div>
+					<div class="command">!mp abort <span class="explanation">Aborts the match</span></div>
+					<div class="command">!mp map &lt;beatmap id&gt; <span class="explanation">Changes the beatmap</span></div>
+					<div class="command">!mp mods &lt;name&gt; <span class="explanation">Changes the mods</span></div>
 				</div>
 			</iron-pages>
 		</div>
-		<paper-dialog id="changeMatchIdDialog" modal>
-			<h2>Change match ID</h2>
-			<paper-input label="Match ID" value="{{match_id_new}}"></paper-input>
-			<div class="buttons">
-				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm on-click="saveMatchId">Save</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-toast id="successToast" text="[[toast_message]]"></paper-toast>
-		<paper-toast id="errorToast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
-		Polymer({
-			is: 'lobby-page',
-			properties: {
-				id: {
-					type: Number,
-					observer: 'idChanged'
-				},
-				round: {
-					type: Number,
-					observer: 'roundChanged'
-				},
-				match_id: {
-					type: Number
-				},
-				match_name: String,
-				closed: {
-					type: Boolean,
-					value: false
-				}
-			},
-			idChanged: function() {
-				this.tabSelected = 'Overview';
-				this.$.lobbyAjax.url = '../api/lobbies/' + this.id;
-				this.$.lobbyAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.lobbyAjax.generateRequest();
-			},
-			roundChanged: function() {
-				this.$.mappoolAjax.url = '../api/rounds/' + this.round + '/mappool';
-				this.$.mappoolAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.mappoolAjax.generateRequest();
-			},
-			lobbyResponse: function() {
-				if (this.lobby && this.lobby.match_id) {
-					this.match_id = this.lobby.match_id;
-					this.$.matchAjax.url = '../api/matches/' + this.match_id;
-					this.$.matchAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.matchAjax.generateRequest();
-					this.$.bansAjax.url = '../api/matches/' + this.match_id + '/bans';
-					this.$.bansAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.bansAjax.generateRequest();
-					this.new_match = false;
-					this.ref_comments = this.lobby.comment;
-					this.closed = this.lobby.closed == '1';
-				} else {
-					this.new_match = true;
-				}
-				this.players = this.lobby.slots;
-			},
-			refreshLobby: function() {
-				this.$.lobbyAjax.generateRequest();
-			},
-			saveContinues: function() {
-				var players = [];
-				for (var i = 0; i < this.overall.length; i++) {
-					if (this.overall[i].continues) {
-						players.push({user: this.overall[i].user.discord_profile.id, continues: this.overall[i].continues});
+		class LobbyPage extends Polymer.Element {
+			static get is() { return 'lobby-page' }
+
+			static get properties() {
+				return {
+					lobby: {
+						observer: '_lobbyChanged'
 					}
 				}
-				this.$.saveContinuesAjax.url = '../api/lobbies/' + this.id;
-				this.$.saveContinuesAjax.headers = {
+			}
+
+			ready() {
+				super.ready();
+				this.tabSelected = 'match';
+				this.$.getMappoolAjax.url = '../api/mappools/' + this.lobby.round + '/' + this.lobby.tier;
+				this.$.getMappoolAjax.headers = {
 					'Authorization': localStorage.getItem('token')
-				};
-				this.$.saveContinuesAjax.body = {
-					'action': 'continues',
-					'continues': players
-				};
-				this.$.saveContinuesAjax.generateRequest();
-			},
-			saveContinuesResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
 				}
-			},
-			saveMatchId: function() {
-				if (this.match_id_new) {
-					this.$.saveLobbyAjax.url = '../api/lobbies/' + this.id;
-					this.$.saveLobbyAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.saveLobbyAjax.body = {
-						'action': 'match_id',
-						'id': this.match_id_new
-					};
-					this.$.saveLobbyAjax.generateRequest();
-				}
-			},
-			showChangeMatchId: function() {
-				this.match_id_new = this.match_id;
-				this.$.changeMatchIdDialog.open();
-			},
-			saveLobbyResponse: function() {
-				this.$.lobbyAjax.generateRequest();
-			},
-			matchResponse: function(e) {
-				this.games = [];
-				this.overall = [];
-				for (var player = 0; player < this.players.length; player++) {
-					if (this.players[player].user.osu_profile) {
-						this.push('overall', this.players[player]);
-						this.overall[this.overall.length - 1].score = 0;
-						if (this.players[player].continue_to_upper == '1' && this.players[player].drop_down == '0') {
-							this.overall[this.overall.length - 1].continues = 'Continues';
-						} else if (this.players[player].continue_to_upper == '0' && this.players[player].drop_down == '1') {
-							this.overall[this.overall.length - 1].continues = 'Drops down';
-						} else if (this.players[player].continue_to_upper == '0' && this.players[player].drop_down == '0') {
-							this.overall[this.overall.length - 1].continues = 'Eliminated';
+				this.$.getMappoolAjax.generateRequest();
+				this.editor = new Quill(this.$.editor, {
+					theme: 'snow',
+					placeholder: 'Ref comments'
+				});
+				this.editor.setContents(JSON.parse(this.lobby.comment));
+			}
+
+			_lobbyChanged(e) {
+				this.players = [];
+				for (var i = 0; i < this.lobby.slots.length; i++) {
+					if (this.lobby.slots[i].userId) {
+						if (this.lobby.slots[i].continueToUpper == '1') {
+							this.set('lobby.slots.' + i + '.continue', 'Continue');
+						} else if (this.lobby.slots[i].dropDown == '1') {
+							this.set('lobby.slots.' + i + '.continue', 'Drop down');
+						} else if (this.lobby.slots[i].eliminated == '1') {
+							this.set('lobby.slots.' + i + '.continue', 'Eliminated');
+						} else if (this.lobby.slots[i].forfeit == '1') {
+							this.set('lobby.slots.' + i + '.continue', 'Forfeit');
+						} else if (this.lobby.slots[i].noshow == '1') {
+							this.set('lobby.slots.' + i + '.continue', 'Noshow');
+						} else {
+							this.set('lobby.slots.' + i + '.continue', null);
 						}
+						this.push('players', this.lobby.slots[i]);
 					}
 				}
-				var games = e.detail.response.games;
-				for (var game = 0; game < games.length; game++) {
-					if (games[game].counts == '1') {
-						var scoreAdd = this.players.length > 2 ? 6 : 1;
-						var tb_place = 1;
-						var tb = false;
-						for (var score = 0; score < games[game].scores.length; score++) {
-							for (var player = 0; player < this.overall.length; player++) {
-								if (games[game].scores[score].user_id == this.overall[player].user.osu_profile.user_id) {
-									for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-										if (this.mappool.slots[slot].tiebreaker) {
-											tb = true;
-										}
-									}
-									this.overall[player].score += scoreAdd;
-									games[game].scores[score].points = scoreAdd;
-									switch (scoreAdd) {
-										case 6: scoreAdd = 4; break;
-										case 4: scoreAdd = 3; break;
-										case 3: scoreAdd = 2; break;
-										case 2: scoreAdd = 0; break;
-										case 1: scoreAdd = 0; break;
+			}
+
+			_matchIdChanged() {
+				this.$.putLobbyAjax.url = '../api/lobbies/' + this.lobby.id;
+				this.$.putLobbyAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putLobbyAjax.body = {
+					'matchId': this.lobby.matchId
+				}
+				this.$.putLobbyAjax.generateRequest();
+			}
+
+			_loadMatch() {
+				this.$.getMatchAjax.url = '../api/osumatch/' + this.lobby.matchId;
+				this.$.getMatchAjax.generateRequest();
+			}
+
+			_getMatchResponse(e) {
+				var overall = [];
+				for (var i = 0; i < this.lobby.slots.length; i++) {
+					if (this.lobby.slots[i].osuId) {
+						overall.push({
+							osuAvatarUrl: this.lobby.slots[i].osuAvatarUrl,
+							osuHitAccuracy: this.lobby.slots[i].osuHitAccuracy,
+							osuId: this.lobby.slots[i].osuId,
+							osuLevel: this.lobby.slots[i].osuLevel,
+							osuPlayCount: this.lobby.slots[i].osuPlayCount,
+							osuPp: this.lobby.slots[i].osuPp,
+							osuRank: this.lobby.slots[i].osuRank,
+							osuUsername: this.lobby.slots[i].osuUsername,
+							score: 0
+						});
+					}
+				}
+				for (var i = 0; i < this.matchHistory.length; i++) {
+					if (this.matchHistory[i].type == 'other' && this.matchHistory[i].game.counts == '1') {
+						if (overall.length == 2) {
+							var scoreAmount = 1;
+						} else {
+							var scoreAmount = 4;
+						}
+						for (var j = 0; j < this.matchHistory[i].game.scores.length; j++) {
+							for (var k = 0; k < overall.length; k++) {
+								if (overall[k].osuId == this.matchHistory[i].game.scores[j].userId) {
+									overall[k].score += scoreAmount;
+									switch (scoreAmount) {
+										case 4: scoreAmount = 3; break;
+										case 3: scoreAmount = 2; break;
+										default: scoreAmount = 0; break;
 									}
 								}
 							}
-						}
-					}
-					for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-						if (this.mappool.slots[slot].beatmap.beatmap_id == games[game].beatmap_id) {
-							games[game].tiebreaker = this.mappool.slots[slot].tiebreaker;
-							games[game].freemod = this.mappool.slots[slot].freemod;
-							if (games[game].counts == '1') {
-								this.set('mappool.slots.' + slot + '.picked', true);
+							if (scoreAmount == 0) {
+								break;
 							}
 						}
 					}
-					this.push('games', games[game]);
-				}
-				this.overall.sort(function(a, b) {
-					return b.score - a.score;
-				});
-			},
-			saveComment: function() {
-				this.$.saveCommentAjax.url = '../api/lobbies/' + this.id;
-				this.$.saveCommentAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.saveCommentAjax.body = {
-					'action': 'comment',
-					'comment': this.ref_comments
-				};
-				this.$.saveCommentAjax.generateRequest();
-			},
-			mappoolResponse: function() {
-				for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-					if (this.mappool.slots[slot].tiebreaker == '1' || this.mappool.slots[slot].freemod == '1') {
-						this.mappool.slots[slot].mods_string = 'Freemod';
-					} else if (this.mappool.slots[slot].mods == '0') {
-						this.mappool.slots[slot].mods_string = 'None';
-					} else if (this.mappool.slots[slot].mods == '8') {
-						this.mappool.slots[slot].mods_string = 'HD';
-					} else if (this.mappool.slots[slot].mods == '16') {
-						this.mappool.slots[slot].mods_string = 'HR';
-					} else if (this.mappool.slots[slot].mods == '64') {
-						this.mappool.slots[slot].mods_string = 'DT';
-					}
-				}
-			},
-			bansResponse: function(e) {
-				this.changing_bans = true;
-				var response = e.detail.response;
-				for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-					this.set('mappool.slots.' + slot + '.banned', false);
-					this.set('mappool.slots.' + slot + '.banned_by', '');
-				}
-				for (var i = 0; i < response.length; i++) {
-					for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-						if (this.mappool.slots[slot].beatmap.beatmap_id == response[i].beatmap_id) {
-							this.set('mappool.slots.' + slot + '.banned', true);
-							this.set('mappool.slots.' + slot + '.banned_by', response[i].user.discord_profile.id);
+					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded') {
+						overall.sort((a, b) => {
+							return b.score - a.score;
+						});
+						this.splice('matchHistory', i, 0, {
+							type: 'overall',
+							slots: overall
+						});
+						var overall = [];
+						for (var j = 0; j < this.lobby.slots.length; j++) {
+							if (this.lobby.slots[j].osuId) {
+								overall.push({
+									osuAvatarUrl: this.lobby.slots[j].osuAvatarUrl,
+									osuHitAccuracy: this.lobby.slots[j].osuHitAccuracy,
+									osuId: this.lobby.slots[j].osuId,
+									osuLevel: this.lobby.slots[j].osuLevel,
+									osuPlayCount: this.lobby.slots[j].osuPlayCount,
+									osuPp: this.lobby.slots[j].osuPp,
+									osuRank: this.lobby.slots[j].osuRank,
+									osuUsername: this.lobby.slots[j].osuUsername,
+									score: 0
+								});
+							}
 						}
+						i++;
 					}
 				}
-				this.changing_bans = false;
-			},
-			bannedByChanged: function(e) {
-				if (!this.changing_bans) {
-					if (e.detail.value == '') {
-						this.$.deleteBanAjax.url = '../api/matches/' + this.match_id + '/bans';
-						this.$.deleteBanAjax.headers = {
-							'Authorization': localStorage.getItem('token')
-						};
-						this.$.deleteBanAjax.body = {
-							'beatmap_id': e.model.slot.beatmap.beatmap_id
-						};
-						this.$.deleteBanAjax.generateRequest();
-					} else {
-						this.$.saveBanAjax.url = '../api/matches/' + this.match_id + '/bans';
-						this.$.saveBanAjax.headers = {
-							'Authorization': localStorage.getItem('token')
-						};
-						this.$.saveBanAjax.body = {
-							'beatmap_id': e.model.slot.beatmap.beatmap_id,
-							'user_id': e.detail.value
-						};
-						this.$.saveBanAjax.generateRequest();
-					}
+			}
+
+			_countsChanged(e) {
+				this.$.putGameAjax.url = '../api/osugame/' + e.model.item.id;
+				this.$.putGameAjax.headers = {
+					'Authorization': localStorage.getItem('token')
 				}
-			},
-			saveBanResponse: function(e) {
+				this.$.putGameAjax.body = {
+					'counts': e.detail.value
+				}
+				this.$.putGameAjax.generateRequest();
+			}
+
+			_pickedByChanged(e) {
+				var item = e.model.item;
+				this.$.putGameAjax.url = '../api/osugame/' + item.id;
+				this.$.putGameAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putGameAjax.body = {
+					'pickedBy': item.game.picked_by
+				}
+				this.$.putGameAjax.generateRequest();
+			}
+
+			_putGameResponse(e) {
 				var response = e.detail.response;
-				this.toast_message = response.message;
+				this.message = response.message;
 				if (response.error == '1') {
 					this.$.errorToast.open();
 				} else {
 					this.$.successToast.open();
-					this.$.bansAjax.generateRequest();
 				}
-			},
-			deleteBanResponse: function(e) {
+			}
+
+			_insertBracketReset(e) {
+				this.$.postGameAjax.url = '../api/osumatch/' + this.lobby.matchId + '/games';
+				this.$.postGameAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.postGameAjax.body = {
+					'time': e.model.item.game.end_time
+				}
+				this.$.postGameAjax.generateRequest();
+			}
+
+			_postGameResponse(e) {
 				var response = e.detail.response;
-				this.toast_message = response.message;
+				this.message = response.message;
 				if (response.error == '1') {
 					this.$.errorToast.open();
 				} else {
 					this.$.successToast.open();
-					this.$.bansAjax.generateRequest();
+					this.$.getMatchAjax.generateRequest();
 				}
 			}
-		});
-	</script>
-</dom-module>
 
-<dom-module id="overall-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<div class="layout horizontal">
-			<osu-profile profile="[[overall_item.user.osu_profile]]" sub_since="[[overall_item.user.twitch_profile.sub_since]]"></osu-profile>
-			<div class="layout vertical" style="margin-left:20px;">
-				<div class="flex"></div>
-				<div style="font-size:30px;">[[overall_item.score]]</div>
-				<div class="flex"></div>
-			</div>
-			<div class="layout vertical" style="margin-left:20px;">
-				<div class="flex"></div>
-				<paper-dropdown-menu label="Moves on to" disabled$="[[closed]]">
-					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{overall_item.continues}}">
-						<paper-item value="Continues">Continues</paper-item>
-						<paper-item value="Drops down">Drops down</paper-item>
-						<paper-item value="Eliminated">Eliminated</paper-item>
-					</paper-listbox>
-				</paper-dropdown-menu>
-				<div class="flex"></div>
-			</div>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'overall-item',
-			properties: {
-				overall_item: Object,
-				closed: Boolean
+			_deleteBracketReset(e) {
+				this.$.deleteGameAjax.url = '../api/osugame/' + e.model.item.id;
+				this.$.deleteGameAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.deleteGameAjax.generateRequest();
 			}
-		});
-	</script>
-</dom-module>
 
-<dom-module id="game-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<iron-ajax id="saveCountsAjax" url="../api/games/" method="PUT" content-type="application/json" on-response="saveCountsResponse"></iron-ajax>
-		<iron-ajax id="savePickedByAjax" url="../api/games/" method="PUT" content-type="application/json" on-response="savePickedByResponse"></iron-ajax>
-		<div class="layout vertical">
-			<div class="layout horizontal" style="margin:20px;">
-				<mappool-item beatmap-id="[[game_item.beatmap_id]]" map="[[game_item.beatmap]]" mods="[[game_item.mods]]" freemod="[[game_item.freemod]]" tiebreaker="[[game_item.tiebreaker]]"></mappool-item>
-				<div class="layout vertical" style="margin-left:20px;">
-					<div class="flex"></div>
-					<paper-dropdown-menu label="Picked by" disabled$="[[closed]]">
-						<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{picked_by}}">
-							<template is="dom-repeat" items="[[players]]">
-								<paper-item value="[[item.user.discord_profile.id]]">[[item.user.osu_profile.username]]</paper-item>
-							</template>
-						</paper-listbox>
-					</paper-dropdown-menu>
-					<div class="flex"></div>
-				</div>
-				<div class="layout vertical" style="margin-left:20px;">
-					<div class="flex"></div>
-					<paper-toggle-button checked="{{counts}}" disabled$="[[closed]]">Game counts</paper-toggle-button>
-					<div class="flex"></div>
-				</div>
-			</div>
-			<template is="dom-repeat" items="[[game_item.scores]]">
-				<div class="layout horizontal" style="width:900px;margin-bottom:10px;">
-					<div class="flex"></div>
-					<score-item user-id="[[item.user_id]]" profile="[[item.osu_profile]]" score="[[item.score]]" combo="[[item.maxcombo]]" pass-setter="[[item.pass]]" count300="[[item.count300]]" count100="[[item.count100]]" count50="[[item.count50]]" countmiss="[[item.countmiss]]" points="[[item.points]]"></score-item>
-				</div>
-			</template>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'game-item',
-			properties: {
-				game_item: {
-					type: Object,
-					observer: 'game_itemChanged'
-				},
-				counts: {
-					type: Boolean,
-					value: false,
-					observer: 'countsChanged'
-				},
-				locked: {
-					type: Boolean,
-					value: false
-				},
-				picked_by: {
-					type: String,
-					observer: 'picked_byChanged'
-				},
-				closed: Boolean
-			},
-			game_itemChanged: function() {
-				this.locked = true;
-				this.counts = this.game_item.counts == '1';
-				if (this.game_item.picked_by) {
-					this.picked_by = this.game_item.picked_by;
+			_deleteGameResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getMatchAjax.generateRequest();
 				}
-				this.locked = false;
-			},
-			countsChanged: function() {
-				if (!this.locked && this.game_item) {
-					this.$.saveCountsAjax.url = '../api/games/' + this.game_item.game_id;
-					this.$.saveCountsAjax.headers =  {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.saveCountsAjax.body = {
-						'action': 'counts',
-						'counts': this.counts
-					};
-					this.$.saveCountsAjax.generateRequest();
-				}
-			},
-			picked_byChanged: function() {
-				if (!this.locked && this.game_item) {
-					this.$.savePickedByAjax.url = '../api/games/' + this.game_item.game_id;
-					this.$.savePickedByAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.savePickedByAjax.body = {
-						'action': 'picked_by',
-						'picked_by': this.picked_by
-					};
-					this.$.savePickedByAjax.generateRequest();
-				}
-			},
-			saveCountsResponse: function() {
-				this.fire('changed', {});
-			},
-			savePickedByResponse: function() {
-				this.fire('changed', {});
 			}
-		})
-	</script>
-</dom-module>
 
-<dom-module id="score-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<div class="layout horizontal">
-			<paper-card elevation="1" class="layout vertical" style="height:64px;width:500px;background-color:#212121;">
-				<div class="card-content" style="height:64px;width:500px;padding:0;">
-					<div class="layout horizontal">
-						<img src="https://a.ppy.sh/[[userId]]" style="height:64px;width:64px;">
-						<div class="flex layout vertical" style="margin-left:10px;color:white;">
-							<div style="font-size:30px;">[[profile.username]]</div>
-							<div>Score: <span>[[score]]</span> (<span>[[combo]]</span>x)</div>
-						</div>
-						<div class="layout vertical" style="width:64px;color:red;">
-							<div hidden$="[[pass]]">FAILED</div>
-						</div>
-						<div class="layout vertical" style="width:64px;color:white;text-align:right;">
-							<div><span>[[accuracy]]</span>%</div>
-						</div>
-					</div>
-				</div>
-			</paper-card>
-			<div class="layout vertical" style="margin-left:10px;width:50px;">
-				<div class="flex"></div>
-				<div style="font-size:30px;">[[points]]</div>
-				<div class="flex"></div>
-			</div>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'score-item',
-			properties: {
-				userId: Number,
-				profile: Object,
-				score: Number,
-				combo: Number,
-				accuracy: String,
-				pass: {
-					type: Boolean,
-					value: false
-				},
-				passSetter: {
-					type: String,
-					observer: 'passChanged'
-				},
-				points: Number,
-				count300: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				},
-				count100: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				},
-				count50: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				},
-				countmiss: {
-					type: Number,
-					observer: 'calculateAccuracy'
+			_saveContinues() {
+				for (var i = this.matchHistory.length - 1; i >= 0; i--) {
+					if (this.matchHistory[i].type == 'overall') {
+						var lastOverall = this.matchHistory[i].slots;
+						break;
+					}
 				}
-			},
-			passChanged: function() {
-				this.pass = this.passSetter == '1';
-			},
-			calculateAccuracy: function() {
-				if ((this.count300 || this.count300 == 0) && (this.count100 || this.count100 == 0) && (this.count50 || this.count50 == 0) && (this.countmiss || this.countmiss == 0)) {
-					var totalPointsOfHits = parseInt(this.count50) * 50 + parseInt(this.count100) * 100 + parseInt(this.count300) * 300;
-	        var totalNumberOfHits = parseInt(this.countmiss) + parseInt(this.count50) + parseInt(this.count100) + parseInt(this.count300);
-	        this.accuracy = Math.round(((totalPointsOfHits / (totalNumberOfHits * 300)) * 100) * 100) / 100;
-	      }
+				this.$.putLobbyAjax.url = '../api/lobbies/' + this.lobby.id;
+				this.$.putLobbyAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putLobbyAjax.body = {
+					'continues': this.lobby.slots,
+					'overall': lastOverall
+				}
+				this.$.putLobbyAjax.generateRequest();
 			}
-		})
+
+			_saveComment() {
+				this.$.putLobbyAjax.url = '../api/lobbies/' + this.lobby.id;
+				this.$.putLobbyAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putLobbyAjax.body = {
+					'comment': JSON.stringify(this.editor.getContents())
+				}
+				this.$.putLobbyAjax.generateRequest();
+			}
+
+			_putLobbyResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+				}
+			}
+
+			_isMatchCreated(e) {
+				return e == 'match-created';
+			}
+
+			_isPlayerJoined(e) {
+				return e == 'player-joined';
+			}
+
+			_isOther(e) {
+				return e == 'other';
+			}
+
+			_isPlayerLeft(e) {
+				return e == 'player-left';
+			}
+
+			_isMatchDisbanded(e) {
+				return e == 'match-disbanded';
+			}
+
+			_isBracketReset(e) {
+				return e == 'bracket-reset';
+			}
+
+			_isOverall(e) {
+				return e == 'overall';
+			}
+
+			_counts(e) {
+				return e == '1';
+			}
+
+			_convertTimestamp(e) {
+				return e.substring(11, 16);
+			}
+		}
+
+		window.customElements.define(LobbyPage.is, LobbyPage);
 	</script>
 </dom-module>
