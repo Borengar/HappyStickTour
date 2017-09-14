@@ -193,50 +193,52 @@ class OsuApi {
     curl_close($curl);
 
     $history = json_decode($json);
-    foreach ($history->events as $item) {
-      $found = false;
-      foreach ($rows as $row) {
-        if ($row->id == $item->id) {
-          $found = true;
-          break;
+    if ($history) {
+      foreach ($history->events as $item) {
+        $found = false;
+        foreach ($rows as $row) {
+          if ($row->id == $item->id) {
+            $found = true;
+            break;
+          }
         }
-      }
-      if ($found === false) {
-        $stmt = $db->prepare('INSERT INTO osu_match_events (id, match_id, type, timestamp, user_id, text)
-          VALUES (:id, :match_id, :type, :timestamp, :user_id, :text)');
-        $stmt->bindValue(':id', $item->id, PDO::PARAM_INT);
-        $stmt->bindValue(':match_id', $matchId, PDO::PARAM_INT);
-        $stmt->bindValue(':type', $item->detail->type, PDO::PARAM_STR);
-        $stmt->bindValue(':timestamp', str_replace('+00:00', '', $item->timestamp), PDO::PARAM_STR);
-        $stmt->bindValue(':user_id', $item->user_id, PDO::PARAM_INT);
-        $stmt->bindValue(':text', ($item->detail->type == 'other') ? $item->detail->text : null, PDO::PARAM_STR);
-        $stmt->execute();
-
-        if ($item->detail->type == 'other') {
-          $stmt = $db->prepare('INSERT INTO osu_match_games (match_event, beatmap, start_time, end_time, mods, counts)
-            VALUES (:match_event, :beatmap, :start_time, :end_time, :mods, 1)');
-          $stmt->bindValue(':match_event', $item->id, PDO::PARAM_INT);
-          $stmt->bindValue(':beatmap', $item->game->beatmap->id, PDO::PARAM_INT);
-          $stmt->bindValue(':start_time', str_replace('+00:00', '', $item->game->start_time), PDO::PARAM_STR);
-          $stmt->bindValue(':end_time', str_replace('+00:00', '', $item->game->end_time), PDO::PARAM_STR);
-          $stmt->bindValue(':mods', join(',', $item->game->mods), PDO::PARAM_STR);
+        if ($found === false) {
+          $stmt = $db->prepare('INSERT INTO osu_match_events (id, match_id, type, timestamp, user_id, text)
+            VALUES (:id, :match_id, :type, :timestamp, :user_id, :text)');
+          $stmt->bindValue(':id', $item->id, PDO::PARAM_INT);
+          $stmt->bindValue(':match_id', $matchId, PDO::PARAM_INT);
+          $stmt->bindValue(':type', $item->detail->type, PDO::PARAM_STR);
+          $stmt->bindValue(':timestamp', str_replace('+00:00', '', $item->timestamp), PDO::PARAM_STR);
+          $stmt->bindValue(':user_id', $item->user_id, PDO::PARAM_INT);
+          $stmt->bindValue(':text', ($item->detail->type == 'other') ? $item->detail->text : null, PDO::PARAM_STR);
           $stmt->execute();
 
-          foreach ($item->game->scores as $score) {
-            $stmt = $db->prepare('INSERT INTO osu_match_scores (match_event, user_id, score, pass, max_combo, accuracy, mods, count_300, count_100, count_50, count_miss)
-              VALUES (:match_event, :user_id, :score, :pass, :max_combo, :accuracy, :mods, :count_300, :count_100, :count_50, :count_miss)');
+          if ($item->detail->type == 'other') {
+            $stmt = $db->prepare('INSERT INTO osu_match_games (match_event, beatmap, start_time, end_time, mods, counts)
+              VALUES (:match_event, :beatmap, :start_time, :end_time, :mods, 1)');
             $stmt->bindValue(':match_event', $item->id, PDO::PARAM_INT);
-            $stmt->bindValue(':user_id', $score->user_id, PDO::PARAM_INT);
-            $stmt->bindValue(':score', $score->score, PDO::PARAM_INT);
-            $stmt->bindValue(':pass', $score->multiplayer->pass, PDO::PARAM_INT);
-            $stmt->bindValue(':max_combo', $score->max_combo, PDO::PARAM_INT);
-            $stmt->bindValue(':accuracy', $score->accuracy * 100, PDO::PARAM_STR);
-            $stmt->bindValue(':mods', join(',', $score->mods), PDO::PARAM_STR);
-            $stmt->bindValue(':count_300', $score->statistics->count_300, PDO::PARAM_INT);
-            $stmt->bindValue(':count_100', $score->statistics->count_100, PDO::PARAM_INT);
-            $stmt->bindValue(':count_50', $score->statistics->count_50, PDO::PARAM_INT);
-            $stmt->bindValue(':count_miss', $score->statistics->count_miss, PDO::PARAM_INT);
+            $stmt->bindValue(':beatmap', $item->game->beatmap->id, PDO::PARAM_INT);
+            $stmt->bindValue(':start_time', str_replace('+00:00', '', $item->game->start_time), PDO::PARAM_STR);
+            $stmt->bindValue(':end_time', str_replace('+00:00', '', $item->game->end_time), PDO::PARAM_STR);
+            $stmt->bindValue(':mods', join(',', $item->game->mods), PDO::PARAM_STR);
             $stmt->execute();
+
+            foreach ($item->game->scores as $score) {
+              $stmt = $db->prepare('INSERT INTO osu_match_scores (match_event, user_id, score, pass, max_combo, accuracy, mods, count_300, count_100, count_50, count_miss)
+                VALUES (:match_event, :user_id, :score, :pass, :max_combo, :accuracy, :mods, :count_300, :count_100, :count_50, :count_miss)');
+              $stmt->bindValue(':match_event', $item->id, PDO::PARAM_INT);
+              $stmt->bindValue(':user_id', $score->user_id, PDO::PARAM_INT);
+              $stmt->bindValue(':score', $score->score, PDO::PARAM_INT);
+              $stmt->bindValue(':pass', $score->multiplayer->pass, PDO::PARAM_INT);
+              $stmt->bindValue(':max_combo', $score->max_combo, PDO::PARAM_INT);
+              $stmt->bindValue(':accuracy', $score->accuracy * 100, PDO::PARAM_STR);
+              $stmt->bindValue(':mods', join(',', $score->mods), PDO::PARAM_STR);
+              $stmt->bindValue(':count_300', $score->statistics->count_300, PDO::PARAM_INT);
+              $stmt->bindValue(':count_100', $score->statistics->count_100, PDO::PARAM_INT);
+              $stmt->bindValue(':count_50', $score->statistics->count_50, PDO::PARAM_INT);
+              $stmt->bindValue(':count_miss', $score->statistics->count_miss, PDO::PARAM_INT);
+              $stmt->execute();
+            }
           }
         }
       }
