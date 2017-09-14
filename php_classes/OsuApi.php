@@ -256,7 +256,7 @@ class OsuApi {
       if ($event->type == 'player-joined' || $event->type == 'player-left') {
         $event->player = $this->getUser($event->userId);
       } elseif ($event->type == 'other') {
-        $stmt = $db->prepare('SELECT id, beatmap, start_time, end_time, mods, counts
+        $stmt = $db->prepare('SELECT id, beatmap, start_time, end_time, mods, counts, picked_by
           FROM osu_match_games
           WHERE match_event = :match_event');
         $stmt->bindValue(':match_event', $event->id, PDO::PARAM_INT);
