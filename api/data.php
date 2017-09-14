@@ -789,7 +789,7 @@ function getLobbies() {
 
 	$user = checkToken();
 	if (!isset($user) || $user->scope == 'PLAYER' || $user->scope == 'REFEREE') {
-		$stmt = $db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
+		$stmt = $db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.round LIKE :round AND lobbies.tier LIKE :tier AND rounds.lobbies_released = 1');
 		$stmt->bindValue(':round', isset($_GET['round']) ? $_GET['round'] : '%', PDO::PARAM_STR);
