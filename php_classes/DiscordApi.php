@@ -15,6 +15,7 @@ class DiscordApi {
 		$this->redirectUri = $config['discordRedirectUri'];
 		$this->botToken = $config['discordBotToken'];
 		$this->guildId = $config['discordGuildId'];
+		$this->channelId = $config['discordChannelId'];
 	}
 
 	public function getLoginUri() {
@@ -131,6 +132,27 @@ class DiscordApi {
 			CURLOPT_HTTPHEADER => array(
 				'Authorization: Bot ' . $this->botToken
 				)
+			)
+		);
+		$response = json_decode(curl_exec($curl));
+		curl_close($curl);
+		return $response;
+	}
+
+	public function sendMessage($message) {
+		$messageObject = new stdClass;
+		$messageObject->content = $message;
+		$curl = curl_init();
+		curl_setopt_array($curl, array(
+			CURLOPT_SSL_VERIFYPEER => false,
+			CURLOPT_FOLLOWLOCATION => false,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_URL => 'https://discordapp.com/api/channels/' . $this->channelId . '/messages',
+			CURLOPT_HTTPHEADER => array(
+				'Authorization: Bot ' . $this->botToken
+				),
+			CURLOPT_POSTFIELDS => json_encode($messageObject)
 			)
 		);
 		$response = json_decode(curl_exec($curl));
