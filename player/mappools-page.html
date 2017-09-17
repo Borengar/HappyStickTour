@@ -41,8 +41,8 @@
 			}
 		</style>
 		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
-		<iron-ajax id="getMappoolAjax" url="../api/mappools" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
-		<iron-ajax id="putMappoolAjax" url="../api/mappools" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/rounds//tiers//mappool" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
+		<iron-ajax id="putMappoolAjax" url="../api/mappools//feedback" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="header">Mappools</div>
 			<paper-dropdown-menu label="Round" class="round-dropdown">
@@ -86,7 +86,7 @@
 			}
 
 			_selectedRoundChanged(e) {
-				this.$.getMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
+				this.$.getMappoolAjax.url = '../api/rounds/' + this.selectedRound.id + '/tiers/' + this.user.tier + '/mappool';
 				this.$.getMappoolAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
