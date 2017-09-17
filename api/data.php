@@ -101,6 +101,11 @@ switch ($_GET['query']) {
 			case 'PUT': putMappool(); break; // update mappool
 		}
 		break;
+	case 'feedback':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'PUT': putFeedback(); break; // update mappool feedback
+		}
+		break;
 	case 'osuprofile':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'GET': getOsuProfile(); break; // get an osu account over the osu api
@@ -1481,6 +1486,10 @@ function putMappool() {
 
 	$user = checkToken();
 
+	if (!isset($user) || $user->scope == 'REFEREE' || $user->scope == 'ADMIN') {
+		return;
+	}
+
 	if (!isset($_GET['mappool'])) {
 		$stmt = $db->prepare('SELECT copy_mappool as copyMappool, copy_mappool_from as copyMappoolFrom
 			FROM rounds
@@ -1515,29 +1524,7 @@ function putMappool() {
 		$id = $_GET['mappool'];
 	}
 
-	if (!isset($user) || $user->scope == 'REFEREE' || $user->scope == 'ADMIN') {
-		return;
-	}
-
 	$body = json_decode(file_get_contents('php://input'));
-
-	if ($user->scope == 'PLAYER') {
-		if (isset($body->feedback)) {
-			$stmt = $db->prepare('DELETE FROM mappool_feedback
-				WHERE mappool = :mappool AND user_id = :user_id');
-			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
-			$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
-			$stmt->execute();
-			$stmt = $db->prepare('INSERT INTO mappool_feedback (mappool, user_id, feedback)
-				VALUES (:mappool, :user_id, :feedback)');
-			$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
-			$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
-			$stmt->bindValue(':feedback', $body->feedback, PDO::PARAM_STR);
-			$stmt->execute();
-		}
-		echoError(0, 'Feedback saved');
-		return;
-	}
 
 	if ($user->scope == 'MAPPOOLER') {
 		$stmt = $db->prepare('SELECT rounds.mappools_released as mappoolsReleased, mappools.tier
@@ -1605,6 +1592,32 @@ function putMappool() {
 		echoError(0, 'Mappool updated');
 		return;
 	}
+}
+
+function putFeedback() {
+	global $db;
+
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'PLAYER') {
+		return;
+	}
+
+	$body = file_get_contents('php://input');
+
+	$stmt = $db->prepare('DELETE FROM mappool_feedback
+		WHERE mappool = :mappool AND user_id = :user_id');
+	$stmt->bindValue(':mappool', $_GET['mappool'], PDO::PARAM_INT);
+	$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+	$stmt->execute();
+	$stmt = $db->prepare('INSERT INTO mappool_feedback (mappool, user_id, feedback)
+		VALUES (:mappool, :user_id, :feedback)');
+	$stmt->bindValue(':mappool', $_GET['mappool'], PDO::PARAM_INT);
+	$stmt->bindValue(':user_id', $user->userId, PDO::PARAM_INT);
+	$stmt->bindValue(':feedback', $body, PDO::PARAM_STR);
+	$stmt->execute();
+
+	echoError(0, 'Feedback saved');
 }
 
 function getOsuProfile() {

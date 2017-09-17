@@ -100,13 +100,11 @@
 			}
 
 			_saveFeedback() {
-				this.$.putMappoolAjax.url = '../api/mappools/' + this.selectedRound.id + '/' + this.user.tier;
+				this.$.putMappoolAjax.url = '../api/mappools/' + this.mappool.id + '/feedback';
 				this.$.putMappoolAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putMappoolAjax.body = {
-					'feedback': JSON.stringify(this.editor.getContents())
-				}
+				this.$.putMappoolAjax.body = JSON.stringify(this.editor.getContents());
 				this.$.putMappoolAjax.generateRequest();
 			}
 

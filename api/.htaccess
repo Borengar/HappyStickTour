@@ -14,6 +14,7 @@ RewriteRule ^lobbies/([^/]+)/bans/?$ data.php?query=bans&lobby=$1
 RewriteRule ^lobbies/([^/]+)/matchId/?$ data.php?query=matchId&lobby=$1
 RewriteRule ^lobbies/([^/]+)/comment/?$ data.php?query=comment&lobby=$1
 RewriteRule ^lobbies/([^/]+)/result/?$ data.php?query=result&lobby=$1
+RewriteRule ^mappools/([^/]+)/feedback/?$ data.php?query=feedback&mappool=$1
 RewriteRule ^mappools/([^/]+)/?$ data.php?query=mappool&mappool=$1
 RewriteRule ^osuprofile/([^/]+)/?$ data.php?query=osuprofile&id=$1
 RewriteRule ^osubeatmap/([^/]+)/?$ data.php?query=osubeatmap&id=$1
