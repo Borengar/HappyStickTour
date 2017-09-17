@@ -92,6 +92,10 @@
 				margin-left: 10px;
 				margin-top: 20px;
 			}
+			.beatmap-command {
+				margin-left: 10px;
+				margin-top: 10px;
+			}
 		</style>
 		<iron-ajax id="putLobbyAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="getMatchAjax" url="../api/osumatch/" method="GET" last-response="{{matchHistory}}" on-response="_getMatchResponse"></iron-ajax>
@@ -189,6 +193,8 @@
 						<div class="layout horizontal">
 							<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
 							<div class="layout vertical banned-wrapper">
+								<div class="beatmap-command">!mp map [[beatmap.beatmapId]]</div>
+								<div class="beatmap-command">!mp mods [[_formatMod(beatmap.mod)]]</div>
 								<vaadin-combo-box class="player-banned" label="Banned by" items="[[players]]" value="{{beatmap.bannedBy}}" item-value-path="userId" item-label-path="osu.username" on-change="_saveBans"></vaadin-combo-box>
 								<template is="dom-if" if="[[lobby.hasBracketReset]]">
 									<vaadin-combo-box class="player-banned" label="Banned by after bracket reset" items="[[players]]" value="{{beatmap.bannedByAfterBracketReset}}" item-value-path="userId" item-label-path="osuUsername" on-change="_saveBans"></vaadin-combo-box>
@@ -497,6 +503,13 @@
 
 			_bracketResetAvailable(hasBracketReset, bracketResetUsed) {
 				return hasBracketReset && !bracketResetUsed;
+			}
+
+			_formatMod(e) {
+				if (e == 'Nomod') {
+					return 'None';
+				}
+				return e;
 			}
 		}
 
