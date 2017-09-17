@@ -70,10 +70,24 @@ switch ($_GET['query']) {
 			case 'DELETE': deleteLobbies(); break; // delete all lobbies of a round
 		}
 		break;
-	case 'lobby':
+	case 'bans':
 		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getLobby(); break; // get a lobby
-			case 'PUT': putLobby(); break; // update a lobby
+			case 'PUT': putBans(); break; // update lobby bans
+		}
+		break;
+	case 'matchId':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'PUT': putMatchId(); break; // update lobby match id
+		}
+		break;
+	case 'comment':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'PUT': putComment(); break; // update lobby comment
+		}
+		break;
+	case 'result':
+		switch ($_SERVER['REQUEST_METHOD']) {
+			case 'PUT': putResult(); break; // update lobby result
 		}
 		break;
 	case 'mappools':
@@ -802,7 +816,80 @@ function getLobbies() {
 				WHERE lobby_slots.lobby = :lobby');
 			$stmt->bindValue(':lobby', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
-			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
+			$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+			$lobby->slots = [];
+			foreach ($rows as $row) {
+				$slot = new stdClass;
+				$slot->id = $row->id;
+				$slot->userId = $row->userId;
+				if ($row->continueToUpper) {
+					$slot->continue = 'Continue';
+				} elseif ($row->dropDown) {
+					$slot->continue = 'Drop down';
+				} elseif ($row->eliminated) {
+					$slot->continue = 'Eliminated';
+				} elseif ($row->forfeit) {
+					$slot->continue = 'Forfeit';
+				} elseif ($row->noshow) {
+					$slot->continue = 'Noshow';
+				} else {
+					$slot->continue = null;
+				}
+				$slot->osu = new stdClass;
+				$slot->osu->id = $row->osuId;
+				$slot->osu->username = $row->osuUsername;
+				$slot->osu->avatarUrl = $row->osuAvatarUrl;
+				$slot->osu->hitAccuracy = $row->osuHitAccuracy;
+				$slot->osu->level = $row->osuLevel;
+				$slot->osu->playCount = $row->osuPlayCount;
+				$slot->osu->pp = $row->osuPp;
+				$slot->osu->rank = $row->osuRank;
+				$slot->osu->rankHistory = $row->osuRankHistory;
+				$slot->osu->bestScore = $row->osuBestScore;
+				$slot->osu->playstyle = $row->osuPlaystyle;
+				$slot->osu->joinDate = $row->osuJoinDate;
+				$slot->osu->country = $row->osuCountry;
+				$slot->discord = new stdClass;
+				$slot->discord->id = $row->discordId;
+				$slot->discord->username = $row->discordUsername;
+				$slot->discord->discriminator = $row->discordDiscriminator;
+				$slot->discord->avatar = $row->discordAvatar;
+				$lobby->slots[] = $slot;
+			}
+			$stmt = $db->prepare('SELECT lobby_bans.beatmap_id as beatmapId, lobby_bans.banned_by as bannedBy, lobby_bans.after_bracket_reset as afterBracketReset, osu_users.id as osuId, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
+				FROM lobby_bans INNER JOIN players ON lobby_bans.banned_by = players.id INNER JOIN osu_users ON players.osu_id = osu_users.id INNER JOIN discord_users ON players.discord_id = discord_users.id
+				WHERE lobby = :lobby');
+			$stmt->bindValue(':lobby', $lobby->id, PDO::PARAM_INT);
+			$stmt->execute();
+			$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+			$lobby->bans = [];
+			foreach ($rows as $row) {
+				$ban = new stdClass;
+				$ban->beatmapId = $row->beatmapId;
+				$ban->afterBracketReset = $row->afterBracketReset;
+				$ban->bannedBy = new stdClass;
+				$ban->bannedBy->userId = $row->bannedBy;
+				$ban->bannedBy->osu = new stdClass;
+				$ban->bannedBy->osu->id = $row->osuId;
+				$ban->bannedBy->osu->username = $row->osuUsername;
+				$ban->bannedBy->osu->avatarUrl = $row->osuAvatarUrl;
+				$ban->bannedBy->osu->hitAccuracy = $row->osuHitAccuracy;
+				$ban->bannedBy->osu->level = $row->osuLevel;
+				$ban->bannedBy->osu->playCount = $row->osuPlayCount;
+				$ban->bannedBy->osu->pp = $row->osuPp;
+				$ban->bannedBy->osu->rank = $row->osuRank;
+				$ban->bannedBy->osu->rankHistory = $row->osuRankHistory;
+				$ban->bannedBy->osu->bestScore = $row->osuBestScore;
+				$ban->bannedBy->osu->playstyle = $row->osuPlaystyle;
+				$ban->bannedBy->osu->joinDate = $row->osuJoinDate;
+				$ban->bannedBy->osu->country = $row->osuCountry;
+				$ban->bannedBy->discord = new stdClass;
+				$ban->bannedBy->discord->id = $row->discordId;
+				$ban->bannedBy->discord->username = $row->discordUsername;
+				$ban->bannedBy->discord->discriminator = $row->discordDiscriminator;
+				$ban->bannedBy->discord->avatar = $row->discordAvatar;
+				$lobby->bans[] = $ban;
+			}
 		}
 		echo json_encode($lobbies);
 		return;
@@ -821,7 +908,46 @@ function getLobbies() {
 				WHERE lobby_slots.lobby = :id');
 			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
-			$lobby->slots = $stmt->fetchAll(PDO::FETCH_OBJ);
+			$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
+			$lobby->slots = [];
+			foreach ($rows as $row) {
+				$slot = new stdClass;
+				$slot->id = $row->id;
+				$slot->userId = $row->userId;
+				if ($row->continueToUpper) {
+					$slot->continue = 'Continue';
+				} elseif ($row->dropDown) {
+					$slot->continue = 'Drop down';
+				} elseif ($row->eliminated) {
+					$slot->continue = 'Eliminated';
+				} elseif ($row->forfeit) {
+					$slot->continue = 'Forfeit';
+				} elseif ($row->noshow) {
+					$slot->continue = 'Noshow';
+				} else {
+					$slot->continue = null;
+				}
+				$slot->osu = new stdClass;
+				$slot->osu->id = $row->osuId;
+				$slot->osu->username = $row->osuUsername;
+				$slot->osu->avatarUrl = $row->osuAvatarUrl;
+				$slot->osu->hitAccuracy = $row->osuHitAccuracy;
+				$slot->osu->level = $row->osuLevel;
+				$slot->osu->playCount = $row->osuPlayCount;
+				$slot->osu->pp = $row->osuPp;
+				$slot->osu->rank = $row->osuRank;
+				$slot->osu->rankHistory = $row->osuRankHistory;
+				$slot->osu->bestScore = $row->osuBestScore;
+				$slot->osu->playstyle = $row->osuPlaystyle;
+				$slot->osu->joinDate = $row->osuJoinDate;
+				$slot->osu->country = $row->osuCountry;
+				$slot->discord = new stdClass;
+				$slot->discord->id = $row->discordId;
+				$slot->discord->username = $row->discordUsername;
+				$slot->discord->discriminator = $row->discordDiscriminator;
+				$slot->discord->avatar = $row->discordAvatar;
+				$lobby->slots[] = $slot;
+			}
 			foreach ($lobby->slots as &$slot) {
 				if (!empty($slot->userId)) {
 					$stmt = $db->prepare('SELECT time_from as timeFrom, time_to as timeTo
@@ -967,112 +1093,232 @@ function deleteLobbies() {
 	echoError(0, 'Lobbies deleted');
 }
 
-function getLobby() {
+function putBans() {
 	global $db;
-	global $osuApi;
-
-	$stmt = $db->prepare('SELECT id, round, tier, match_id as matchId, match_time as matchTime, comment
-		FROM lobbies
-		WHERE id = :id');
-	$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
-	$stmt->execute();
-	$lobby = $stmt->fetch(PDO::FETCH_OBJ);
-	if (isset($lobby->matchId)) {
-		$lobby->events = $osuApi->getMatch($lobby->matchId);
-	}
-}
-
-function putLobby() {
-	global $db;
-	global $discordApi;
 
 	$user = checkToken();
-	if (!isset($user)) {
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
 		return;
 	}
 
 	$body = json_decode(file_get_contents('php://input'));
 
-	if ($user->scope == 'REFEREE') {
-		if (isset($body->matchId)) {
-			$stmt = $db->prepare('UPDATE lobbies
-				SET match_id = :match_id
-				WHERE id = :id');
-			$stmt->bindValue(':match_id', $body->matchId, PDO::PARAM_INT);
-			$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
-			$stmt->execute();
-		}
-		if (isset($body->comment)) {
-			$stmt = $db->prepare('UPDATE lobbies
-				SET comment = :comment
-				WHERE id = :id');
-			$stmt->bindValue(':comment', $body->comment, PDO::PARAM_STR);
-			$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
-			$stmt->execute();
-		}
-		if (isset($body->continues)) {
-			$stmt = $db->prepare('SELECT COUNT(*) as rowcount
-				FROM lobby_slots INNER JOIN players ON lobby_slots.user_id = players.id
-				WHERE lobby_slots.lobby = :lobby AND players.current_lobby <> :current_lobby');
-			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
-			$stmt->bindValue(':current_lobby', $_GET['lobby'], PDO::PARAM_INT);
-			$stmt->execute();
-			$rowcount = $stmt->fetch(PDO::FETCH_OBJ);
-			if ($rowcount->rowcount == 0) {
-				$stmt = $db->prepare('SELECT rounds.name as roundName, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId
-					FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round INNER JOIN tiers ON lobbies.tier = tiers.id
-					WHERE lobbies.id = :id');
-				$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
-				$stmt->execute();
-				$round = $stmt->fetch(PDO::FETCH_OBJ);
-				$roundName = $round->roundName;
-				$tierName = $round->tierName;
-				$matchId = $round->matchId;
-				foreach ($body->continues as $player) {
-					$stmt = $db->prepare('UPDATE lobby_slots
-						SET continue_to_upper = :continue_to_upper, drop_down = :drop_down, eliminated = :eliminated, forfeit = :forfeit, noshow = :noshow
-						WHERE lobby = :lobby and user_id = :user_id');
-					$stmt->bindValue(':continue_to_upper', $player->continue == 'Continue', PDO::PARAM_BOOL);
-					$stmt->bindValue(':drop_down', $player->continue == 'Drop down', PDO::PARAM_BOOL);
-					$stmt->bindValue(':eliminated', $player->continue == 'Eliminated', PDO::PARAM_BOOL);
-					$stmt->bindValue(':forfeit', $player->continue == 'Forfeit', PDO::PARAM_BOOL);
-					$stmt->bindValue(':noshow', $player->continue == 'Noshow', PDO::PARAM_BOOL);
-					$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
-					$stmt->bindValue(':user_id', $player->userId, PDO::PARAM_INT);
-					$stmt->execute();
-					$nextRound = null;
-					switch ($player->continues) {
-						case 'continue': $nextRound = $round->continueRound; break;
-						case 'dropdown': $nextRound = $round->dropDownRound; break;
-						default: $nextRound = null;
-					}
-					$stmt = $db->prepare('UPDATE players
-						SET next_round = :next_round
-						WHERE id = :id');
-					$stmt->bindValue(':next_round', $nextRound, PDO::PARAM_INT);
-					$stmt->bindValue(':id', $player->id, PDO::PARAM_INT);
-					$stmt->execute();
-				}
-			}
+	$stmt = $db->prepare('DELETE FROM lobby_bans
+		WHERE lobby = :lobby');
+	$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+	$stmt->execute();
+	foreach ($body as $ban) {
+		$stmt = $db->prepare('INSERT INTO lobby_bans (lobby, beatmap_id, banned_by, after_bracket_reset)
+			VALUES (:lobby, :beatmap_id, :banned_by, :after_bracket_reset)');
+		$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+		$stmt->bindValue(':beatmap_id', $ban->beatmapId, PDO::PARAM_INT);
+		$stmt->bindValue(':banned_by', $ban->userId, PDO::PARAM_INT);
+		$stmt->bindValue(':after_bracket_reset', $ban->afterBracketReset, PDO::PARAM_BOOL);
+		$stmt->execute();
+	}
 
-			$message = "**" . $roundName . " | " . $tierName . "**\r\n";
-			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n";
-			foreach ($body->overall as $player) {
-				$playerContinue = '';
-				$playerDiscordId = '';
-				foreach ($body->continues as $continue) {
-					if ($continue->osuId == $player->osuId) {
-						$playerContinue = $continue->continue;
-						$playerDiscordId = $continue->discordId;
-					}
-				}
-				$message .= $player->score . " | " . $player->osuUsername . " (<@" . $playerDiscordId . ">) | " . $playerContinue . "\r\n";
-			}
-			$discordApi->sendMessage($message);
-		}
-		echoError(0, 'Lobby updated');
+	echoError(0, 'Bans saved');
+}
+
+function putMatchId() {
+	global $db;
+
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
 		return;
 	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	$stmt = $db->prepare('UPDATE lobbies
+		SET match_id = :match_id
+		WHERE id = :id');
+	$stmt->bindValue(':match_id', $body, PDO::PARAM_INT);
+	$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+	$stmt->execute();
+
+	echoError(0, 'Match ID saved');
+}
+
+function putComment() {
+	global $db;
+
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
+		return;
+	}
+
+	$body = file_get_contents('php://input');
+
+	$stmt = $db->prepare('UPDATE lobbies
+		SET comment = :comment
+		WHERE id = :id');
+	$stmt->bindValue(':comment', $body, PDO::PARAM_STR);
+	$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+	$stmt->execute();
+
+	echoError(0, 'Comment saved');
+}
+
+function putResult() {
+	global $db;
+	global $discordApi;
+
+	$user = checkToken();
+
+	if (!isset($user) || $user->scope != 'REFEREE') {
+		return;
+	}
+
+	$body = json_decode(file_get_contents('php://input'));
+
+	$stmt = $db->prepare('SELECT COUNT(*) as rowcount
+		FROM lobby_slots INNER JOIN players ON lobby_slots.user_id = players.id
+		WHERE lobby_slots.lobby = :lobby AND players.current_lobby <> :current_lobby');
+	$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+	$stmt->bindValue(':current_lobby', $_GET['lobby'], PDO::PARAM_INT);
+	$stmt->execute();
+	$rowcount = $stmt->fetch(PDO::FETCH_OBJ);
+	if ($rowcount->rowcount == 0) {
+		$stmt = $db->prepare('SELECT rounds.id as roundId, rounds.name as roundName, tiers.id as tierId, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId
+			FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round INNER JOIN tiers ON lobbies.tier = tiers.id
+			WHERE lobbies.id = :id');
+		$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+		$stmt->execute();
+		$round = $stmt->fetch(PDO::FETCH_OBJ);
+		$roundId = $round->roundId;
+		$roundName = $round->roundName;
+		$tierId = $round->tierId;
+		$tierName = $round->tierName;
+		$matchId = $round->matchId;
+		foreach ($body as &$player) {
+			$stmt = $db->prepare('UPDATE lobby_slots
+				SET continue_to_upper = :continue_to_upper, drop_down = :drop_down, eliminated = :eliminated, forfeit = :forfeit, noshow = :noshow
+				WHERE lobby = :lobby and user_id = :user_id');
+			$stmt->bindValue(':continue_to_upper', $player->continue == 'Continue', PDO::PARAM_BOOL);
+			$stmt->bindValue(':drop_down', $player->continue == 'Drop down', PDO::PARAM_BOOL);
+			$stmt->bindValue(':eliminated', $player->continue == 'Eliminated', PDO::PARAM_BOOL);
+			$stmt->bindValue(':forfeit', $player->continue == 'Forfeit', PDO::PARAM_BOOL);
+			$stmt->bindValue(':noshow', $player->continue == 'Noshow', PDO::PARAM_BOOL);
+			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->bindValue(':user_id', $player->userId, PDO::PARAM_INT);
+			$stmt->execute();
+			$nextRound = null;
+			switch ($player->continues) {
+				case 'continue': $nextRound = $round->continueRound; break;
+				case 'dropdown': $nextRound = $round->dropDownRound; break;
+				default: $nextRound = null;
+			}
+			$stmt = $db->prepare('UPDATE players
+				SET next_round = :next_round
+				WHERE id = :id');
+			$stmt->bindValue(':next_round', $nextRound, PDO::PARAM_INT);
+			$stmt->bindValue(':id', $player->id, PDO::PARAM_INT);
+			$stmt->execute();
+
+			$player->score = 0;
+		}
+
+		$message = "**" . $roundName . " | " . $tierName . "**\r\n";
+		$stmt = $db->prepare('SELECT osu_match_events.id, osu_match_events.type, osu_match_events.user_id as userId, osu_match_games.counts
+			FROM osu_match_events INNER JOIN lobbies ON osu_match_events.match_id = lobbies.match_id LEFT JOIN osu_match_games ON osu_match_events.id = osu_match_games.match_event
+			WHERE lobbies.id = :id
+			ORDER BY osu_match_events.timestamp ASC');
+		$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
+		$stmt->execute();
+		$events = $stmt->fetchAll(PDO::FETCH_OBJ);
+		$hasBracketReset = false;
+		foreach ($events as $event) {
+			if ($event->type == 'bracket-reset') {
+				$hasBracketReset = true;
+				foreach ($body as &$player) {
+					$player->score = 0;
+				}
+			}
+			if ($event->type == 'other' && $event->counts) {
+				$scoreAmount = count($body) == 2 ? 1 : 4;
+
+				$stmt = $db->prepare('SELECT user_id as userId, score, pass
+					FROM osu_match_scores
+					WHERE match_event = :match_event
+					ORDER BY pass DESC, score DESC');
+				$stmt->bindValue(':match_event', $event->id, PDO::PARAM_INT);
+				$stmt->execute();
+				$scores = $stmt->fetchAll(PDO::FETCH_OBJ);
+				foreach ($scores as $score) {
+					foreach ($body as &$player) {
+						if ($score->userId == $player->osu->id) {
+							$player->score += $scoreAmount;
+							switch ($scoreAmount) {
+								case 4: $scoreAmount = 3; break;
+								case 3: $scoreAmount = 2; break;
+								default: $scoreAmount = 0; break;
+							}
+							break;
+						}
+					}
+					if ($scoreAmount == 0) {
+						break;
+					}
+				}
+			}
+		}
+
+		usort($body, function($a, $b) {
+			return $b->score - $a->score;
+		});
+
+		if (count($body) == 2) {
+			$message .= "Final Score: **" . $body[0]->osu->username . " (<@" . $body[0]->discord->id . ">) " . $body[0]->score . "** | " . $body[1]->score . " " . $body[1]->osu->username . " (<@" . $body[1]->discord->id . ">)\r\n";
+			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n\r\n";
+			$message .= "**Bans**\r\n";
+			$message .= "__" . $body[0]->osu->username . "__\r\n";
+			$stmt = $db->prepare('SELECT mappool_slots.mod, osu_beatmaps.beatmap_id as beatmapId, osu_beatmaps.artist, osu_beatmaps.title, osu_beatmaps.version
+				FROM mappools INNER JOIN mappool_slots ON mappools.id = mappool_slots.mappool INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
+				WHERE mappools.tier = :tier AND mappools.round = :round');
+			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
+			$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
+			$stmt->execute();
+			$mappool = $stmt->fetchAll(PDO::FETCH_OBJ);
+			$stmt = $db->prepare('SELECT beatmap_id as beatmapId, banned_by as bannedBy
+				FROM lobby_bans
+				WHERE lobby = :lobby AND after_bracket_reset = :after_bracket_reset');
+			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->bindValue(':after_bracket_reset', $hasBracketReset, PDO::PARAM_BOOL);
+			$stmt->execute();
+			$bans = $stmt->fetchAll(PDO::FETCH_OBJ);
+			foreach ($bans as $ban) {
+				if ($ban->bannedBy == $body[0]->userId) {
+					foreach ($mappool as $beatmap) {
+						if ($beatmap->beatmapId == $ban->beatmapId) {
+							$message .= $beatmap->mod . " | " . $beatmap->artist . " - " . $beatmap->title . " [" . $beatmap->version . "]\r\n";
+						}
+					}
+				}
+			}
+			$message .= "\r\n__" . $body[1]->osu->username . "__\r\n";
+			foreach ($bans as $ban) {
+				if ($ban->bannedBy == $body[1]->userId) {
+					foreach ($mappool as $beatmap) {
+						if ($beatmap->beatmapId == $ban->beatmapId) {
+							$message .= $beatmap->mod . " | " . $beatmap->artist . " - " . $beatmap->title . " [" . $beatmap->version . "]\r\n";
+						}
+					}
+				}
+			}
+		} else {
+			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n\r\n";
+			foreach ($body as $score) {
+				$message .= $score->score . " | " . $score->osu->username . " (<@" . $score->discord->id . ">)\r\n";
+			}
+		}
+		$discordApi->sendMessage($message);
+	}
+
+	echoError(0, 'Results saved');
 }
 
 function getMappools() {
