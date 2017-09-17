@@ -55,7 +55,7 @@
 		</style>
 		<iron-ajax id="roundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
 		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
-		<iron-ajax id="getLobbiesAjax" url="../api/lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}"></iron-ajax>
+		<iron-ajax id="getLobbiesAjax" url="../api/rounds//tiers//lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="header">Lobbies</div>
 			<div class="filter-wrapper layout horizontal">
@@ -130,7 +130,7 @@
 			_getLobbies() {
 				if (this.selectedRound && this.selectedTier) {
 					this.set('lobbies', []);
-					this.$.getLobbiesAjax.url = '../api/lobbies/' + this.selectedRound + '/' + this.selectedTier;
+					this.$.getLobbiesAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/lobbies';
 					this.$.getLobbiesAjax.headers = {
 						'Authorization': localStorage.getItem('token')
 					}

@@ -88,13 +88,21 @@
 			.save-comment-button {
 				width: 300px;
 			}
+			.player-banned {
+				margin-left: 10px;
+				margin-top: 20px;
+			}
 		</style>
-		<iron-ajax id="putLobbyAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="_putLobbyResponse"></iron-ajax>
+		<iron-ajax id="putLobbyAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="getMatchAjax" url="../api/osumatch/" method="GET" last-response="{{matchHistory}}" on-response="_getMatchResponse"></iron-ajax>
-		<iron-ajax id="putGameAjax" url="../api/osugame/" method="PUT" content-type="application/json" on-response="_putGameResponse"></iron-ajax>
-		<iron-ajax id="postGameAjax" url="../api/osumatch//games" method="POST" content-type="application/json" on-response="_postGameResponse"></iron-ajax>
-		<iron-ajax id="deleteGameAjax" url="../api/osugame/" method="DELETE" on-response="_deleteGameResponse"></iron-ajax>
-		<iron-ajax id="getMappoolAjax" url="../api/mappools/" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<iron-ajax id="putGameAjax" url="../api/osugame/" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="postGameAjax" url="../api/osumatch//games" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="deleteGameAjax" url="../api/osugame/" method="DELETE" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/rounds//tiers//mappool" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
+		<iron-ajax id="putBansAjax" url="../api/lobbies//bans" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putMatchIdAjax" url="../api/lobbies//matchId" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putCommentAjax" url="../api/lobbies//comment" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putResultAjax" url="../api/lobbies//result" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<div class="flex layout vertical">
 			<paper-tabs selected="{{tabSelected}}" attr-for-selected="value">
 				<paper-tab value="match">MATCH</paper-tab>
@@ -120,13 +128,13 @@
 							<div class="layout horizontal">
 								<div class="layout vertical">
 									<match-game game="[[item.game]]"></match-game>
-									<template is="dom-if" if="[[lobby.hasBracketReset]]">
+									<template is="dom-if" if="[[_bracketResetAvailable(lobby.hasBracketReset, bracketResetUsed)]]">
 										<paper-button class="action-button" raised on-click="_insertBracketReset">Insert Bracket Reset</paper-button>
 									</template>
 								</div>
 								<div class="layout vertical">
 									<paper-toggle-button class="counts" checked="[[_counts(item.game.counts)]]" on-checked-changed="_countsChanged">Counts</paper-toggle-button>
-									<vaadin-combo-box class="picked-by" label="Picked by" items="[[players]]" value="{{item.game.picked_by}}" item-value-path="userId" item-label-path="osuUsername" on-change="_pickedByChanged"></vaadin-combo-box>
+									<vaadin-combo-box class="picked-by" label="Picked by" items="[[players]]" value="{{item.game.picked_by}}" item-value-path="userId" item-label-path="osu.username" on-change="_pickedByChanged"></vaadin-combo-box>
 								</div>
 							</div>
 						</template>
@@ -149,7 +157,7 @@
 						<template is="dom-if" if="[[_isOverall(item.type)]]">
 							<template is="dom-repeat" items="[[item.slots]]" as="slot">
 								<div class="overall-wrapper layout horizontal">
-									<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]"></osu-profile>
+									<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]"></osu-profile>
 									<div class="layout vertical">
 										<div class="flex"></div>
 										<div class="overall-score">[[slot.score]]</div>
@@ -162,11 +170,11 @@
 				</div>
 				<div class="wrapper flex layout vertical" value="players">
 					<template is="dom-repeat" items="{{lobby.slots}}" as="slot">
-						<template is="dom-if" if="[[slot.osuId]]">
+						<template is="dom-if" if="[[slot.osu.id]]">
 							<div class="player-wrapper layout horizontal">
-								<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]"></osu-profile>
+								<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]"></osu-profile>
 								<div class="layout vertical">
-									<div class="player-invite">!mp invite #[[slot.osuId]]</div>
+									<div class="player-invite">!mp invite #[[slot.osu.id]]</div>
 									<vaadin-combo-box class="player-continues" label="Continues" items='["Continue","Drop down","Eliminated","Forfeit","Noshow"]' value="{{slot.continue}}"></vaadin-combo-box>
 								</div>
 							</div>
@@ -177,8 +185,16 @@
 					<paper-button class="action-button save-comment-button" raised on-click="_saveComment">Save</paper-button>
 				</div>
 				<div class="wrapper flex layout vertical" value="mappool">
-					<template is="dom-repeat" items="[[mappool.slots]]" as="beatmap">
-						<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
+					<template is="dom-repeat" items="{{mappool.slots}}" as="beatmap">
+						<div class="layout horizontal">
+							<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
+							<div class="layout vertical banned-wrapper">
+								<vaadin-combo-box class="player-banned" label="Banned by" items="[[players]]" value="{{beatmap.bannedBy}}" item-value-path="userId" item-label-path="osu.username" on-change="_saveBans"></vaadin-combo-box>
+								<template is="dom-if" if="[[lobby.hasBracketReset]]">
+									<vaadin-combo-box class="player-banned" label="Banned by after bracket reset" items="[[players]]" value="{{beatmap.bannedByAfterBracketReset}}" item-value-path="userId" item-label-path="osuUsername" on-change="_saveBans"></vaadin-combo-box>
+								</template>
+							</div>
+						</div>
 					</template>
 				</div>
 				<div class="wrapper flex layout vertical" value="commands">
@@ -209,8 +225,9 @@
 
 			static get properties() {
 				return {
-					lobby: {
-						observer: '_lobbyChanged'
+					bracketResetUsed: {
+						type: Boolean,
+						value: false
 					}
 				}
 			}
@@ -218,7 +235,7 @@
 			ready() {
 				super.ready();
 				this.tabSelected = 'match';
-				this.$.getMappoolAjax.url = '../api/mappools/' + this.lobby.round + '/' + this.lobby.tier;
+				this.$.getMappoolAjax.url = '../api/rounds/' + this.lobby.round + '/tiers/' + this.lobby.tier + '/mappool';
 				this.$.getMappoolAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
@@ -228,39 +245,33 @@
 					placeholder: 'Ref comments'
 				});
 				this.editor.setContents(JSON.parse(this.lobby.comment));
-			}
-
-			_lobbyChanged(e) {
 				this.players = [];
 				for (var i = 0; i < this.lobby.slots.length; i++) {
 					if (this.lobby.slots[i].userId) {
-						if (this.lobby.slots[i].continueToUpper == '1') {
-							this.set('lobby.slots.' + i + '.continue', 'Continue');
-						} else if (this.lobby.slots[i].dropDown == '1') {
-							this.set('lobby.slots.' + i + '.continue', 'Drop down');
-						} else if (this.lobby.slots[i].eliminated == '1') {
-							this.set('lobby.slots.' + i + '.continue', 'Eliminated');
-						} else if (this.lobby.slots[i].forfeit == '1') {
-							this.set('lobby.slots.' + i + '.continue', 'Forfeit');
-						} else if (this.lobby.slots[i].noshow == '1') {
-							this.set('lobby.slots.' + i + '.continue', 'Noshow');
-						} else {
-							this.set('lobby.slots.' + i + '.continue', null);
-						}
 						this.push('players', this.lobby.slots[i]);
 					}
 				}
+				this._loadMatch();
 			}
 
 			_matchIdChanged() {
-				this.$.putLobbyAjax.url = '../api/lobbies/' + this.lobby.id;
-				this.$.putLobbyAjax.headers = {
+				this.$.putMatchIdAjax.url = '../api/lobbies/' + this.lobby.id + '/matchId';
+				this.$.putMatchIdAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putLobbyAjax.body = {
-					'matchId': this.lobby.matchId
+				this.$.putMatchIdAjax.body = this.lobby.matchId;
+				this.$.putMatchIdAjax.generateRequest();
+			}
+
+			_defaultResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this._loadMatch();
 				}
-				this.$.putLobbyAjax.generateRequest();
 			}
 
 			_loadMatch() {
@@ -270,17 +281,21 @@
 
 			_getMatchResponse(e) {
 				var overall = [];
+				this.bracketResetUsed = false;
 				for (var i = 0; i < this.lobby.slots.length; i++) {
-					if (this.lobby.slots[i].osuId) {
+					if (this.lobby.slots[i].osu.id) {
 						overall.push({
-							osuAvatarUrl: this.lobby.slots[i].osuAvatarUrl,
-							osuHitAccuracy: this.lobby.slots[i].osuHitAccuracy,
-							osuId: this.lobby.slots[i].osuId,
-							osuLevel: this.lobby.slots[i].osuLevel,
-							osuPlayCount: this.lobby.slots[i].osuPlayCount,
-							osuPp: this.lobby.slots[i].osuPp,
-							osuRank: this.lobby.slots[i].osuRank,
-							osuUsername: this.lobby.slots[i].osuUsername,
+							osu: {
+								avatarUrl: this.lobby.slots[i].osu.avatarUrl,
+								hitAccuracy: this.lobby.slots[i].osu.hitAccuracy,
+								id: this.lobby.slots[i].osu.id,
+								level: this.lobby.slots[i].osu.level,
+								playCount: this.lobby.slots[i].osu.playCount,
+								pp: this.lobby.slots[i].osu.pp,
+								rank: this.lobby.slots[i].osu.rank,
+								username: this.lobby.slots[i].osu.username
+							},
+							userId: this.lobby.slots[i].userId,
 							score: 0
 						});
 					}
@@ -294,7 +309,7 @@
 						}
 						for (var j = 0; j < this.matchHistory[i].game.scores.length; j++) {
 							for (var k = 0; k < overall.length; k++) {
-								if (overall[k].osuId == this.matchHistory[i].game.scores[j].userId) {
+								if (overall[k].osu.id == this.matchHistory[i].game.scores[j].userId) {
 									overall[k].score += scoreAmount;
 									switch (scoreAmount) {
 										case 4: scoreAmount = 3; break;
@@ -309,6 +324,9 @@
 						}
 					}
 					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded') {
+						if (this.matchHistory[i].type == 'bracket-reset') {
+							this.bracketResetUsed = true;
+						}
 						overall.sort((a, b) => {
 							return b.score - a.score;
 						});
@@ -320,14 +338,17 @@
 						for (var j = 0; j < this.lobby.slots.length; j++) {
 							if (this.lobby.slots[j].osuId) {
 								overall.push({
-									osuAvatarUrl: this.lobby.slots[j].osuAvatarUrl,
-									osuHitAccuracy: this.lobby.slots[j].osuHitAccuracy,
-									osuId: this.lobby.slots[j].osuId,
-									osuLevel: this.lobby.slots[j].osuLevel,
-									osuPlayCount: this.lobby.slots[j].osuPlayCount,
-									osuPp: this.lobby.slots[j].osuPp,
-									osuRank: this.lobby.slots[j].osuRank,
-									osuUsername: this.lobby.slots[j].osuUsername,
+									osu: {
+										avatarUrl: this.lobby.slots[j].osu.avatarUrl,
+										hitAccuracy: this.lobby.slots[j].osu.hitAccuracy,
+										id: this.lobby.slots[j].osu.id,
+										level: this.lobby.slots[j].osu.level,
+										playCount: this.lobby.slots[j].osu.playCount,
+										pp: this.lobby.slots[j].osu.pp,
+										rank: this.lobby.slots[j].osu.rank,
+										username: this.lobby.slots[j].osu.username
+									},
+									userId: this.lobby.slots[j].userId,
 									score: 0
 								});
 							}
@@ -360,16 +381,6 @@
 				this.$.putGameAjax.generateRequest();
 			}
 
-			_putGameResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-			}
-
 			_insertBracketReset(e) {
 				this.$.postGameAjax.url = '../api/osumatch/' + this.lobby.matchId + '/games';
 				this.$.postGameAjax.headers = {
@@ -381,17 +392,6 @@
 				this.$.postGameAjax.generateRequest();
 			}
 
-			_postGameResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.$.getMatchAjax.generateRequest();
-				}
-			}
-
 			_deleteBracketReset(e) {
 				this.$.deleteGameAjax.url = '../api/osugame/' + e.model.item.id;
 				this.$.deleteGameAjax.headers = {
@@ -400,53 +400,62 @@
 				this.$.deleteGameAjax.generateRequest();
 			}
 
-			_deleteGameResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.$.getMatchAjax.generateRequest();
-				}
-			}
-
 			_saveContinues() {
-				for (var i = this.matchHistory.length - 1; i >= 0; i--) {
-					if (this.matchHistory[i].type == 'overall') {
-						var lastOverall = this.matchHistory[i].slots;
-						break;
-					}
-				}
-				this.$.putLobbyAjax.url = '../api/lobbies/' + this.lobby.id;
-				this.$.putLobbyAjax.headers = {
+				this.$.putResultAjax.url = '../api/lobbies/' + this.lobby.id + '/result';
+				this.$.putResultAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putLobbyAjax.body = {
-					'continues': this.lobby.slots,
-					'overall': lastOverall
-				}
-				this.$.putLobbyAjax.generateRequest();
+				this.$.putResultAjax.body = this.lobby.slots;
+				this.$.putResultAjax.generateRequest();
 			}
 
 			_saveComment() {
-				this.$.putLobbyAjax.url = '../api/lobbies/' + this.lobby.id;
-				this.$.putLobbyAjax.headers = {
+				this.$.putCommentAjax.url = '../api/lobbies/' + this.lobby.id + '/comment';
+				this.$.putCommentAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putLobbyAjax.body = {
-					'comment': JSON.stringify(this.editor.getContents())
-				}
-				this.$.putLobbyAjax.generateRequest();
+				this.$.putCommentAjax.body = JSON.stringify(this.editor.getContents());
+				this.$.putCommentAjax.generateRequest();
 			}
 
-			_putLobbyResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
+			_saveBans() {
+				var bans = [];
+				for (var i = 0; i < this.mappool.slots.length; i++) {
+					if (this.mappool.slots[i].bannedBy) {
+						bans.push({
+							afterBracketReset: false,
+							beatmapId: this.mappool.slots[i].beatmapId,
+							userId: this.mappool.slots[i].bannedBy
+						});
+					}
+					if (this.mappool.slots[i].bannedByAfterBracketReset) {
+						bans.push({
+							afterBracketReset: true,
+							beatmapId: this.mappool.slots[i].beatmapId,
+							userId: this.mappool.slots[i].bannedByAfterBracketReset
+						});
+					}
+				}
+				this.$.putBansAjax.url = '../api/lobbies/' + this.lobby.id + '/bans';
+				this.$.putBansAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putBansAjax.body = bans;
+				this.$.putBansAjax.generateRequest();
+			}
+
+			_getMappoolResponse() {
+				for (var i = 0; i < this.lobby.bans.length; i++) {
+					for (var j = 0; j < this.mappool.slots.length; j++) {
+						if (this.lobby.bans[i].beatmapId == this.mappool.slots[j].beatmapId) {
+							if (this.lobby.bans[i].afterBracketReset == '1') {
+								this.set('mappool.slots.' + j + '.bannedByAfterBracketReset', this.lobby.bans[i].bannedBy.userId);
+							} else {
+								this.set('mappool.slots.' + j + '.bannedBy', this.lobby.bans[i].bannedBy.userId);
+							}
+							break;
+						}
+					}
 				}
 			}
 
@@ -484,6 +493,10 @@
 
 			_convertTimestamp(e) {
 				return e.substring(11, 16);
+			}
+
+			_bracketResetAvailable(hasBracketReset, bracketResetUsed) {
+				return hasBracketReset && !bracketResetUsed;
 			}
 		}
 
