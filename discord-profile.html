@@ -20,7 +20,9 @@
 			}
 		</style>
 		<div class="wrapper layout horizontal">
-			<div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/[[id]]/[[avatar]].png?size=256');"></div>
+			<template is="dom-if" if="[[_initialized(id, avatar)]]">
+				<div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/[[id]]/[[avatar]].png?size=256');"></div>
+			</template>
 			<div class="text-wrapper layout vertical">
 				<div class="flex"></div>
 				<div class="name">[[username]]#[[discriminator]]</div>
@@ -39,6 +41,10 @@
 					username: String,
 					discriminator: String
 				}
+			}
+
+			_initialized(id, avatar) {
+				return id && avatar;
 			}
 		}
 
