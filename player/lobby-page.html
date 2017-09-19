@@ -1,443 +1,342 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+
 <dom-module id="lobby-page">
 	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning">
-			paper-tabs {
-        background-color: var(--discord-grey);
-        color: white;
-        --paper-tabs-selection-bar-color: var(--happystick-green);
-      }
-      overall-item {
-      	margin-top: 10px;
-      }
-      .green-button {
-      	background-color: var(--happystick-green);
-      	color: white;
-      	margin: 10px;
-      	width: 300px;
-      }
-      .red-button {
-      	background-color: var(--error-red);
-      	color: white;
-      	margin: 10px;
-      	width: 300px;
-      }
-      .header {
-      	color: var(--happystick-green);
-      	font-size: 40px;
-      }
-      .mappack-button {
-      	background-color: var(--happystick-green);
-      	color: white;
-      	margin: 20px;
-      	width: 900px;
-      }
-      .feedback-input {
-      	width: 900px;
-      	margin-left: 20px;
-      }
-      .success-toast {
+		<style include="iron-flex iron-flex-alignment quill-core quill-snow">
+			.wrapper {
+				margin: 10px;
+			}
+			paper-input {
+				--paper-input-container-focus-color: var(--happystick-green);
+			}
+			.action-button {
 				background-color: var(--happystick-green);
 				color: white;
+				margin: 10px;
+				flex-shrink: 0;
 			}
-			.error-toast {
-				background-color: var(--error-red);
+			.refresh-button {
+				width: 200px;
+			}
+			match-game {
+				margin-top: 20px;
+				margin-bottom: 20px;
+			}
+			.picked-by {
+				margin-left: 10px;
+				margin-top: 50px;
+			}
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
+			}
+			.overall-wrapper {
+				margin: 5px;
+			}
+			.overall-score {
+				margin-left: 5px;
+				font-size: 30px;
+			}
+			paper-tabs {
+				--paper-tabs-selection-bar-color: var(--happystick-green);
+				background-color: var(--discord-grey);
 				color: white;
 			}
+			.player-wrapper {
+				margin: 5px;
+			}
+			.player-continues {
+				margin-top: 10px;
+				margin-left: 5px;
+			}
+			beatmap-info {
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.player-banned {
+				margin-left: 10px;
+				margin-top: 20px;
+			}
 		</style>
-		<iron-ajax id="lobbyAjax" url="../api/lobbies/" method="GET" on-response="lobbyResponse" last-response="{{lobby}}"></iron-ajax>
-		<iron-ajax id="mappoolAjax" url="../api/rounds//mappool" method="GET" on-response="mappoolResponse" last-response="{{mappool}}"></iron-ajax>
-		<iron-ajax id="matchAjax" url="../api/matches/" method="GET" on-response="matchResponse"></iron-ajax>
-		<iron-ajax id="feedbackAjax" url="../api/rounds//feedback" method="GET" on-response="feedbackResponse"></iron-ajax>
-		<iron-ajax id="saveFeedbackAjax" url="../api/rounds//feedback" method="PUT" content-type="application/json" on-response="saveFeedbackResponse"></iron-ajax>
-		<iron-ajax id="bansAjax" url="../api/matches//bans" method="GET" on-response="bansResponse"></iron-ajax>
-		<div class="layout vertical">
-			<paper-tabs attr-for-selected="value" selected="{{tabSelected}}">
-				<paper-tab value="Overview">Overview</paper-tab>
-				<paper-tab value="Players">Players</paper-tab>
-				<paper-tab value="Mappool">Mappool</paper-tab>
+		<iron-ajax id="getLobbyAjax" url="../api/lobbies/" method="GET" last-response="{{lobby}}" on-response="_getLobbyResponse"></iron-ajax>
+		<iron-ajax id="getMatchAjax" url="../api/osumatch/" method="GET" last-response="{{matchHistory}}" on-response="_getMatchResponse"></iron-ajax>
+		<iron-ajax id="getMappoolAjax" url="../api/rounds//tiers//mappool" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
+		<div class="flex layout vertical">
+			<paper-tabs selected="{{tabSelected}}" attr-for-selected="value">
+				<paper-tab value="match">MATCH</paper-tab>
+				<paper-tab value="players">PLAYERS</paper-tab>
+				<paper-tab value="mappool">MAPPOOL</paper-tab>
 			</paper-tabs>
-			<iron-pages attr-for-selected="value" selected="[[tabSelected]]" class="layout vertical">
-				<div value="Overview" class="layout vertical">
-					<div class="layout vertical" style="margin:20px;">
-						<div class="header">Lobby <span>[[id]]</span></div>
+			<iron-pages selected="[[tabSelected]]" attr-for-selected="value">
+				<div class="wrapper flex layout vertical" value="match">
+					<paper-button class="action-button refresh-button" raised on-click="_loadMatch">Refresh</paper-button>
+					<template is="dom-repeat" items="{{matchHistory}}" filter="_matchFilter">
+						<template is="dom-if" if="[[_isMatchCreated(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> Match created</div>
+						</template>
+						<template is="dom-if" if="[[_isPlayerJoined(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> <span>[[item.player.username]]</span> joined the match</div>
+						</template>
+						<template is="dom-if" if="[[_isOther(item.type)]]">
+							<div class="layout horizontal">
+								<match-game game="[[item.game]]"></match-game>
+								<div class="picked-by">Picked by [[item.game.pickedBy]]</div>
+							</div>
+						</template>
+						<template is="dom-if" if="[[_isPlayerLeft(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> <span>[[item.player.username]]</span> left the match</div>
+						</template>
+						<template is="dom-if" if="[[_isMatchDisbanded(item.type)]]">
+							<div><span>[[_convertTimestamp(item.timestamp)]]</span> Match disbanded</div>
+						</template>
+						<template is="dom-if" if="[[_isBracketReset(item.type)]]">
+							<div class="layout horizontal">
+								<div class="layout vertical">
+									<div class="flex"></div>
+									<div><span>[[_convertTimestamp(item.timestamp)]]</span> Bracket Reset</div>
+									<div class="flex"></div>
+								</div>
+							</div>
+						</template>
+						<template is="dom-if" if="[[_isOverall(item.type)]]">
+							<template is="dom-repeat" items="[[item.slots]]" as="slot">
+								<div class="overall-wrapper layout horizontal">
+									<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]"></osu-profile>
+									<div class="layout vertical">
+										<div class="flex"></div>
+										<div class="overall-score">[[slot.score]]</div>
+										<div class="flex"></div>
+									</div>
+								</div>
+							</template>
+						</template>
+					</template>
+				</div>
+				<div class="wrapper flex layout vertical" value="players">
+					<template is="dom-repeat" items="{{lobby.slots}}" as="slot">
+						<template is="dom-if" if="[[slot.osu.id]]">
+							<div class="player-wrapper layout horizontal">
+								<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]"></osu-profile>
+								<div class="player-continues">[[slot.continue]]</div>
+							</div>
+						</template>
+					</template>
+				</div>
+				<div class="wrapper flex layout vertical" value="mappool">
+					<template is="dom-repeat" items="{{mappool.slots}}" as="beatmap">
 						<div class="layout horizontal">
-							<div style="margin-top:13px;">Match time:</div>
-							<paper-datetime-picker-item date="[[match_date]]" disabled></paper-datetime-picker-item>
+							<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
+							<div class="layout vertical banned-wrapper">
+								<template is="dom-if" if="[[beatmap.bannedBy]]">
+									<div class="player-banned">Banned by [[beatmap.bannedBy]]</div>
+								</template>
+								<template is="dom-if" if="[[beatmap.bannedByAfterBracketReset]]">
+									<div class="player-banned">Banned by [[beatmap.bannedByAfterBracketReset]] after bracket reset</div>
+								</template>
+							</div>
 						</div>
-						<div>Match name: <span>[[match_name]]</span></div>
-						<div>MP link: <a href="https://osu.ppy.sh/mp/[[match_id]]">https://osu.ppy.sh/mp/[[match_id]]</a></div>
-						<paper-button raised class="green-button" on-click="refreshLobby">Refresh</paper-button>
-						<div class="header" style="margin-top:50px;">Players</div>
-						<template is="dom-repeat" items="{{overall}}">
-							<overall-item overall_item="{{item}}"></overall-item>
-						</template>
-						<div class="header" style="margin-top:50px;">Played Maps</div>
-						<template is="dom-repeat" items="[[games]]">
-							<game-item game_item="[[item]]" players="[[players]]" style="margin-top:10px;" on-changed="refreshLobby"></game-item>
-						</template>
-					</div>
-				</div>
-				<div value="Players" class="layout vertical">
-					<div class="layout vertical">
-						<template is="dom-repeat" items="[[players]]" as="player">
-							<div class="layout horizontal" style="margin:20px;">
-								<osu-profile profile="[[player.user.osu_profile]]" sub_since="[[player.user.twitch_profile.sub_since]]"></osu-profile>
-								<discord-profile profile="[[player.user.discord_profile]]" style="margin-left:20px;"></discord-profile>
-							</div>
-						</template>
-					</div>
-				</div>
-				<div value="Mappool" class="layout vertical">
-					<div class="layout vertical">
-						<paper-button class="mappack-button" raised on-click="downloadMappack">Download mappack</paper-button>
-						<template is="dom-repeat" items="[[mappool.slots]]" as="slot">
-							<div class="layout horizontal" style="margin:20px;">
-								<mappool-item beatmap-id="[[slot.beatmap.beatmap_id]]" map="[[slot.beatmap]]" mods="[[slot.mods]]" freemod="[[slot.freemod]]" tiebreaker="[[slot.tiebreaker]]" picked$="[[slot.picked]]" banned$="[[slot.banned]]"></mappool-item>
-								<a href="https://osu.ppy.sh/d/[[slot.beatmap.beatmapset_id]]" target="_blank"><img src="../images/download.png" style="height:150px;margin-left:10px;"></a>
-								<a href="osu://b/[[slot.beatmap.beatmap_id]]"><img src="../images/direct.png" style="height:150px;margin-left:10px;"></a>
-								<a href="http://bloodcat.com/osu/s/[[slot.beatmap.beatmapset_id]]" style="height:150px;margin-left:10px;"></a>
-							</div>
-						</template>
-						<paper-textarea class="feedback-input" label="Feedback" value="{{feedback}}"></paper-textarea>
-						<paper-button raised class="mappack-button" on-click="saveFeedback">Save feedback</paper-button>
-					</div>
+					</template>
 				</div>
 			</iron-pages>
 		</div>
-		<paper-toast id="successToast" class="success-toast" text="[[toast_message]]"></paper-toast>
-		<paper-toast id="errorToast" class="error-toast" text="[[toast_message]]"></paper-toast>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
-		Polymer({
-			is: 'lobby-page',
-			properties: {
-				id: {
-					type: Number,
-					observer: 'idChanged'
-				},
-				round: {
-					type: Number,
-					observer: 'roundChanged'
-				},
-				match_id: {
-					type: Number
-				},
-				match_name: String
-			},
-			idChanged: function() {
-				this.tabSelected = 'Overview';
-				this.$.lobbyAjax.url = '../api/lobbies/' + this.id;
-				this.$.lobbyAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.lobbyAjax.generateRequest();
-			},
-			roundChanged: function() {
-				this.$.mappoolAjax.url = '../api/rounds/' + this.round + '/mappool';
-				this.$.mappoolAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.mappoolAjax.generateRequest();
-				this.$.feedbackAjax.url = '../api/rounds/' + this.round + '/feedback';
-				this.$.feedbackAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.feedbackAjax.generateRequest();
-			},
-			lobbyResponse: function() {
-				var match_date_utc = new Date(this.lobby.match_time);
-				this.match_date = new Date(Date.UTC(match_date_utc.getFullYear(), match_date_utc.getMonth(), match_date_utc.getDate(), match_date_utc.getHours(), match_date_utc.getMinutes(), 0));
-				if (this.lobby && this.lobby.match_id) {
-					this.match_id = this.lobby.match_id;
-					this.$.matchAjax.url = '../api/matches/' + this.match_id;
-					this.$.matchAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.matchAjax.generateRequest();
-					this.$.bansAjax.url = '../api/matches/' + this.match_id + '/bans';
-					this.$.bansAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.bansAjax.generateRequest();
-					this.new_match = false;
-					this.ref_comments = this.lobby.comment;
-				} else {
-					this.new_match = true;
-				}
-				this.players = this.lobby.slots;
-				this.round = this.lobby.round;
-			},
-			refreshLobby: function() {
-				this.$.lobbyAjax.generateRequest();
-			},
-			matchResponse: function(e) {
-				this.games = [];
-				this.overall = [];
-				for (var player = 0; player < this.players.length; player++) {
-					if (this.players[player].user.osu_profile) {
-						this.push('overall', this.players[player]);
-						this.overall[this.overall.length - 1].score = 0;
-						if (this.players[player].continue_to_upper == '1' && this.players[player].drop_down == '0') {
-							this.overall[this.overall.length - 1].continues = 'Continues';
-						} else if (this.players[player].continue_to_upper == '0' && this.players[player].drop_down == '1') {
-							this.overall[this.overall.length - 1].continues = 'Drops down';
-						} else if (this.players[player].continue_to_upper == '0' && this.players[player].drop_down == '0') {
-							this.overall[this.overall.length - 1].continues = 'Eliminated';
-						}
+		class LobbyPage extends Polymer.Element {
+			static get is() { return 'lobby-page' }
+
+			static get properties() {
+				return {
+					user: {
+						observer: '_userChanged'
 					}
 				}
-				var games = e.detail.response.games;
-				for (var game = 0; game < games.length; game++) {
-					if (games[game].counts == '1') {
-						var scoreAdd = this.players.length > 2 ? 6 : 1;
-						for (var score = 0; score < games[game].scores.length; score++) {
-							for (var player = 0; player < this.overall.length; player++) {
-								if (games[game].scores[score].user_id == this.overall[player].user.osu_profile.user_id) {
-									this.overall[player].score += scoreAdd;
-									games[game].scores[score].points = scoreAdd;
-									switch (scoreAdd) {
-										case 6: scoreAdd = 4; break;
-										case 4: scoreAdd = 3; break;
-										case 3: scoreAdd = 2; break;
-										case 2: scoreAdd = 0; break;
-										case 1: scoreAdd = 0; break;
+			}
+
+			ready() {
+				super.ready();
+				this.tabSelected = 'match';
+			}
+
+			_userChanged() {
+				this.$.getLobbyAjax.url = '../api/lobbies/' + this.user.currentLobby;
+				this.$.getLobbyAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getLobbyAjax.generateRequest();
+			}
+
+			_getLobbyResponse(e) {
+				this.$.getMappoolAjax.url = '../api/rounds/' + this.lobby.round + '/tiers/' + this.lobby.tier + '/mappool';
+				this.$.getMappoolAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getMappoolAjax.generateRequest();
+				this.players = [];
+				for (var i = 0; i < this.lobby.slots.length; i++) {
+					if (this.lobby.slots[i].userId) {
+						this.push('players', this.lobby.slots[i]);
+					}
+				}
+				this._loadMatch();
+			}
+
+			_loadMatch() {
+				this.$.getMatchAjax.url = '../api/osumatch/' + this.lobby.matchId;
+				this.$.getMatchAjax.generateRequest();
+			}
+
+			_getMatchResponse(e) {
+				var overall = [];
+				this.bracketResetUsed = false;
+				for (var i = 0; i < this.lobby.slots.length; i++) {
+					if (this.lobby.slots[i].osu.id) {
+						overall.push({
+							osu: {
+								avatarUrl: this.lobby.slots[i].osu.avatarUrl,
+								hitAccuracy: this.lobby.slots[i].osu.hitAccuracy,
+								id: this.lobby.slots[i].osu.id,
+								level: this.lobby.slots[i].osu.level,
+								playCount: this.lobby.slots[i].osu.playCount,
+								pp: this.lobby.slots[i].osu.pp,
+								rank: this.lobby.slots[i].osu.rank,
+								username: this.lobby.slots[i].osu.username
+							},
+							userId: this.lobby.slots[i].userId,
+							score: 0
+						});
+					}
+				}
+				for (var i = 0; i < this.matchHistory.length; i++) {
+					if (this.matchHistory[i].type == 'other' && this.matchHistory[i].game.counts == '1') {
+						for (var j = 0; j < this.players.length; j++) {
+							if (this.matchHistory[i].game.picked_by == this.players[j].userId) {
+								this.set('matchHistory.' + i + '.game.pickedBy', this.players[j].osu.username);
+							}
+						}
+						if (overall.length == 2) {
+							var scoreAmount = 1;
+						} else {
+							var scoreAmount = 4;
+						}
+						for (var j = 0; j < this.matchHistory[i].game.scores.length; j++) {
+							for (var k = 0; k < overall.length; k++) {
+								if (overall[k].osu.id == this.matchHistory[i].game.scores[j].userId) {
+									overall[k].score += scoreAmount;
+									switch (scoreAmount) {
+										case 4: scoreAmount = 3; break;
+										case 3: scoreAmount = 2; break;
+										default: scoreAmount = 0; break;
 									}
 								}
 							}
-						}
-					}
-					for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-						if (this.mappool.slots[slot].beatmap.beatmap_id == games[game].beatmap_id) {
-							games[game].tiebreaker = this.mappool.slots[slot].tiebreaker;
-							games[game].freemod = this.mappool.slots[slot].freemod;
-							if (games[game].counts == '1') {
-								this.set('mappool.slots.' + slot + '.picked', true);
+							if (scoreAmount == 0) {
+								break;
 							}
 						}
 					}
-					this.push('games', games[game]);
+					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded') {
+						if (this.matchHistory[i].type == 'bracket-reset') {
+							this.bracketResetUsed = true;
+						}
+						overall.sort((a, b) => {
+							return b.score - a.score;
+						});
+						this.splice('matchHistory', i, 0, {
+							type: 'overall',
+							slots: overall
+						});
+						var overall = [];
+						for (var j = 0; j < this.lobby.slots.length; j++) {
+							if (this.lobby.slots[j].osuId) {
+								overall.push({
+									osu: {
+										avatarUrl: this.lobby.slots[j].osu.avatarUrl,
+										hitAccuracy: this.lobby.slots[j].osu.hitAccuracy,
+										id: this.lobby.slots[j].osu.id,
+										level: this.lobby.slots[j].osu.level,
+										playCount: this.lobby.slots[j].osu.playCount,
+										pp: this.lobby.slots[j].osu.pp,
+										rank: this.lobby.slots[j].osu.rank,
+										username: this.lobby.slots[j].osu.username
+									},
+									userId: this.lobby.slots[j].userId,
+									score: 0
+								});
+							}
+						}
+						i++;
+					}
 				}
-				this.overall.sort(function(a, b) {
-					return b.score - a.score;
-				});
-			},
-			downloadMappack: function() {
-				window.open(this.mappool.mappack);
-			},
-			feedbackResponse: function(e) {
-				var response = e.detail.response;
-				if (response.error == '0') {
-					this.feedback = response.message;
-				} else {
-					this.feedback = '';
-				}
-			},
-			saveFeedback: function() {
-				this.$.saveFeedbackAjax.url = '../api/rounds/' + this.round + '/feedback';
-				this.$.saveFeedbackAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.saveFeedbackAjax.body = {
-					'feedback': this.feedback
-				};
-				this.$.saveFeedbackAjax.generateRequest();
-			},
-			saveFeedbackResponse: function(e) {
-				var response = e.detail.response;
-				this.toast_message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-				}
-			},
-			bansResponse: function(e) {
-				var response = e.detail.response;
-				for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-					this.set('mappool.slots.' + slot + '.banned', false);
-					this.set('mappool.slots.' + slot + '.banned_by', '');
-				}
-				for (var i = 0; i < response.length; i++) {
-					for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-						if (this.mappool.slots[slot].beatmap.beatmap_id == response[i].beatmap_id) {
-							this.set('mappool.slots.' + slot + '.banned', true);
-							this.set('mappool.slots.' + slot + '.banned_by', response[i].user.discord_profile.id);
+			}
+
+			_getMappoolResponse() {
+				for (var i = 0; i < this.lobby.bans.length; i++) {
+					for (var j = 0; j < this.mappool.slots.length; j++) {
+						if (this.lobby.bans[i].beatmapId == this.mappool.slots[j].beatmapId) {
+							if (this.lobby.bans[i].afterBracketReset == '1') {
+								this.set('mappool.slots.' + j + '.bannedByAfterBracketReset', this.lobby.bans[i].bannedBy.osu.username);
+							} else {
+								this.set('mappool.slots.' + j + '.bannedBy', this.lobby.bans[i].bannedBy.osu.username);
+							}
+							break;
 						}
 					}
 				}
-			},
-			mappoolResponse: function() {
-				this.$.bansAjax.generateRequest();
 			}
-		});
-	</script>
-</dom-module>
 
-<dom-module id="overall-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<div class="layout horizontal">
-			<osu-profile profile="[[overall_item.user.osu_profile]]" sub_since="[[overall_item.user.twitch_profile.sub_since]]"></osu-profile>
-			<div class="layout vertical" style="margin-left:20px;">
-				<div class="flex"></div>
-				<div style="font-size:30px;">[[overall_item.score]]</div>
-				<div class="flex"></div>
-			</div>
-			<div class="layout vertical" style="margin-left:20px;">
-				<div class="flex"></div>
-				<paper-dropdown-menu label="Moves on to" disabled>
-					<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{overall_item.continues}}">
-						<paper-item value="Continues">Continues</paper-item>
-						<paper-item value="Drops down">Drops down</paper-item>
-						<paper-item value="Eliminated">Eliminated</paper-item>
-					</paper-listbox>
-				</paper-dropdown-menu>
-				<div class="flex"></div>
-			</div>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'overall-item',
-			properties: {
-				overall_item: Object
-			},
-			ready: function() {
-				
+			_isMatchCreated(e) {
+				return e == 'match-created';
 			}
-		});
-	</script>
-</dom-module>
 
-<dom-module id="game-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<div class="layout vertical">
-			<div class="layout horizontal" style="margin:20px;">
-				<mappool-item beatmap-id="[[game_item.beatmap_id]]" map="[[game_item.beatmap]]" mods="[[game_item.mods]]" freemod="[[game_item.freemod]]" tiebreaker="[[game_item.tiebreaker]]"></mappool-item>
-				<div class="layout vertical" style="margin-left:20px;">
-					<div class="flex"></div>
-					<paper-dropdown-menu label="Picked by" disabled>
-						<paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{picked_by}}">
-							<template is="dom-repeat" items="[[players]]">
-								<paper-item value="[[item.user.discord_profile.id]]">[[item.user.osu_profile.username]]</paper-item>
-							</template>
-						</paper-listbox>
-					</paper-dropdown-menu>
-					<div class="flex"></div>
-				</div>
-			</div>
-			<template is="dom-repeat" items="[[game_item.scores]]">
-				<div class="layout horizontal" style="width:900px;margin-bottom:10px;">
-					<div class="flex"></div>
-					<score-item user-id="[[item.user_id]]" profile="[[item.osu_profile]]" score="[[item.score]]" combo="[[item.maxcombo]]" pass-setter="[[item.pass]]" count300="[[item.count300]]" count100="[[item.count100]]" count50="[[item.count50]]" countmiss="[[item.countmiss]]" points="[[item.points]]"></score-item>
-				</div>
-			</template>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'game-item',
-			properties: {
-				game_item: {
-					type: Object,
-					observer: 'game_itemChanged'
-				},
-				counts: {
-					type: Boolean,
-					value: false
-				},
-				locked: {
-					type: Boolean,
-					value: false
-				},
-				picked_by: String
-			},
-			game_itemChanged: function() {
-				this.locked = true;
-				this.counts = this.game_item.counts == '1';
-				if (this.game_item.picked_by) {
-					this.picked_by = this.game_item.picked_by;
+			_isPlayerJoined(e) {
+				return e == 'player-joined';
+			}
+
+			_isOther(e) {
+				return e == 'other';
+			}
+
+			_isPlayerLeft(e) {
+				return e == 'player-left';
+			}
+
+			_isMatchDisbanded(e) {
+				return e == 'match-disbanded';
+			}
+
+			_isBracketReset(e) {
+				return e == 'bracket-reset';
+			}
+
+			_isOverall(e) {
+				return e == 'overall';
+			}
+
+			_counts(e) {
+				return e == '1';
+			}
+
+			_convertTimestamp(e) {
+				return e.substring(11, 16);
+			}
+
+			_bracketResetAvailable(hasBracketReset, bracketResetUsed) {
+				return hasBracketReset && !bracketResetUsed;
+			}
+
+			_formatMod(e) {
+				if (e == 'Nomod') {
+					return 'None';
 				}
-				this.locked = false;
+				return e;
 			}
-		});
-	</script>
-</dom-module>
 
-<dom-module id="score-item">
-	<template>
-		<style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
-		<div class="layout horizontal">
-			<paper-card elevation="1" class="layout vertical" style="height:64px;width:500px;background-color:#212121;">
-				<div class="card-content" style="height:64px;width:500px;padding:0;">
-					<div class="layout horizontal">
-						<img src="https://a.ppy.sh/[[userId]]" style="height:64px;width:64px;">
-						<div class="flex layout vertical" style="margin-left:10px;color:white;">
-							<div style="font-size:30px;">[[profile.username]]</div>
-							<div>Score: <span>[[score]]</span> (<span>[[combo]]</span>x)</div>
-						</div>
-						<div class="layout vertical" style="width:64px;color:red;">
-							<div hidden$="[[pass]]">FAILED</div>
-						</div>
-						<div class="layout vertical" style="width:64px;color:white;text-align:right;">
-							<div><span>[[accuracy]]</span>%</div>
-						</div>
-					</div>
-				</div>
-			</paper-card>
-			<div class="layout vertical" style="margin-left:10px;width:50px;">
-				<div class="flex"></div>
-				<div style="font-size:30px;">[[points]]</div>
-				<div class="flex"></div>
-			</div>
-		</div>
-	</template>
-	<script>
-		Polymer({
-			is: 'score-item',
-			properties: {
-				userId: Number,
-				profile: Object,
-				score: Number,
-				combo: Number,
-				accuracy: String,
-				pass: {
-					type: Boolean,
-					value: false
-				},
-				passSetter: {
-					type: String,
-					observer: 'passChanged'
-				},
-				points: Number,
-				count300: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				},
-				count100: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				},
-				count50: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				},
-				countmiss: {
-					type: Number,
-					observer: 'calculateAccuracy'
-				}
-			},
-			passChanged: function() {
-				this.pass = this.passSetter == '1';
-			},
-			calculateAccuracy: function() {
-				if ((this.count300 || this.count300 == 0) && (this.count100 || this.count100 == 0) && (this.count50 || this.count50 == 0) && (this.countmiss || this.countmiss == 0)) {
-					var totalPointsOfHits = parseInt(this.count50) * 50 + parseInt(this.count100) * 100 + parseInt(this.count300) * 300;
-	        var totalNumberOfHits = parseInt(this.countmiss) + parseInt(this.count50) + parseInt(this.count100) + parseInt(this.count300);
-	        this.accuracy = Math.round(((totalPointsOfHits / (totalNumberOfHits * 300)) * 100) * 100) / 100;
-	      }
+			_matchFilter(e) {
+				return e.type != 'other' || e.game.counts == '1';
 			}
-		})
+		}
+
+		window.customElements.define(LobbyPage.is, LobbyPage);
 	</script>
 </dom-module>
