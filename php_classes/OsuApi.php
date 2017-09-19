@@ -1,11 +1,8 @@
 <?php
 
-require_once 'Database.php';
-
 class OsuApi {
   public function getBeatmap($beatmapId) {
-    $database = new Database();
-    $db = $database->getConnection();
+    global $db;
 
     $stmt = $db->prepare('SELECT beatmap_id as beatmapId, beatmapset_id as beatmapsetId, title, artist, version, cover, preview_url as previewUrl, total_length as totalLength, bpm, count_circles as countCircles, count_sliders as countSliders, cs, drain, accuracy, ar, difficulty_rating as difficultyRating
       FROM osu_beatmaps
@@ -79,8 +76,7 @@ class OsuApi {
   }
 
   public function getUser($userId) {
-    $database = new Database();
-    $db = $database->getConnection();
+    global $db;
 
     $stmt = $db->prepare('SELECT id, username, avatar_url as avatarUrl, hit_accuracy as hitAccuracy, level, play_count as playCount, pp, rank, rank_history as rankHistory, best_score as bestScore, playstyle, join_date as joinDate, country, cache_update as cacheUpdate
       FROM osu_users
@@ -171,8 +167,7 @@ class OsuApi {
   }
 
   public function getMatch($matchId) {
-    $database = new Database();
-    $db = $database->getConnection();
+    global $db;
 
     $stmt = $db->prepare('SELECT id
       FROM osu_match_events
