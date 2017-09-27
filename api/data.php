@@ -16,6 +16,8 @@ $discordApi = new DiscordApi();
 
 date_default_timezone_set('UTC');
 
+header('Content-Type: application/json; charset=UTF-8');
+
 switch ($_GET['query']) {
 	case 'user':
 		switch ($_SERVER['REQUEST_METHOD']) {
