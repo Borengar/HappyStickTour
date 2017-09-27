@@ -977,9 +977,9 @@ function putAvailability() {
 		echo403();
 	}
 
-	$database->putAvailability($user->userId, $_GET['round'], $body->availabilities);
-
 	$body = json_decode(file_get_contents('php://input'));
+
+	$database->putAvailability($user->userId, $_GET['round'], $body->availabilities);
 
 	echoSuccess('Availability saved');
 }

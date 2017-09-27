@@ -35,10 +35,10 @@
 				--paper-toast-background-color: var(--error-red);
 			}
 		</style>
-		<iron-ajax id="putUserAjax" url="../api/users/@me" method="PUT" content-type="application/json" on-response="_putUserResponse"></iron-ajax>
+		<iron-ajax id="putTriviaAjax" url="../api/players/@me/trivia" method="PUT" content-type="application/json" on-response="_putTriviaResponse"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="header">My Profile</div>
-			<osu-profile avatar-url="[[user.osuAvatarUrl]]" username="[[user.osuUsername]]" pp="[[user.osuPp]]" hit-accuracy="[[user.osuHitAccuracy]]" play-count="[[user.osuPlayCount]]" level="[[user.osuLevel]]" rank="[[user.osuRank]]"></osu-profile>
+			<osu-profile avatar-url="[[user.osu.avatarUrl]]" username="[[user.osu.username]]" pp="[[user.osu.pp]]" hit-accuracy="[[user.osu.hitAccuracy]]" play-count="[[user.osu.playCount]]" level="[[user.osu.level]]" rank="[[user.osu.rank]]"></osu-profile>
 			<div class="header">Trivia</div>
 			<div id="editor"></div>
 			<paper-button class="action-button" raised on-click="_saveTrivia">Save</paper-button>
@@ -71,16 +71,16 @@
 			}
 
 			_saveTrivia() {
-				this.$.putUserAjax.headers = {
+				this.$.putTriviaAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putUserAjax.body = {
+				this.$.putTriviaAjax.body = {
 					'trivia': JSON.stringify(this.editor.getContents())
 				}
-				this.$.putUserAjax.generateRequest();
+				this.$.putTriviaAjax.generateRequest();
 			}
 
-			_putUserResponse(e) {
+			_putTriviaResponse(e) {
 				var response = e.detail.response;
 				this.message = response.message;
 				if (response.error == '1') {

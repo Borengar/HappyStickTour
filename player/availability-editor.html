@@ -42,13 +42,13 @@
 		<div class="wrapper layout vertical">
 			<div class="time-wrapper">
 				<div>Possible times:</div>
-				<template is="dom-repeat" items="[[availabilities.roundTimes]]" as="roundTime">
-					<div><span>[[roundTime.timeFrom]]</span> - <span>[[roundTime.timeTo]]</span></div>
+				<template is="dom-repeat" items="[[round.times]]" as="time">
+					<div><span>[[time.from]]</span> - <span>[[time.to]]</span></div>
 				</template>
 			</div>
 			<div class="layout horizontal">
 				<div class="list-wrapper layout vertical">
-					<vaadin-grid class="availability-grid" items="[[availabilities.availabilities]]" active-item="{{selectedAvailability}}">
+					<vaadin-grid class="availability-grid" items="[[availabilities]]" active-item="{{selectedAvailability}}">
 						<vaadin-grid-column>
 							<template class="header">From</template>
 							<template>[[item.timeFrom]]</template>
@@ -147,7 +147,7 @@
 			}
 
 			_roundChanged(e) {
-				this.$.getAvailabilityAjax.url = '../api/rounds/' + e + '/availability';
+				this.$.getAvailabilityAjax.url = '../api/rounds/' + e.id + '/availability';
 				this.$.getAvailabilityAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
@@ -167,8 +167,8 @@
 
 			_selectedAvailabilityChanged(e) {
 				if (e) {
-					for (var i = 0; i < this.availabilities.availabilities.length; i++) {
-						if (e.timeFrom == this.availabilities.availabilities[i].timeFrom && e.timeTo == this.availabilities.availabilities[i].timeTo) {
+					for (var i = 0; i < this.availabilities.length; i++) {
+						if (e.timeFrom == this.availabilities[i].timeFrom && e.timeTo == this.availabilities[i].timeTo) {
 							this.index = i;
 						}
 					}
@@ -196,11 +196,12 @@
 				var inRoundTimes = false;
 				var fromDate = new Date(this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
 				var toDate = new Date(this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
-				for (var i = 0; i < this.availabilities.roundTimes.length; i++) {
-					var roundFrom = new Date(this.availabilities.roundTimes[i].timeFrom);
-					var roundTo = new Date(this.availabilities.roundTimes[i].timeTo);
+				for (var i = 0; i < this.round.times.length; i++) {
+					var roundFrom = new Date(this.round.times[i].from);
+					var roundTo = new Date(this.round.times[i].to);
 					if (fromDate >= roundFrom && fromDate <= roundTo && toDate >= roundFrom && toDate <= roundTo) {
 						inRoundTimes = true;
+						break;
 					}
 				}
 				if (!inRoundTimes) {
@@ -210,40 +211,40 @@
 				}
 				if (this.isNewAvailability) {
 					if (fromDate < toDate) {
-						this.push('availabilities.availabilities', {
+						this.push('availabilities', {
 							timeFrom: this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00',
 							timeTo: this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00'
 						});
 					} else {
-						this.push('availabilities.availabilities', {
+						this.push('availabilities', {
 							timeTo: this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00',
 							timeFrom: this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00'
 						});
 					}
 				} else {
 					if (fromDate < toDate) {
-						this.set('availabilities.availabilities.' + this.index + '.timeFrom', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
-						this.set('availabilities.availabilities.' + this.index + '.timeTo', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
+						this.set('availabilities.' + this.index + '.timeFrom', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
+						this.set('availabilities.' + this.index + '.timeTo', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
 					} else {
-						this.set('availabilities.availabilities.' + this.index + '.timeTo', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
-						this.set('availabilities.availabilities.' + this.index + '.timeFrom', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
+						this.set('availabilities.' + this.index + '.timeTo', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
+						this.set('availabilities.' + this.index + '.timeFrom', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
 					}
 				}
 				this.editVisible = false;
 			}
 
 			_deleteAvailability() {
-				this.splice('availabilities.availabilities', this.index, 1);
+				this.splice('availabilities', this.index, 1);
 				this.editVisible = false;
 			}
 
 			_save() {
-				this.$.putAvailabilityAjax.url = '../api/rounds/' + this.round + '/availability';
+				this.$.putAvailabilityAjax.url = '../api/rounds/' + this.round.id + '/availability';
 				this.$.putAvailabilityAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.putAvailabilityAjax.body = {
-					'availabilities': this.availabilities.availabilities
+					'availabilities': this.availabilities
 				}
 				this.$.putAvailabilityAjax.generateRequest();
 			}

@@ -159,7 +159,7 @@
 			}
 
 			_userChanged() {
-				this.$.getLobbyAjax.url = '../api/lobbies/' + this.user.currentLobby;
+				this.$.getLobbyAjax.url = '../api/lobbies/' + this.user.lobby.id;
 				this.$.getLobbyAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}

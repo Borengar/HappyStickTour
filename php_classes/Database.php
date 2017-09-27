@@ -324,7 +324,7 @@ class Database {
 		$stmt = $this->db->prepare('SELECT id, name, lobby_size as lobbySize, best_of as bestOf, is_first_round as isFirstRound, player_amount as playerAmount, is_start_round as isStartRound, has_continue as hasContinue, continue_amount as continueAmount, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_amount as dropDownAmount, drop_down_round as dropDownRound, has_elimination as hasElimination, eliminated_amount as eliminatedAmount, has_bracket_reset as hasBracketReset, mappools_released as mappoolsReleased, lobbies_released as lobbiesReleased, copy_mappool as copyMappool, copy_mappool_from as copyMappoolFrom
 			FROM rounds
 			WHERE id = :id');
-		$stmt->bindValue(':id');
+		$stmt->bindValue(':id', $roundId, PDO::PARAM_INT);
 		$stmt->execute();
 		$round = $stmt->fetch();
 
@@ -567,6 +567,8 @@ class Database {
 	}
 
 	public function getLobby($lobbyId) {
+		$osuApi = new OsuApi();
+
 		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.id = :id');
@@ -876,7 +878,7 @@ class Database {
 		$stmt->execute();
 		$round = $stmt->fetch();
 		if ($round->copyMappool) {
-			$roundId = $row->copyMappoolFrom;
+			$roundId = $round->copyMappoolFrom;
 		}
 
 		$stmt = $this->db->prepare('SELECT id
@@ -903,7 +905,7 @@ class Database {
 	public function getMappool($mappoolId) {
 		$osuApi = new OsuApi();
 
-		$this->db->prepare('SELECT id, tier, round, mappack
+		$stmt = $this->db->prepare('SELECT id, tier, round, mappack
 			FROM mappools
 			WHERE id = :id');
 		$stmt->bindValue(':id', $mappoolId, PDO::PARAM_INT);
@@ -913,14 +915,14 @@ class Database {
 		$stmt = $this->db->prepare('SELECT mappool_slots.id, mappool_slots.beatmap_id as beatmapId, mappool_slots.mod, osu_beatmaps.beatmapset_id as beatmapsetId, osu_beatmaps.title, osu_beatmaps.artist, osu_beatmaps.version, osu_beatmaps.cover, osu_beatmaps.preview_url as previewUrl, osu_beatmaps.total_length as totalLength, osu_beatmaps.bpm, osu_beatmaps.count_circles as countCircles, osu_beatmaps.count_sliders as countSliders, osu_beatmaps.cs, osu_beatmaps.drain, osu_beatmaps.accuracy, osu_beatmaps.ar, osu_beatmaps.difficulty_rating as difficultyRating
 			FROM mappool_slots INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
 			WHERE mappool_slots.mappool = :mappool');
-		$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+		$stmt->bindValue(':mappool', $mappoolId, PDO::PARAM_INT);
 		$stmt->execute();
 		$mappool->slots = $stmt->fetchAll();
 
 		$stmt = $this->db->prepare('SELECT mappool_feedback.feedback, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
 			FROM mappool_feedback INNER JOIN players ON mappool_feedback.user_id = players.id INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN osu_users ON players.osu_id = osu_users.id
 			WHERE mappool_feedback.mappool = :mappool');
-		$stmt->bindValue(':mappool', $id, PDO::PARAM_INT);
+		$stmt->bindValue(':mappool', $mappoolId, PDO::PARAM_INT);
 		$stmt->execute();
 		$mappool->feedback = $stmt->fetchAll();
 		foreach ($mappool->feedback as &$feedback) {
@@ -1017,7 +1019,7 @@ class Database {
 		$stmt->bindValue(':round', $round, PDO::PARAM_INT);
 		$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
 		$stmt->execute();
-		return = $stmt->fetchAll();
+		return $stmt->fetchAll();
 	}
 
 	public function putAvailability($userId, $round, $availabilities) {

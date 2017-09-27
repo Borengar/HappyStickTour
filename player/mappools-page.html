@@ -40,7 +40,6 @@
 				flex-shrink: 0;
 			}
 		</style>
-		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
 		<iron-ajax id="getMappoolAjax" url="../api/rounds//tiers//mappool" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
 		<iron-ajax id="putMappoolAjax" url="../api/mappools//feedback" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
 		<div class="wrapper flex layout vertical">
@@ -52,13 +51,18 @@
 					</template>
 				</paper-listbox>
 			</paper-dropdown-menu>
-			<paper-button class="action-button" raised on-click="_downloadMappack" hidden$="[[!mappool.mappack]]">Download Mappack</paper-button>
-			<template is="dom-repeat" items="[[mappool.slots]]" as="beatmap">
-				<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
-			</template>
-			<div hidden$="[[!mappool]]">
-				<div id="editor"></div>
-				<paper-button class="action-button" raised on-click="_saveFeedback">Save</paper-button>
+			<div hidden$="[[!mappoolsReleased]]">
+				<paper-button class="action-button" raised on-click="_downloadMappack" hidden$="[[!mappool.mappack]]">Download Mappack</paper-button>
+				<template is="dom-repeat" items="[[mappool.slots]]" as="beatmap">
+					<beatmap-info accuracy="[[beatmap.accuracy]]" ar="[[beatmap.ar]]" artist="[[beatmap.artist]]" beatmap-id="[[beatmap.beatmapId]]" beatmapset-id="[[beatmap.beatmapsetId]]" bpm="[[beatmap.bpm]]" count-circles="[[beatmap.countCircles]]" count-sliders="[[beatmap.countSliders]]" cover="[[beatmap.cover]]" cs="[[beatmap.cs]]" difficulty-rating="[[beatmap.difficultyRating]]" drain="[[beatmap.drain]]" preview-url="[[beatmap.previewUrl]]" title="[[beatmap.title]]" total-length="[[beatmap.totalLength]]" version="[[beatmap.version]]" mod="[[beatmap.mod]]"></beatmap-info>
+				</template>
+				<div hidden$="[[!mappool]]">
+					<div id="editor"></div>
+					<paper-button class="action-button" raised on-click="_saveFeedback">Save</paper-button>
+				</div>
+			</div>
+			<div hidden$="[[mappoolsReleased]]">
+				<div>Mappools for this round are not released yet.</div>
 			</div>
 		</div>
 		<paper-toast id="successToast" text="[[message]]"></paper-toast>
@@ -86,11 +90,21 @@
 			}
 
 			_selectedRoundChanged(e) {
-				this.$.getMappoolAjax.url = '../api/rounds/' + this.selectedRound.id + '/tiers/' + this.user.tier + '/mappool';
-				this.$.getMappoolAjax.headers = {
-					'Authorization': localStorage.getItem('token')
+				if (this.selectedRound.copyMappool == '1') {
+					var round = this.rounds.find((item) => {
+						return item.id == this.selectedRound.copyMappoolFrom;
+					});
+				} else {
+					var round = this.selectedRound;
 				}
-				this.$.getMappoolAjax.generateRequest();
+				this.mappoolsReleased = round.mappoolsReleased == '1';
+				if (this.mappoolsReleased) {
+					this.$.getMappoolAjax.url = '../api/rounds/' + round.id + '/tiers/' + this.user.tier.id + '/mappool';
+					this.$.getMappoolAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					}
+					this.$.getMappoolAjax.generateRequest();
+				}
 			}
 
 			_getMappoolResponse(e) {

@@ -20,17 +20,17 @@
 			<div class="header">My Next Match</div>
 			<div>Please enter when you are available. All times are displayed in UTC.</div>
 			<div class="header">Next Round</div>
-			<div>[[user.nextRoundName]]</div>
-			<availability-editor round="[[user.nextRound]]"></availability-editor>
+			<div class="round-name">[[nextRound.name]]</div>
+			<availability-editor round="[[nextRound]]"></availability-editor>
 			<div class="header">If I win</div>
-			<template is="dom-if" if="[[user.continueRound]]">
-				<div class="round-name">[[user.continueRoundName]]</div>
-				<availability-editor round="[[user.continueRound]]"></availability-editor>
+			<template is="dom-if" if="[[continueRound]]">
+				<div class="round-name">[[continueRound.name]]</div>
+				<availability-editor round="[[continueRound]]"></availability-editor>
 			</template>
 			<div class="header">If I lose</div>
-			<template is="dom-if" if="[[user.dropDownRound]]">
-				<div class="round-name">[[user.dropDownRoundName]]</div>
-				<availability-editor round="[[user.dropDownRound]]"></availability-editor>
+			<template is="dom-if" if="[[dropDownRound]]">
+				<div class="round-name">[[dropDownRound.name]]</div>
+				<availability-editor round="[[dropDownRound]]"></availability-editor>
 			</template>
 		</div>
 	</template>
@@ -41,6 +41,32 @@
 			static get properties() {
 				return {
 
+				}
+			}
+
+			static get observers() {
+				return [
+					'_userChanged(user, rounds)'
+				]
+			}
+
+			_userChanged(user, rounds) {
+				if (user && rounds) {
+					if (user.round.id) {
+						this.nextRound = rounds.find((item) => {
+							return item.id == user.round.id;
+						});
+						if (this.nextRound.hasContinue == '1') {
+							this.continueRound = rounds.find((item) => {
+								return item.id == this.nextRound.continueRound;
+							});
+						}
+						if (this.nextRound.hasDropDown == '1') {
+							this.dropDownRound = rounds.find((item) => {
+								return item.id == this.nextRound.dropDownRound;
+							});
+						}
+					}
 				}
 			}
 		}

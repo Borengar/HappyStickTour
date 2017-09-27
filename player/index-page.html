@@ -21,7 +21,8 @@
 				overflow: auto;
 			}
 		</style>
-		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
+		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="getUserAjax" url="../api/user" method="GET" last-response="{{user}}"></iron-ajax>
 		<app-drawer-layout force-narrow>
 			<app-drawer slot="drawer">
 				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
@@ -38,14 +39,14 @@
 						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
 						<div main-title>Player</div>
 						<div class="flex"></div>
-						<discord-profile id="[[user.id]]" avatar="[[user.avatar]]" username="[[user.username]]" discriminator="[[user.discriminator]]"></discord-profile>
+						<discord-profile id="[[user.discord.id]]" avatar="[[user.discord.avatar]]" username="[[user.discord.username]]" discriminator="[[user.discord.discriminator]]"></discord-profile>
 					</app-toolbar>
 				</app-header>
 				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value">
 					<dashboard-page class="flex layout vertical" value="Dashboard" user="[[user]]"></dashboard-page>
-					<match-page class="flex layout vertical" value="Match" user="[[user]]"></match-page>
+					<match-page class="flex layout vertical" value="Match" user="[[user]]" rounds="[[rounds]]"></match-page>
 					<lobby-page value="Lobby" user="[[user]]"></lobby-page>
-					<mappools-page class="flex layout vertical" value="Mappools" user="[[user]]"></mappools-page>
+					<mappools-page class="flex layout vertical" value="Mappools" user="[[user]]" rounds="[[rounds]]"></mappools-page>
 					<info-page class="flex layout vertical" value="Info" user="[[user]]"></info-page>
 				</iron-pages>
 			</app-header-layout>
