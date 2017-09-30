@@ -12,7 +12,7 @@
 				color: white;
 			}
 			paper-input {
-				--paper-input-container-focux-color: var(--happystick-green);
+				--paper-input-container-focus-color: var(--happystick-green);
 			}
 			paper-radio-button {
 				display: inline-block;
@@ -61,6 +61,9 @@
 			.beatmap-link {
 				width: 500px;
 			}
+			.mappack-link {
+				width: 500px;
+			}
 			.beatmap-links {
 				width: 500px;
 			}
@@ -79,6 +82,7 @@
 		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
 		<iron-ajax id="getMappoolAjax" url="../api/rounds//tiers//mappool" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
 		<iron-ajax id="putMappoolSlotsAjax" url="../api/mappools//slots" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
+		<iron-ajax id="putMappackAjax" url="../api/mappools//mappack" method="PUT" content-type="application/json" on-response="_putMappoolResponse"></iron-ajax>
 		<iron-ajax id="getBeatmapAjax" url="../api/osubeatmap" method="GET" last-response="{{beatmap}}" on-response="_getBeatmapResponse"></iron-ajax>
 		<app-header-layout fullbleed has-scrolling-region>
 			<app-header slot="header">
@@ -188,6 +192,11 @@
 								</div>
 							</div>
 						</div>
+					</div>
+					<div hidden$="[[!listVisible]]">
+						<div class="header">Mappack</div>
+						<paper-input class="mappack-link" label="Mappack URL" value="{{mappool.mappack}}"></paper-input>
+						<paper-icon-button icon="save" class="action-button" on-click="_saveMappack"></paper-icon-button>
 					</div>
 					<div hidden$="[[!listVisible]]">
 						<div class="header">Feedback</div>
@@ -444,6 +453,17 @@
 				}
 				this.$.putMappoolSlotsAjax.body = this.mappool.slots;
 				this.$.putMappoolSlotsAjax.generateRequest();
+			}
+
+			_saveMappack() {
+				this.$.putMappackAjax.url = '../api/mappools/' + this.mappool.id + '/mappack';
+				this.$.putMappackAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putMappackAjax.body = {
+					'mappack': this.mappool.mappack
+				}
+				this.$.putMappackAjax.generateRequest();
 			}
 
 			_putMappoolResponse(e) {
