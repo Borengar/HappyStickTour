@@ -52,28 +52,27 @@
 				width: 400px;
 			}
 		</style>
-		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{discordProfile}}"></iron-ajax>
+		<iron-ajax id="getUserAjax" url="../api/user" method="GET" last-response="{{user}}" on-response="_getUserResponse"></iron-ajax>
 		<iron-ajax id="osuProfileAjax" url="../api/osuprofile/" method="GET" last-response="{{osuProfile}}"></iron-ajax>
 		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" on-response="_getTiersResponse" auto></iron-ajax>
-		<iron-ajax id="getRegistrationAjax" url="../api/registrations" method="GET" on-response="_getRegistrationResponse"></iron-ajax>
-		<iron-ajax id="postRegistrationAjax" url="../api/registrations" method="POST" content-type="application/json" on-response="_postRegistrationResponse"></iron-ajax>
+		<iron-ajax id="postRegistrationAjax" url="../api/registrations" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="getTwitchLoginAjax" url="../api/twitchlogin" method="GET" content-type="application/json" on-response="_getTwitchLoginResponse"></iron-ajax>
-		<iron-ajax id="postTwitchLoginAjax" url="../api/twitchlogin" method="POST" content-type="application/json" on-response="_postTwitchLoginResponse"></iron-ajax>
+		<iron-ajax id="postTwitchLoginAjax" url="../api/twitchlogin" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<app-header-layout>
 			<app-header slot="header">
 				<app-toolbar class="layout horizontal">
 					<div main-title>Registration</div>
 					<div class="flex"></div>
-					<discord-profile id="[[discordProfile.id]]" username="[[discordProfile.username]]" avatar="[[discordProfile.avatar]]" discriminator="[[discordProfile.discriminator]]"></discord-profile>
+					<discord-profile id="[[user.discord.id]]" username="[[user.discord.username]]" avatar="[[user.discord.avatar]]" discriminator="[[user.discord.discriminator]]"></discord-profile>
 				</app-toolbar>
 			</app-header>
 			<div class="flex layout vertical wrapper">
-				<div class="heading">HAPPYSTICK FALL TOUR REGISTRATION</div>
-				<div>Welcome to the HappyStick Fall Tour Registration!</div>
-				<div>By going through the previous page you've registered on our site with your Discord account. Input your osu! username below to link your osu! account with our site and to register for the Fall Tour.</div>
+				<div class="heading">TESTPAGE PLEASE IGNORE</div>
+				<div>Welcome to the HappyStick Summer Tour Registration!</div>
+				<div>By going through the previous page you've registered on our site with your Discord account. Input your osu! username below to link your osu! account with our site and to register for the Summer Tour.</div>
 				<div class="text">There are a limited amount of slots so the earlier you register, the more likely you'll make it in! You can come back here to check if you've been accepted when the clock strikes July 12th UTC.</div>
 				<div class="text">If your registration is accepted you will be automatically assigned the appropriate Discord role on our server.</div>
-				<div class="text">For an in-depth look into how the Fall Tour is run take a look at <a href="https://google.com" target="_blank">this document.</a> Here you'll find an overview of the prizepool, format, rules, etc.</div>
+				<div class="text">For an in-depth look into how the Summer Tour is run take a look at <a href="https://google.com" target="_blank">this document.</a> Here you'll find an overview of the prizepool, format, rules, etc.</div>
 				<template is="dom-if" if="[[showSearch]]">
 					<div class="layout horizontal search-wrapper">
 						<paper-input class="search-input" label="osu! ID or Username" value="{{osuId}}" on-keydown="_searchKeyDown"></paper-input>
@@ -92,8 +91,8 @@
 				<template is="dom-if" if="[[showTwitchLink]]">
 					<paper-button class="twitch-button" raised on-click="_twitchLink">Link Twitch</paper-button>
 				</template>
-				<template is="dom-if" if="[[showTwitchProfile]]">
-					<twitch-profile avatar="[[twitchProfile.avatar]]" display-name="[[twitchProfile.displayName]]" sub-since="[[twitchProfile.subSince]]"></twitch-profile>
+				<template is="dom-if" if="[[user.twitch]]">
+					<twitch-profile avatar="[[user.twitch.avatar]]" display-name="[[user.twitch.displayName]]" sub-since="[[user.twitch.subSince]]"></twitch-profile>
 				</template>
 			</div>
 		</app-header-layout>
@@ -131,20 +130,14 @@
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.getUserAjax.generateRequest();
-				this.$.getRegistrationAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				}
-				this.$.getRegistrationAjax.generateRequest();
 
-				var code = this._getUriParams('code');
-				var state = this._getUriParams('state');
-				if (code && state) {
+				var token = this._getHashParams()['access_token'];
+				if (token) {
 					this.$.postTwitchLoginAjax.headers = {
 						'Authorization': localStorage.getItem('token')
 					}
 					this.$.postTwitchLoginAjax.body = {
-						'code': code,
-						'state': state
+						'token': token
 					}
 					this.$.postTwitchLoginAjax.generateRequest();
 				}
@@ -180,6 +173,18 @@
 				}
 			}
 
+			_getUserResponse(e) {
+				if (this.user.osu) {
+					this.showSearch = false;
+					this.osuProfile = this.user.osu;
+					if (!this.user.twitch) {
+						this.showTwitchLink = true;
+					} else {
+						this.showTwitchLink = false;
+					}
+				}
+			}
+
 			_searchOsuProfile() {
 				this.$.osuProfileAjax.url = '../api/osuprofile/' + this.osuId;
 				this.$.osuProfileAjax.generateRequest();
@@ -189,13 +194,11 @@
 				this.tier = null;
 				this.showRegister = false;
 				if (this.tiers) {
-					for (var i = 0; i < this.tiers.length; i++) {
-						if (parseInt(e.rank) >= parseInt(this.tiers[i].lowerEndpoint) && parseInt(e.rank) <= parseInt(this.tiers[i].upperEndpoint)) {
-							this.tier = this.tiers[i];
-							if (this.showSearch == true) {
-								this.showRegister = true;
-							}
-						}
+					this.tier = this.tiers.find((item) => {
+						return parseInt(this.osuProfile.rank) >= item.lowerEndpoint && parseInt(this.osuProfile.rank) <= item.upperEndpoint;
+					});
+					if (this.tier && this.showSearch) {
+						this.showRegister = true;
 					}
 					if (!this.tier) {
 						this.tier = { name: 'No tier found' };
@@ -203,43 +206,13 @@
 				}
 			}
 
-			_getRegistrationResponse(e) {
-				var response = e.detail.response;
-				if (response) {
-					this.showSearch = false;
-					this.osuProfile = {
-						'avatarUrl': response.osuAvatarUrl,
-						'username': response.osuUsername,
-						'pp': response.osuPp,
-						'hitAccuracy': response.osuHitAccuracy,
-						'playCount': response.osuPlayCount,
-						'level': response.osuLevel,
-						'rank': response.osuRank
-					}
-					if (response.twitchId) {
-						this.showTwitchLink = false;
-						this.showTwitchProfile = true;
-						this.twitchProfile = {
-							'avatar': response.twitchAvatar,
-							'displayName': response.twitchDisplayName ? response.twitchDisplayName : response.twitchUsername,
-							'subSince': response.twitchSubSince
-						}
-					} else {
-						this.showTwitchLink = true;
-						this.showTwitchProfile = false;
-					}
-				}
-			}
-
 			_getTiersResponse(e) {
 				if (this.osuProfile) {
-					for (var i = 0; i < this.tiers.length; i++) {
-						if (parseInt(this.osuProfile.rank) >= parseInt(this.tiers[i].lowerEndpoint) && parseInt(this.osuProfile.rank) <= parseInt(this.tiers[i].upperEndpoint)) {
-							this.tier = this.tiers[i];
-							if (this.showSearch == true) {
-								this.showRegister = true;
-							}
-						}
+					this.tier = this.tiers.find((item) => {
+						return parseInt(this.osuProfile.rank) >= item.lowerEndpoint && parseInt(this.osuProfile.rank) <= item.upperEndpoint;
+					});
+					if (this.tier && this.showSearch) {
+						this.showRegister = true;
 					}
 					if (!this.tier) {
 						this.tier = { name: 'No tier found' };
@@ -257,7 +230,7 @@
 				this.$.postRegistrationAjax.generateRequest();
 			}
 
-			_postRegistrationResponse(e) {
+			_defaultResponse(e) {
 				var response = e.detail.response;
 				this.message = response.message;
 				if (response.error == '1') {
@@ -265,7 +238,7 @@
 				} else {
 					this.$.successToast.open();
 					this.editVisible = false;
-					this.$.getRegistrationAjax.generateRequest();
+					this.$.getUserAjax.generateRequest();
 				}
 			}
 
@@ -276,18 +249,6 @@
 			_getTwitchLoginResponse(e) {
 				var response = e.detail.response;
 				window.location = response.uri;
-			}
-
-			_postTwitchLoginResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.editVisible = false;
-					this.$.getRegistrationAjax.generateRequest();
-				}
 			}
 		}
 

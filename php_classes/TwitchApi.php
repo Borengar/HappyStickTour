@@ -19,7 +19,7 @@ class TwitchApi {
 	public function getLoginUri() {
 		$state = random_int(1, 1000000000);
 
-		return 'https://api.twitch.tv/kraken/oauth2/authorize?response_type=code&client_id=' . $this->twitchClientKey . '&redirect_uri=' . $this->redirect_uri . '&scope=user_read+user_subscriptions&state=' . $state;
+		return 'https://api.twitch.tv/kraken/oauth2/authorize?response_type=token&client_id=' . $this->twitchClientKey . '&redirect_uri=' . $this->redirectUri . '&scope=user_read+user_subscriptions&state=' . $state;
 	}
 
 	public function getAccessToken($code, $state) {

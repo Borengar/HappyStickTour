@@ -1142,14 +1142,9 @@ function postTwitchLogin() {
 
 	$body = json_decode(file_get_contents('php://input'));
 
-	$accessToken = $twitchApi->getAccessToken($body->code, $body->state);
+	$twitchId = $database->cacheNewTwitchAccount($body->token);
 
-	if (!$accessToken) {
-		echoError('Access code is not valid');
-		return;
-	}
-
-	$database->cacheNewTwitchAccount($accessToken);
+	$database->putRegistrationTwitchId($user->discord->id, $twitchId);
 	echoSuccess('Twitch account linked');
 }
 

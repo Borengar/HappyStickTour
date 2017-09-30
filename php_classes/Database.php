@@ -289,6 +289,15 @@ class Database {
 		$this->cacheNewDiscordAccount($discordIdNew);
 	}
 
+	public function putRegistrationTwitchId($discordId, $twitchId) {
+		$stmt = $this->db->prepare('UPDATE registrations
+			SET twitch_id = :twitch_id
+			WHERE id = :id');
+		$stmt->bindValue(':twitch_id', $twitchId, PDO::PARAM_INT);
+		$stmt->bindValue(':id', $discordId, PDO::PARAM_INT);
+		$stmt->execute();
+	}
+
 	public function postRegistration($osuId) {
 		$stmt = $this->db->prepare('INSERT INTO registrations (id, osu_id, registration_time)
 			VALUES (:id, :osu_id, :registration_time)');
@@ -1232,22 +1241,23 @@ class Database {
 
 		$sub = $twitchApi->getUserSubscription($accessToken, $twitchUser->_id);
 
-		$stmt = $this->db->prepare('UPDATE registrations
-			SET twitch_id = :twitch_id
-			WHERE id = :id');
-		$stmt->bindValue(':twitch_id', $twitchUser->_id, PDO::PARAM_INT);
-		$stmt->bindValue(':id', $user->id, PDO::PARAM_INT);
-		$stmt->execute();
-
 		$stmt = $this->db->prepare('INSERT INTO twitch_users (id, username, display_name, avatar, sub_since, sub_plan)
-			VALUES (:id, :username, :display_name, :avatar, :sub_since, :sub_plan)');
+			VALUES (:id, :username, :display_name, :avatar, :sub_since, :sub_plan)
+			ON DUPLICATE KEY UPDATE username = :username2, display_name = :display_name2, avatar = :avatar2, sub_since = :sub_since2, sub_plan = :sub_plan2');
 		$stmt->bindValue(':id', $twitchUser->_id, PDO::PARAM_INT);
 		$stmt->bindValue(':username', $twitchUser->name, PDO::PARAM_STR);
 		$stmt->bindValue(':display_name', $twitchUser->display_name, PDO::PARAM_STR);
 		$stmt->bindValue(':avatar', $twitchUser->logo, PDO::PARAM_STR);
 		$stmt->bindValue(':sub_since', isset($sub->created_at) ? $sub->created_at : null, PDO::PARAM_STR);
 		$stmt->bindValue(':sub_plan', isset($sub->sub_plan) ? $sub->sub_plan : null, PDO::PARAM_STR);
+		$stmt->bindValue(':username2', $twitchUser->name, PDO::PARAM_STR);
+		$stmt->bindValue(':display_name2', $twitchUser->display_name, PDO::PARAM_STR);
+		$stmt->bindValue(':avatar2', $twitchUser->logo, PDO::PARAM_STR);
+		$stmt->bindValue(':sub_since2', isset($sub->created_at) ? $sub->created_at : null, PDO::PARAM_STR);
+		$stmt->bindValue(':sub_plan2', isset($sub->sub_plan) ? $sub->sub_plan : null, PDO::PARAM_STR);
 		$stmt->execute();
+
+		return $twitchUser->_id;
 	}
 
 	private function recalculateRound($roundId = 0) {
