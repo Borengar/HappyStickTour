@@ -756,7 +756,7 @@ function getMappool() {
 
 	$mappool = $database->getMappool($mappoolId);
 
-	if ($scope != SCOPE::ADMIN && $scope == SCOPE::HEADPOOLER && $scope != SCOPE::MAPPOOLER) {
+	if ($scope != SCOPE::ADMIN && $scope != SCOPE::HEADPOOLER && $scope != SCOPE::MAPPOOLER) {
 		$round = $database->getRound($mappool->round);
 		if ($round->mappoolsReleased == 0) {
 			echo403();
