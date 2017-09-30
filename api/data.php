@@ -831,7 +831,7 @@ function putMappack() {
 
 	$database->putMappoolMappack($mappoolId, $body->mappack);
 
-	echoSuccess('Mappool saved');
+	echoSuccess('Mappack URL saved');
 }
 
 function putFeedback() {
