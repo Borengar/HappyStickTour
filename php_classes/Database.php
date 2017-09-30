@@ -933,13 +933,22 @@ class Database {
 		$mappool->slots = $stmt->fetchAll();
 
 		$stmt = $this->db->prepare('SELECT mappool_feedback.feedback, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
-			FROM mappool_feedback INNER JOIN players ON mappool_feedback.user_id = players.id INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN osu_users ON players.osu_id = osu_users.id
+			FROM mappool_feedback INNER JOIN players ON mappool_feedback.user_id = players.id INNER JOIN discord_users ON players.discord_id = discord_users.id
 			WHERE mappool_feedback.mappool = :mappool');
 		$stmt->bindValue(':mappool', $mappoolId, PDO::PARAM_INT);
 		$stmt->execute();
-		$mappool->feedback = $stmt->fetchAll();
-		foreach ($mappool->feedback as &$feedback) {
-			$feedback->osu = $osuApi->getUser($feedback->osuId);
+		$rows = $stmt->fetchAll();
+		$mappool->feedback = [];
+		foreach ($rows as $row) {
+			$feedback = new stdClass;
+			$feedback->feedback = $row->feedback;
+			$feedback->osu = $osuApi->getUser($row->osuId);
+			$feedback->discord = new stdClass;
+			$feedback->discord->id = $row->discordId;
+			$feedback->discord->username = $row->discordUsername;
+			$feedback->discord->discriminator = $row->discordDiscriminator;
+			$feedback->discord->avatar = $row->discordAvatar;
+			$mappool->feedback[] = $feedback;
 		}
 
 		return $mappool;
