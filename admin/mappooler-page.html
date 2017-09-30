@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="mappooler-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -31,7 +29,6 @@
 				margin-left: 10px;
 			}
 		</style>
-		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
 		<iron-ajax id="getMappoolersAjax" url="../api/mappoolers" method="GET" last-response="{{mappoolers}}"></iron-ajax>
 		<iron-ajax id="putMappoolersAjax" url="../api/mappoolers" method="PUT" content-type="application/json" on-response="_putMappoolersResponse"></iron-ajax>
 		<iron-ajax id="postMappoolersAjax" url="../api/mappoolers" method="POST" on-response="_postMappoolersResponse"></iron-ajax>
@@ -41,11 +38,11 @@
 				<vaadin-grid class="mappoolers-grid" items="[[mappoolers]]" active-item="{{selectedMappooler}}">
 					<vaadin-grid-column>
 						<template class="header">Discord</template>
-						<template>[[item.discordUsername]]</template>
+						<template>[[item.discord.username]]</template>
 					</vaadin-grid-column>
 					<vaadin-grid-column>
 						<template class="header">Tier</template>
-						<template>[[item.tierName]]</template>
+						<template>[[item.tier.name]]</template>
 					</vaadin-grid-column>
 				</vaadin-grid>
 				<div class="action-wrapper layout horizontal">
@@ -103,11 +100,11 @@
 
 			_selectedMappoolerChanged(e) {
 				if (e) {
-					this.discordId = e.discordId;
-					this.discordUsername = e.discordUsername;
-					this.discordAvatar = e.discordAvatar;
-					this.discordDiscriminator = e.discordDiscriminator;
-					this.tierId = e.tierId;
+					this.discordId = e.discord.id;
+					this.discordUsername = e.discord.username;
+					this.discordAvatar = e.discord.avatar;
+					this.discordDiscriminator = e.discord.discriminator;
+					this.tierId = e.tier ? e.tier.id : null;
 					this.editVisible = true;
 				}
 			}

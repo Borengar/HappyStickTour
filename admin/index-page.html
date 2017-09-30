@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="index-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -21,7 +19,9 @@
 				overflow: auto;
 			}
 		</style>
-		<iron-ajax id="getUserAjax" url="../api/users/@me" method="GET" last-response="{{user}}"></iron-ajax>
+		<iron-ajax id="getUserAjax" url="../api/user" method="GET" last-response="{{user}}"></iron-ajax>
+		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
+		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
 		<app-drawer-layout force-narrow>
 			<app-drawer slot="drawer">
 				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
@@ -39,16 +39,16 @@
 						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
 						<div main-title>Admin</div>
 						<div class="flex"></div>
-						<discord-profile id="[[user.id]]" avatar="[[user.avatar]]" username="[[user.username]]" discriminator="[[user.discriminator]]"></discord-profile>
+						<discord-profile id="[[user.discord.id]]" avatar="[[user.discord.avatar]]" username="[[user.discord.username]]" discriminator="[[user.discord.discriminator]]"></discord-profile>
 					</app-toolbar>
 				</app-header>
-				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value">
-					<tiers-page class="flex layout vertical" value="Tiers"></tiers-page>
-					<bracket-page class="flex layout vertical" value="Bracket"></bracket-page>
+				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value" on-updatetiers="_updateTiers" on-updaterounds="_updateRounds">
+					<tiers-page class="flex layout vertical" value="Tiers" tiers="[[tiers]]" rounds="[[rounds]]"></tiers-page>
+					<bracket-page class="flex layout vertical" value="Bracket" rounds="[[rounds]]"></bracket-page>
 					<registrations-page class="flex layout vertical" value="Registrations"></registrations-page>
 					<roles-page class="flex layout vertical" value="Roles"></roles-page>
-					<lobbies-page class="flex layout vertical" value="Lobbies"></lobbies-page>
-					<mappooler-page class="flex layout vertical" value="Mappooler"></mappooler-page>
+					<lobbies-page class="flex layout vertical" value="Lobbies" tiers="[[tiers]]" rounds="[[rounds]]"></lobbies-page>
+					<mappooler-page class="flex layout vertical" value="Mappooler" tiers="[[tiers]]"></mappooler-page>
 				</iron-pages>
 			</app-header-layout>
 		</app-drawer-layout>
@@ -72,6 +72,14 @@
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.getUserAjax.generateRequest();
+			}
+
+			_updateTiers() {
+				this.$.getTiersAjax.generateRequest();
+			}
+
+			_updateRounds() {
+				this.$.getRoundsAjax.generateRequest();
 			}
 		}
 

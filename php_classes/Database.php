@@ -34,7 +34,7 @@ class Database {
 			WHERE token = :token');
 		$stmt->bindValue(':token', $_SERVER['HTTP_AUTHORIZATION'], PDO::PARAM_STR);
 		$stmt->execute();
-		$row = $stmt->fetch(PDO::FETCH_OBJ);
+		$row = $stmt->fetch();
 		if (!$row) {
 			$this->scope = SCOPE::NONE;
 			return;
@@ -73,6 +73,8 @@ class Database {
 		$stmt->execute();
 
 		$this->cacheNewDiscordAccount($userId);
+
+		return $token;
 	}
 
 	public function getConnection() {
@@ -339,7 +341,7 @@ class Database {
 	}
 
 	public function postRound($name, $lobbySize, $bestOf, $isFirstRound, $playerAmount, $isStartRound, $hasContinue, $continueAmount, $continueRoundId, $hasDropDown, $dropDownAmount, $dropDownRoundId, $hasElimination, $eliminatedAmount, $hasBracketReset, $mappoolsReleased, $lobbiesReleased, $copyMappool, $copyMappoolFrom) {
-		$stmt = $db->prepare('INSERT INTO rounds (name, lobby_size, best_of, is_first_round, player_amount, is_start_round, has_continue, continue_amount, continue_round, has_drop_down, drop_down_amount, drop_down_round, has_elimination, eliminated_amount, has_bracket_reset, mappools_released, lobbies_released, copy_mappool, copy_mappool_from)
+		$stmt = $this->db->prepare('INSERT INTO rounds (name, lobby_size, best_of, is_first_round, player_amount, is_start_round, has_continue, continue_amount, continue_round, has_drop_down, drop_down_amount, drop_down_round, has_elimination, eliminated_amount, has_bracket_reset, mappools_released, lobbies_released, copy_mappool, copy_mappool_from)
 			VALUES (:name, :lobby_size, :best_of, :is_first_round, :player_amount, :is_start_round, :has_continue, :continue_amount, :continue_round, :has_drop_down, :drop_down_amount, :drop_down_round, :has_elimination, :eliminated_amount, :has_bracket_reset, :mappools_released, :lobbies_released, :copy_mappool, :copy_mappool_from)');
 		$stmt->bindValue(':name', $name, PDO::PARAM_STR);
 		$stmt->bindValue(':lobby_size', $lobbySize, PDO::PARAM_INT);
@@ -364,11 +366,11 @@ class Database {
 
 		$this->recalculateRound();
 
-		return $this->$db->lastInsertId();
+		return $this->db->lastInsertId();
 	}
 
 	public function putRound($roundId, $name, $lobbySize, $bestOf, $isFirstRound, $playerAmount, $isStartRound, $hasContinue, $continueAmount, $continueRoundId, $hasDropDown, $dropDownAmount, $dropDownRoundId, $hasElimination, $eliminatedAmount, $hasBracketReset, $mappoolsReleased, $lobbiesReleased, $copyMappool, $copyMappoolFrom) {
-		$stmt = $db->prepare('UPDATE rounds
+		$stmt = $this->db->prepare('UPDATE rounds
 			SET name = :name, lobby_size = :lobby_size, best_of = :best_of, is_first_round = :is_first_round, player_amount = :player_amount, is_start_round = :is_start_round, has_continue = :has_continue, continue_amount = :continue_amount, continue_round = :continue_round, has_drop_down = :has_drop_down, drop_down_amount = :drop_down_amount, drop_down_round = :drop_down_round, has_elimination = :has_elimination, eliminated_amount = :eliminated_amount, has_bracket_reset = :has_bracket_reset, mappools_released = :mappools_released, lobbies_released = :lobbies_released, copy_mappool = :copy_mappool, copy_mappool_from = :copy_mappool_from
 			WHERE id = :id');
 		$stmt->bindValue(':name', $name, PDO::PARAM_STR);
@@ -485,6 +487,7 @@ class Database {
 	}
 
 	public function getLobbies($tierId, $roundId) {
+		$osuApi = new OsuApi();
 		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.round = :round AND lobbies.tier = :tier');
@@ -495,7 +498,8 @@ class Database {
 		foreach ($lobbies as &$lobby) {
 			$stmt = $this->db->prepare('SELECT lobby_slots.id, lobby_slots.user_id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
 				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN discord_users ON players.discord_id = discord_users.id
-				WHERE lobby_slots.lobby = :id');
+				WHERE lobby_slots.lobby = :id
+				ORDER BY lobby_slots.id');
 			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
 			$stmt->execute();
 			$rows = $stmt->fetchAll();
@@ -735,7 +739,7 @@ class Database {
 	public function putResult($lobbyId, $result) {
 		$discordApi = new DiscordApi();
 
-		$stmt = $db->prepare('SELECT rounds.id as roundId, rounds.name as roundName, tiers.id as tierId, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId
+		$stmt = $this->db->prepare('SELECT rounds.id as roundId, rounds.name as roundName, tiers.id as tierId, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId
 			FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round INNER JOIN tiers ON lobbies.tier = tiers.id
 			WHERE lobbies.id = :id');
 		$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
@@ -747,7 +751,7 @@ class Database {
 		$tierName = $round->tierName;
 		$matchId = $round->matchId;
 		foreach ($result as &$player) {
-			$stmt = $db->prepare('UPDATE lobby_slots
+			$stmt = $this->db->prepare('UPDATE lobby_slots
 				SET continue_to_upper = :continue_to_upper, drop_down = :drop_down, eliminated = :eliminated, forfeit = :forfeit, noshow = :noshow
 				WHERE lobby = :lobby and user_id = :user_id');
 			$stmt->bindValue(':continue_to_upper', $player->continue == 'Continue', PDO::PARAM_BOOL);
@@ -764,7 +768,7 @@ class Database {
 				case 'dropdown': $nextRound = $round->dropDownRound; break;
 				default: $nextRound = null;
 			}
-			$stmt = $db->prepare('UPDATE players
+			$stmt = $this->db->prepare('UPDATE players
 				SET next_round = :next_round
 				WHERE id = :id');
 			$stmt->bindValue(':next_round', $nextRound, PDO::PARAM_INT);
@@ -775,7 +779,7 @@ class Database {
 		}
 
 		$message = "**" . $roundName . " | " . $tierName . "**\r\n";
-		$stmt = $db->prepare('SELECT osu_match_events.id, osu_match_events.type, osu_match_events.user_id as userId, osu_match_games.counts
+		$stmt = $this->db->prepare('SELECT osu_match_events.id, osu_match_events.type, osu_match_events.user_id as userId, osu_match_games.counts
 			FROM osu_match_events INNER JOIN lobbies ON osu_match_events.match_id = lobbies.match_id LEFT JOIN osu_match_games ON osu_match_events.id = osu_match_games.match_event
 			WHERE lobbies.id = :id
 			ORDER BY osu_match_events.timestamp ASC');
@@ -793,7 +797,7 @@ class Database {
 			if ($event->type == 'other' && $event->counts) {
 				$scoreAmount = count($result) == 2 ? 1 : 4;
 
-				$stmt = $db->prepare('SELECT user_id as userId, score, pass
+				$stmt = $this->db->prepare('SELECT user_id as userId, score, pass
 					FROM osu_match_scores
 					WHERE match_event = :match_event
 					ORDER BY pass DESC, score DESC');
@@ -828,14 +832,14 @@ class Database {
 			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n\r\n";
 			$message .= "**Bans**\r\n";
 			$message .= "__" . $result[0]->osu->username . "__\r\n";
-			$stmt = $db->prepare('SELECT mappool_slots.mod, osu_beatmaps.beatmap_id as beatmapId, osu_beatmaps.artist, osu_beatmaps.title, osu_beatmaps.version
+			$stmt = $this->db->prepare('SELECT mappool_slots.mod, osu_beatmaps.beatmap_id as beatmapId, osu_beatmaps.artist, osu_beatmaps.title, osu_beatmaps.version
 				FROM mappools INNER JOIN mappool_slots ON mappools.id = mappool_slots.mappool INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
 				WHERE mappools.tier = :tier AND mappools.round = :round');
 			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
 			$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
 			$stmt->execute();
 			$mappool = $stmt->fetchAll(PDO::FETCH_OBJ);
-			$stmt = $db->prepare('SELECT beatmap_id as beatmapId, banned_by as bannedBy
+			$stmt = $this->db->prepare('SELECT beatmap_id as beatmapId, banned_by as bannedBy
 				FROM lobby_bans
 				WHERE lobby = :lobby AND after_bracket_reset = :after_bracket_reset');
 			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
@@ -1069,7 +1073,7 @@ class Database {
 			FROM discord_roles
 			ORDER BY position DESC');
 		$stmt->execute();
-		$roles = $stmt->fetchAll();
+		return $stmt->fetchAll();
 	}
 
 	public function putRoles($roleAdmin, $roleHeadpooler, $roleMappooler, $roleReferee, $rolePlayer) {
@@ -1170,16 +1174,16 @@ class Database {
 			}
 		}
 
-		$stmt = $this->db->prepare('SELECT id, discord_id as discordId, tiers
+		$stmt = $this->db->prepare('SELECT id, discord_id as discordId, tier
 			FROM mappoolers');
 		$stmt->execute();
-		$existingMappoolers = $stmt->fetchAll(PDO::FETCH_OBJ);
+		$existingMappoolers = $stmt->fetchAll();
 
 		// remove mappoolers from the website that got the role removed
 		foreach ($existingMappoolers as $existingMappooler) {
 			$found = false;
 			foreach ($mappoolers as $mappooler) {
-				if ($existingMappoolers->discordId == $mappooler->user->id) {
+				if ($existingMappooler->discordId == $mappooler->user->id) {
 					$found = true;
 					break;
 				}
@@ -1246,7 +1250,7 @@ class Database {
 		$stmt->execute();
 	}
 
-	private function recalculateRound($roundId) {
+	private function recalculateRound($roundId = 0) {
 		if (empty($roundId)) {
 			$stmt = $this->db->prepare('SELECT has_continue as hasContinue, continue_round as continueRound, has_drop_down as hasDropDown, drop_down_round as dropDownRound
 				FROM rounds
@@ -1254,10 +1258,10 @@ class Database {
 			$stmt->execute();
 			$row = $stmt->fetch();
 			if (!empty($row) && !empty($row->hasContinue)) {
-				recalculateRound($row->continueRound);
+				$this->recalculateRound($row->continueRound);
 			}
 			if (!empty($row) && !empty($row->hasDropDown)) {
-				recalculateRound($row->dropDownRound);
+				$this->recalculateRound($row->dropDownRound);
 			}
 		} else {
 			$playerAmount = 0;
@@ -1295,10 +1299,10 @@ class Database {
 			$stmt->execute();
 			$row = $stmt->fetch();
 			if (!empty($row->hasContinue)) {
-				recalculateRound($row->continueRound);
+				$this->recalculateRound($row->continueRound);
 			}
 			if (!empty($row->hasDropDown)) {
-				recalculateRound($row->dropDownRound);
+				$this->recalculateRound($row->dropDownRound);
 			}
 		}
 	}
@@ -1314,16 +1318,16 @@ class Database {
 		$stmt->bindValue(':username', $user->user->username, PDO::PARAM_STR);
 		$stmt->bindValue(':discriminator', $user->user->discriminator, PDO::PARAM_STR);
 		$stmt->bindValue(':avatar', $user->user->avatar, PDO::PARAM_STR);
-		$stmt->bindValue(':username2', $user->username, PDO::PARAM_STR);
-		$stmt->bindValue(':discriminator2', $user->discriminator, PDO::PARAM_STR);
-		$stmt->bindValue(':avatar2', $user->avatar, PDO::PARAM_STR);
+		$stmt->bindValue(':username2', $user->user->username, PDO::PARAM_STR);
+		$stmt->bindValue(':discriminator2', $user->user->discriminator, PDO::PARAM_STR);
+		$stmt->bindValue(':avatar2', $user->user->avatar, PDO::PARAM_STR);
 		$stmt->execute();
 	}
 
 	private function generateToken() {
 		while (true) {
 			$token = str_replace('.', '', uniqid('', true));
-			$stmt = $db->prepare('SELECT COUNT(*) as rowcount
+			$stmt = $this->db->prepare('SELECT COUNT(*) as rowcount
 				FROM bearer_tokens
 				WHERE token = :token');
 			$stmt->bindValue(':token', $token, PDO::PARAM_STR);

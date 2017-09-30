@@ -442,7 +442,7 @@ function deleteRound() {
 		echo401();
 	}
 
-	if ($database->getScope != SCOPE::ADMIN) {
+	if ($database->getScope() != SCOPE::ADMIN) {
 		echo403();
 	}
 
@@ -465,7 +465,7 @@ function postTier() {
 		echo401();
 	}
 
-	if ($database->getScope != SCOPE::ADMIN) {
+	if ($database->getScope() != SCOPE::ADMIN) {
 		echo403();
 	}
 
@@ -493,7 +493,7 @@ function putTier() {
 		echo401();
 	}
 
-	if ($database->getScope != SCOPE::ADMIN) {
+	if ($database->getScope() != SCOPE::ADMIN) {
 		echo403();
 	}
 
@@ -548,10 +548,10 @@ function getLobbies() {
 		}
 	}
 
-	$lobbies = $database->getLobbies();
+	$lobbies = $database->getLobbies($_GET['tier'], $_GET['round']);
 
-	foreach ($lobbies as &$lobby) {
-		if ($scope != SCOPE::ADMIN) {
+	if ($scope != SCOPE::ADMIN) {
+		foreach ($lobbies as &$lobby) {
 			foreach ($lobby->slots as &$slot) {
 				unset($slot->availabilities);
 			}
@@ -575,8 +575,8 @@ function putLobbies() {
 
 	$body = json_decode(file_get_contents('php://input'));
 
-	foreach ($body as $lobby) {
-		$database->putLobby($lobby->id, $lobby->matchTime);
+	foreach ($body->lobbies as $lobby) {
+		$database->putLobbyTime($lobby->id, $lobby->matchTime);
 		foreach ($lobby->slots as $slot) {
 			$database->putLobbySlot($slot->id, $slot->userId);
 			if (!empty($slot->userId)) {
@@ -1012,7 +1012,7 @@ function putSettings() {
 		$database->putRoles($body->roleAdmin, $body->roleHeadpooler, $body->roleMappooler, $body->roleReferee, $body->rolePlayer);
 	}
 
-	echoSuccess(0, 'Settings saved');
+	echoSuccess('Settings saved');
 }
 
 function getDiscordLogin() {
@@ -1063,7 +1063,7 @@ function postDiscordLogin() {
 	$possibleRoles = array_values(array_unique($possibleRoles));
 
 	if (count($possibleRoles) == 1) {
-		$database->loginUser($user->id, $possibleRoles[0]);
+		$token = $database->loginUser($user->id, $possibleRoles[0]);
 
 		$response = new stdClass;
 		$response->error = '0';
@@ -1077,7 +1077,7 @@ function postDiscordLogin() {
 	$body = json_decode(file_get_contents('php://input'));
 
 	if (isset($body->scope) && in_array($body->scope, $possibleRoles)) {
-		$database->loginUser($user->id, $body->scope);
+		$token = $database->loginUser($user->id, $body->scope);
 
 		$response = new stdClass;
 		$response->error = '0';

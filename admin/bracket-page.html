@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="bracket-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -53,10 +51,9 @@
 				--paper-toast-background-color: var(--error-red);
 			}
 		</style>
-		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
-		<iron-ajax id="postRoundAjax" url="../api/rounds" method="POST" content-type="application/json" on-response="_postRoundResponse"></iron-ajax>
-		<iron-ajax id="putRoundAjax" url="../api/rounds" method="PUT" content-type="application/json" on-response="_putRoundResponse"></iron-ajax>
-		<iron-ajax id="deleteRoundAjax" url="../api/rounds" method="DELETE" on-response="_deleteRoundResponse"></iron-ajax>
+		<iron-ajax id="postRoundAjax" url="../api/rounds" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putRoundAjax" url="../api/rounds" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="deleteRoundAjax" url="../api/rounds" method="DELETE" on-response="_defaultResponse"></iron-ajax>
 		<div class="wrapper layout horizontal">
 			<div class="list-wrapper layout vertical">
 				<div class="header">Rounds</div>
@@ -402,7 +399,7 @@
 				}
 			}
 
-			_postRoundResponse(e) {
+			_defaultResponse(e) {
 				var response = e.detail.response;
 				this.message = response.message;
 				if (response.error == '1') {
@@ -410,19 +407,7 @@
 				} else {
 					this.$.successToast.open();
 					this.editVisible = false;
-					this.$.getRoundsAjax.generateRequest();
-				}
-			}
-
-			_putRoundResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.editVisible = false;
-					this.$.getRoundsAjax.generateRequest();
+					this.dispatchEvent(new CustomEvent('updaterounds', {bubbles: true, composed: true}));
 				}
 			}
 
@@ -537,18 +522,6 @@
 						'Authorization': localStorage.getItem('token')
 					}
 					this.$.deleteRoundAjax.generateRequest();
-				}
-			}
-
-			_deleteRoundResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.editVisible = false;
-					this.$.getRoundsAjax.generateRequest();
 				}
 			}
 

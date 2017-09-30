@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="lobbies-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -53,9 +51,7 @@
 				--paper-toast-background-color: var(--error-red);
 			}
 		</style>
-		<iron-ajax id="roundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
-		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
-		<iron-ajax id="getLobbiesAjax" url="../api/lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}" on-response="_getLobbiesResponse"></iron-ajax>
+		<iron-ajax id="getLobbiesAjax" url="../api/rounds//tiers//lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}" on-response="_getLobbiesResponse"></iron-ajax>
 		<iron-ajax id="putLobbiesAjax" url="../api/lobbies" method="PUT" content-type="application/json" on-response="_putLobbiesResponse"></iron-ajax>
 		<iron-ajax id="postLobbiesAjax" url="../api/lobbies" method="POST" content-type="application/json" on-response="_postLobbiesResponse"></iron-ajax>
 		<iron-ajax id="getPlayersAjax" url="../api/players" method="GET" content-type="application/json" last-response="{{players}}" on-response="_getPlayersResponse"></iron-ajax>
@@ -90,7 +86,7 @@
 							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
 								<div hidden$="[[!slot.userId]]">
 									<div class="player-drop-wrapper layout vertical">
-										<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]" draggable="true" on-dragover="_dragOver" on-drop="_dropOnPlayer" on-dragstart="_dragFromLobbies"></osu-profile>
+										<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]" draggable="true" on-dragover="_dragOver" on-drop="_dropOnPlayer" on-dragstart="_dragFromLobbies"></osu-profile>
 										<template is="dom-repeat" items="[[slot.availabilities]]" as="availability">
 											<div class="availability-wrapper">
 												<div><span>[[availability.timeFrom]]</span> - <span>[[availability.timeTo]]</span></div>
@@ -118,7 +114,7 @@
 				<div class="players-wrapper layout vertical" on-dragover="_dragOver" on-drop="_dropOnList">
 					<template is="dom-repeat" items="[[players]]" as="player">
 						<div class="player-wrapper layout vertical">
-							<osu-profile avatar-url="[[player.osuAvatarUrl]]" username="[[player.osuUsername]]" pp="[[player.osuPp]]" hit-accuracy="[[player.osuHitAccuracy]]" play-count="[[player.osuPlayCount]]" level="[[player.osuLevel]]" rank="[[player.osuRank]]" draggable="true" on-dragstart="_dragFromPlayers"></osu-profile>
+							<osu-profile avatar-url="[[player.osu.avatarUrl]]" username="[[player.osu.username]]" pp="[[player.osu.pp]]" hit-accuracy="[[player.osu.hitAccuracy]]" play-count="[[player.osu.playCount]]" level="[[player.osu.level]]" rank="[[player.osu.rank]]" draggable="true" on-dragstart="_dragFromPlayers"></osu-profile>
 							<template is="dom-repeat" items="[[player.availabilities]]" as="availability">
 								<div class="availability-wrapper">
 									<div><span>[[availability.timeFrom]]</span> - <span>[[availability.timeTo]]</span></div>
@@ -163,7 +159,7 @@
 				if (this.selectedRound && this.selectedTier) {
 					this.set('lobbies', []);
 					this.set('players', []);
-					this.$.getLobbiesAjax.url = '../api/lobbies/' + this.selectedRound + '/' + this.selectedTier
+					this.$.getLobbiesAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/lobbies';
 					this.$.getLobbiesAjax.headers = {
 						'Authorization': localStorage.getItem('token')
 					}
@@ -180,7 +176,7 @@
 					this.createVisible = false;
 					this.saveVisible = true;
 					this.deleteVisible = true;
-					this.$.getPlayersAjax.url = '../api/players/' + this.selectedRound + '/' + this.selectedTier
+					this.$.getPlayersAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/players';
 					this.$.getPlayersAjax.headers = {
 						'Authorization': localStorage.getItem('token')
 					}
@@ -225,6 +221,7 @@
 			}
 
 			_saveLobbies() {
+				this.$.putLobbiesAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/lobbies';
 				this.$.putLobbiesAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
@@ -255,14 +252,16 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {
+									avatarUrl: this.dragObject.osu.avatarUrl,
+									hitAccuracy: this.dragObject.osu.hitAccuracy,
+									id: this.dragObject.osu.id,
+									level: this.dragObject.osu.level,
+									playCount: this.dragObject.osu.playCount,
+									pp: this.dragObject.osu.pp,
+									rank: this.dragObject.osu.rank,
+									username: this.dragObject.osu.username
+								});
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
 								break lobby_loop;
 							}
@@ -279,14 +278,7 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].userId == this.dragObject.userId) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', []);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {});
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', null);
 							}
 						}
@@ -296,14 +288,16 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {
+									avatarUrl: this.dragObject.osu.avatarUrl,
+									hitAccuracy: this.dragObject.osu.hitAccuracy,
+									id: this.dragObject.osu.id,
+									level: this.dragObject.osu.level,
+									playCount: this.dragObject.osu.playCount,
+									pp: this.dragObject.osu.pp,
+									rank: this.dragObject.osu.rank,
+									username: this.dragObject.osu.username
+								});
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
 								break lobby_loop;
 							}
@@ -319,14 +313,7 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].userId == this.dragObject.userId) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', []);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', null);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', null);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {});
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', null);
 							}
 						}
@@ -344,14 +331,16 @@
 					}
 					this.push('players', {
 						availabilities: e.model.slot.availabilities,
-						osuAvatarUrl: e.model.slot.osuAvatarUrl,
-						osuHitAccuracy: e.model.slot.osuHitAccuracy,
-						osuId: e.model.slot.osuId,
-						osuLevel: e.model.slot.osuLevel,
-						osuPlayCount: e.model.slot.osuPlayCount,
-						osuPp: e.model.slot.osuPp,
-						osuRank: e.model.slot.osuRank,
-						osuUsername: e.model.slot.osuUsername,
+						osu: {
+							avatarUrl: e.model.slot.osu.avatarUrl,
+							hitAccuracy: e.model.slot.osu.hitAccuracy,
+							id: e.model.slot.osu.id,
+							level: e.model.slot.osu.level,
+							playCount: e.model.slot.osu.playCount,
+							pp: e.model.slot.osu.pp,
+							rank: e.model.slot.osu.rank,
+							username: e.model.slot.osu.username
+						},
 						userId: e.model.slot.userId
 					});
 					lobby_loop:
@@ -359,14 +348,24 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {
+									avatarUrl: this.dragObject.osu.avatarUrl,
+									hitAccuracy: this.dragObject.osu.hitAccuracy,
+									id: this.dragObject.osu.id,
+									level: this.dragObject.osu.level,
+									playCount: this.dragObject.osu.playCount,
+									pp: this.dragObject.osu.pp,
+									rank: this.dragObject.osu.rank,
+									username: this.dragObject.osu.username
+								});
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.avatarUrl', this.dragObject.osu.avatarUrl);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.hitAccuracy', this.dragObject.osu.hitAccuracy);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.id', this.dragObject.osu.id);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.level', this.dragObject.osu.level);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.playCount', this.dragObject.osu.playCount);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.pp', this.dragObject.osu.pp);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.rank', this.dragObject.osu.rank);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu.username', this.dragObject.osu.username);
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
 								break lobby_loop;
 							}
@@ -378,14 +377,16 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].id == this.slotId) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', e.model.slot.availabilities);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', e.model.slot.osuAvatarUrl);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', e.model.slot.osuHitAccuracy);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', e.model.slot.osuId);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', e.model.slot.osuLevel);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', e.model.slot.osuPlayCount);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', e.model.slot.osuPp);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', e.model.slot.osuRank);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', e.model.slot.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {
+									avatarUrl: e.model.slot.osu.avatarUrl,
+									hitAccuracy: e.model.slot.osu.hitAccuracy,
+									id: e.model.slot.osu.id,
+									level: e.model.slot.osu.level,
+									playCount: e.model.slot.osu.playCount,
+									pp: e.model.slot.osu.pp,
+									rank: e.model.slot.osu.rank,
+									username: e.model.slot.osu.username
+								});
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', e.model.slot.userId);
 								break lobby_loop;
 							}
@@ -396,14 +397,16 @@
 						for (var slot = 0; slot < this.lobbies[lobby].slots.length; slot++) {
 							if (this.lobbies[lobby].slots[slot].id == e.model.slot.id) {
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.availabilities', this.dragObject.availabilities);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuAvatarUrl', this.dragObject.osuAvatarUrl);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuHitAccuracy', this.dragObject.osuHitAccuracy);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuId', this.dragObject.osuId);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuLevel', this.dragObject.osuLevel);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPlayCount', this.dragObject.osuPlayCount);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuPp', this.dragObject.osuPp);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuRank', this.dragObject.osuRank);
-								this.set('lobbies.' + lobby + '.slots.' + slot + '.osuUsername', this.dragObject.osuUsername);
+								this.set('lobbies.' + lobby + '.slots.' + slot + '.osu', {
+									avatarUrl: this.dragObject.osu.avatarUrl,
+									hitAccuracy: this.dragObject.osu.hitAccuracy,
+									id: this.dragObject.osu.id,
+									level: this.dragObject.osu.level,
+									playCount: this.dragObject.osu.playCount,
+									pp: this.dragObject.osu.pp,
+									rank: this.dragObject.osu.rank,
+									username: this.dragObject.osu.username
+								});
 								this.set('lobbies.' + lobby + '.slots.' + slot + '.userId', this.dragObject.userId);
 								break lobby_loop2;
 							}
@@ -417,14 +420,16 @@
 				this.dragFromLobbies = false;
 				this.dragObject = {
 					availabilities: e.model.player.availabilities,
-					osuAvatarUrl: e.model.player.osuAvatarUrl,
-					osuHitAccuracy: e.model.player.osuHitAccuracy,
-					osuId: e.model.player.osuId,
-					osuLevel: e.model.player.osuLevel,
-					osuPlayCount: e.model.player.osuPlayCount,
-					osuPp: e.model.player.osuPp,
-					osuRank: e.model.player.osuRank,
-					osuUsername: e.model.player.osuUsername,
+					osu: {
+						avatarUrl: e.model.player.osu.avatarUrl,
+						hitAccuracy: e.model.player.osu.hitAccuracy,
+						id: e.model.player.osu.id,
+						level: e.model.player.osu.level,
+						playCount: e.model.player.osu.playCount,
+						pp: e.model.player.osu.pp,
+						rank: e.model.player.osu.rank,
+						username: e.model.player.osu.username
+					},
 					userId: e.model.player.userId
 				}
 			}
@@ -435,16 +440,19 @@
 				this.dragFromLobbies = true;
 				this.dragObject = {
 					availabilities: e.model.slot.availabilities,
-					osuAvatarUrl: e.model.slot.osuAvatarUrl,
-					osuHitAccuracy: e.model.slot.osuHitAccuracy,
-					osuId: e.model.slot.osuId,
-					osuLevel: e.model.slot.osuLevel,
-					osuPlayCount: e.model.slot.osuPlayCount,
-					osuPp: e.model.slot.osuPp,
-					osuRank: e.model.slot.osuRank,
-					osuUsername: e.model.slot.osuUsername,
+					osu: {
+						avatarUrl: e.model.slot.osu.avatarUrl,
+						hitAccuracy: e.model.slot.osu.hitAccuracy,
+						id: e.model.slot.osu.id,
+						level: e.model.slot.osu.level,
+						playCount: e.model.slot.osu.playCount,
+						pp: e.model.slot.osu.pp,
+						rank: e.model.slot.osu.rank,
+						username: e.model.slot.osu.username
+					},
 					userId: e.model.slot.userId
 				}
+				console.log(this.dragObject);
 			}
 		}
 

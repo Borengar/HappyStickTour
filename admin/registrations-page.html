@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="registrations-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -87,23 +85,23 @@
 					<vaadin-grid class="registrations-grid" items="[[registrations]]" active-item="{{selectedRegistration}}">
 						<vaadin-grid-column width="180px" flex-grow="0">
 							<template class="header">Time</template>
-							<template>[[item.registrationTime]]</template>
+							<template>[[item.time]]</template>
 						</vaadin-grid-column>
 						<vaadin-grid-column flex-grow="1">
 							<template class="header">Discord</template>
-							<template>[[item.discordUsername]]</template>
+							<template>[[item.discord.username]]</template>
 						</vaadin-grid-column>
 						<vaadin-grid-column flex-grow="1">
 							<template class="header">osu!</template>
-							<template>[[item.osuUsername]]</template>
+							<template>[[item.osu.username]]</template>
 						</vaadin-grid-column>
 						<vaadin-grid-column width="100px" flex-grow="0">
 							<template class="header">Rank</template>
-							<template>[[item.osuRank]]</template>
+							<template>[[item.osu.rank]]</template>
 						</vaadin-grid-column>
 						<vaadin-grid-column width="50px" flex-grow="0">
 							<template class="header">Sub</template>
-							<template>[[item.twitchSubPlan]]</template>
+							<template>[[item.twitch.subPlan]]</template>
 						</vaadin-grid-column>
 					</vaadin-grid>
 				</div>
@@ -126,6 +124,9 @@
 									<twitch-profile avatar="[[twitchAvatar]]" display-name="[[twitchDisplayName]]" sub-since="[[twitchSubSince]]"></twitch-profile>
 								</a>
 							</div>
+						</template>
+						<template is="dom-if" if="[[!twitchId]]">
+							<div class="edit-section">No TwitchTV account linked</div>
 						</template>
 						<div class="edit-section">
 							<a href="https://osu.ppy.sh/users/[[osuId]]" target="_blank">
@@ -222,6 +223,9 @@
 			}
 
 			_saveSettings() {
+				this.$.putSettingsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
 				this.$.putSettingsAjax.body = {
 					'registrationsOpen': this.registrationsOpen,
 					'registrationsFrom': this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2),
@@ -242,30 +246,39 @@
 
 			_selectedRegistrationChanged(e) {
 				if (e) {
-					this.discordAvatar = e.discordAvatar;
-					this.discordDiscriminator = e.discordDiscriminator;
-					this.discordId = e.discordId;
-					this.discordUsername = e.discordUsername;
-					this.osuAvatarUrl = e.osuAvatarUrl;
-					this.osuBestScore = e.osuBestScore;
-					this.osuCountry = e.osuCountry;
-					this.osuHitAccuracy = e.osuHitAccuracy;
-					this.osuId = e.osuId;
-					this.osuJoinDate = e.osuJoinDate;
-					this.osuLevel = e.osuLevel;
-					this.osuPlayCount = e.osuPlayCount;
-					this.osuPlaystyle = e.osuPlaystyle;
-					this.osuPp = e.osuPp;
-					this.osuRank = e.osuRank;
-					this.osuRankHistory = e.osuRankHistory.split(',');
-					this.osuUsername = e.osuUsername;
-					this.registrationTime = e.registrationTime;
-					this.twitchAvatar = e.twitchAvatar;
-					this.twitchDisplayName = e.twitchDisplayName;
-					this.twitchId = e.twitchId;
-					this.twitchSubPlan = e.twitchSubPlan;
-					this.twitchSubSince = e.twitchSubSince;
-					this.twitchUsername = e.twitchUsername;
+					this.discordAvatar = e.discord.avatar;
+					this.discordDiscriminator = e.discord.discriminator;
+					this.discordId = e.discord.id;
+					this.discordUsername = e.discord.username;
+					this.osuAvatarUrl = e.osu.avatarUrl;
+					this.osuBestScore = e.osu.bestScore;
+					this.osuCountry = e.osu.country;
+					this.osuHitAccuracy = e.osu.hitAccuracy;
+					this.osuId = e.osu.id;
+					this.osuJoinDate = e.osu.joinDate;
+					this.osuLevel = e.osu.level;
+					this.osuPlayCount = e.osu.playCount;
+					this.osuPlaystyle = e.osu.playstyle;
+					this.osuPp = e.osu.pp;
+					this.osuRank = e.osu.rank;
+					this.osuRankHistory = e.osu.rankHistory.split(',');
+					this.osuUsername = e.osu.username;
+					this.registrationTime = e.time;
+					if (e.twitch) {
+						this.twitchAvatar = e.twitch.avatar;
+						this.twitchDisplayName = e.twitch.displayName;
+						this.twitchId = e.twitch.id;
+						this.twitchSubPlan = e.twitch.subPlan;
+						this.twitchSubSince = e.twitch.subSince;
+						this.twitchUsername = e.twitch.username;
+					} else {
+						this.twitchAvatar = null;
+						this.twitchDisplayName = null;
+						this.twitchId = null;
+						this.twitchSubPlan = null;
+						this.twitchSubSince = null;
+						this.twitchUsername = null;
+					}
 					this.editVisible = true;
 				}
 			}
@@ -280,11 +293,11 @@
 			}
 
 			_changeNewDiscordId() {
+				this.$.putRegistrationAjax.url = '../api/registrations/' + this.discordId + '/discordId';
 				this.$.putRegistrationAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.putRegistrationAjax.body = {
-					'idOld': this.discordId,
 					'idNew': this.newDiscordId
 				}
 				this.$.putRegistrationAjax.generateRequest();

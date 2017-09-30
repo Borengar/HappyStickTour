@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="tiers-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -37,11 +35,9 @@
 				--paper-toast-background-color: var(--error-red);
 			}
 		</style>
-		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" on-response="_roundsResponse" auto></iron-ajax>
-		<iron-ajax id="getTiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
-		<iron-ajax id="postTierAjax" url="../api/tiers" method="POST" content-type="application/json" on-response="_postTierResponse"></iron-ajax>
-		<iron-ajax id="putTierAjax" url="../api/tiers" method="PUT" content-type="application/json" on-response="_putTierResponse"></iron-ajax>
-		<iron-ajax id="deleteTierAjax" url="../api/tiers" method="DELETE" on-response="_deleteTierResponse"></iron-ajax>
+		<iron-ajax id="postTierAjax" url="../api/tiers" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putTierAjax" url="../api/tiers" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="deleteTierAjax" url="../api/tiers" method="DELETE" on-response="_defaultResponse"></iron-ajax>
 		<div class="wrapper layout horizontal">
 			<div class="list-wrapper layout vertical">
 				<div class="header">Tiers</div>
@@ -76,7 +72,7 @@
 					<div class="edit-section">
 						<paper-dropdown-menu label="Starting Round">
 							<paper-listbox slot="dropdown-content" selected="{{startingRound}}" attr-for-selected="value">
-								<template is="dom-repeat" items="[[rounds]]" as="round">
+								<template is="dom-repeat" items="[[rounds]]" as="round" filter="_isStartingRound">
 									<paper-item value="[[round]]">[[round.name]]</paper-item>
 								</template>
 							</paper-listbox>
@@ -125,14 +121,8 @@
 				}
 			}
 
-			_roundsResponse(e) {
-				var response = e.detail.response;
-				this.rounds = [];
-				for (var i = 0; i < response.length; i++) {
-					if (response[i].isStartRound == '1') {
-						this.push('rounds', response[i]);
-					}
-				}
+			_isStartingRound(e) {
+				return e.isStartRound == '1';
 			}
 
 			_addTier() {
@@ -224,7 +214,7 @@
 				}
 			}
 
-			_postTierResponse(e) {
+			_defaultResponse(e) {
 				var response = e.detail.response;
 				this.message = response.message;
 				if (response.error == '1') {
@@ -232,31 +222,7 @@
 				} else {
 					this.$.successToast.open();
 					this.editVisible = false;
-					this.$.getTiersAjax.generateRequest();
-				}
-			}
-
-			_putTierResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.editVisible = false;
-					this.$.getTiersAjax.generateRequest();
-				}
-			}
-
-			_deleteTierResponse(e) {
-				var response = e.detail.response;
-				this.message = response.message;
-				if (response.error == '1') {
-					this.$.errorToast.open();
-				} else {
-					this.$.successToast.open();
-					this.editVisible = false;
-					this.$.getTiersAjax.generateRequest();
+					this.dispatchEvent(new CustomEvent('updatetiers', {bubbles: true, composed: true}));
 				}
 			}
 		}
