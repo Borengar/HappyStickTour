@@ -238,6 +238,7 @@
 
 			_selectedRoundChanged(e) {
 				this.listVisible = false;
+				this.editVisible = false;
 				if (e) {
 					if (e.copyMappool == '1') {
 						for (var i = 0; i < this.rounds.length; i++) {
