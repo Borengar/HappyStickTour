@@ -1,30 +1,33 @@
 <dom-module id="login-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
-			:root {
-				height: 100%;
-				background-image: url('images/index_header.png');
-				background-repeat: no-repeat;
-				background-size: 100% auto;
+			.header-image {
+				width: 100%;
 			}
 			.staff-login-button {
-				margin: 20px;
+				position: absolute;
+				top: 20px;
+				right: 20px;
 				background-color: var(--discord-grey);
 				color: white;
 			}
-			.discord-login-button, .public-login-button {
-				margin-bottom: 100px;
+			.discord-login-button {
 				background-color: var(--happystick-green);
 				color: white;
 				font-size: 40px;
+				padding: 20px;
+			}
+			.discord-login-button-small {
+				background-color: var(--happystick-green);
+				color: white;
+				font-size: 40px;
+				padding: 20px;
+				width: calc(100% - 20px);
 			}
 			.scope-login-button {
 				margin-bottom: 10px;
 				background-color: var(--happystick-green);
 				color: white;
-			}
-			.public-login-button {
-				margin-left: 200px;
 			}
 			.countdown-number {
 				font-size: 150px;
@@ -37,100 +40,193 @@
 		<iron-ajax id="settingsAjax" url="api/settings" method="GET" on-response="_settingsResponse" auto></iron-ajax>
 		<iron-ajax id="getDiscordUriAjax" url="api/discordlogin" method="GET" on-response="_discordLogin"></iron-ajax>
 		<iron-ajax id="postDiscordLoginAjax" url="api/discordlogin" method="POST" content-type="application/json" on-response="_postDiscordLoginResponse"></iron-ajax>
-		<div class="flex layout vertical">
-			<div class="layout horizontal">
-				<div class="flex"></div>
-				<paper-button class="staff-login-button" raised on-click="_getDiscordUri">Staff login</paper-button>
+		<iron-media-query query="(max-width:999px)" query-matches="{{querySmall}}"></iron-media-query>
+		<template is="dom-if" if="[[!querySmall]]">
+			<div class="layout vertical">
+				<img src="images/index_header.png" class="header-image"></div>
+				<vaadin-button class="staff-login-button" on-click="_getDiscordUri">Staff login</vaadin-button>
+				<template is="dom-if" if="[[showDefault]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Player login</vaadin-button>
+						<div style="width:200px;"></div>
+						<vaadin-button class="discord-login-button" on-click="_publicLogin">Public Stats</vaadin-button>
+						<div class="flex"></div>
+					</div>
+				</template>
+				<template is="dom-if" if="[[showScopeChooser]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div class="layout vertical">
+							<template is="dom-repeat" items="[[scopes]]" as="scope">
+								<vaadin-button class="scope-login-button" on-click="_loginScope">[[scope]]</vaadin-button>
+							</template>
+						</div>
+						<div class="flex"></div>
+					</div>
+				</template>
+				<template is="dom-if" if="[[showCountdown]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownDays]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Days</div>
+								<div class="flex"></div>
+							</div>
+						</div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownHours]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Hours</div>
+								<div class="flex"></div>
+							</div>
+						</div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownMinutes]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Minutes</div>
+								<div class="flex"></div>
+							</div>
+						</div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownSeconds]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Seconds</div>
+								<div class="flex"></div>
+							</div>
+						</div>
+						<div class="flex"></div>
+					</div>
+				</template>
+				<template is="dom-if" if="[[showRegistrationClosed]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div style="margin-bottom:100px;">Registrations are closed at the moment.</div>
+						<div class="flex"></div>
+					</div>
+				</template>
+				<template is="dom-if" if="[[showRegistration]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Register</vaadin-button>
+						<div class="flex"></div>
+					</div>
+				</template>
 			</div>
-			<div class="flex"></div>
-			<template is="dom-if" if="[[showDefault]]">
-				<div class="layout horizontal">
-					<div class="flex"></div>
-					<paper-button class="discord-login-button" raised on-click="_getDiscordUri">Player login</paper-button>
-					<paper-button class="public-login-button" raised on-click="_publicLogin">Public Stats</paper-button>
-					<div class="flex"></div>
-				</div>
-			</template>
-			<template is="dom-if" if="[[showScopeChooser]]">
-				<div class="layout horizontal">
-					<div class="flex"></div>
-					<div class="layout vertical">
-						<template is="dom-repeat" items="[[scopes]]" as="scope">
-							<paper-button class="scope-login-button" raised on-click="_loginScope">[[scope]]</paper-button>
-						</template>
+		</template>
+		<template is="dom-if" if="[[querySmall]]">
+			<div class="layout vertical">
+				<img src="images/index_header_small.png" class="header-image"></div>
+				<vaadin-button class="staff-login-button" raised on-click="_getDiscordUri">Staff login</vaadin-button>
+				<template is="dom-if" if="[[showDefault]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div class="layout vertical">
+							<vaadin-button class="discord-login-button-small" on-click="_getDiscordUri">Player login</vaadin-button>
+							<div style="height:20px;"></div>
+							<vaadin-button class="discord-login-button-small" on-click="_publicLogin">Public Stats</vaadin-button>
+						</div>
+						<div class="flex"></div>
 					</div>
-					<div class="flex"></div>
-				</div>
-			</template>
-			<template is="dom-if" if="[[showCountdown]]">
-				<div class="layout horizontal">
-					<div class="flex"></div>
-					<div class="layout vertical" style="width:220px;">
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-number">[[countdownDays]]</div>
-							<div class="flex"></div>
+				</template>
+				<template is="dom-if" if="[[showScopeChooser]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div class="layout vertical">
+							<template is="dom-repeat" items="[[scopes]]" as="scope">
+								<vaadin-button class="scope-login-button" raised on-click="_loginScope">[[scope]]</vaadin-button>
+							</template>
 						</div>
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-title">Days</div>
-							<div class="flex"></div>
-						</div>
+						<div class="flex"></div>
 					</div>
-					<div class="layout vertical" style="width:220px;">
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-number">[[countdownHours]]</div>
-							<div class="flex"></div>
+				</template>
+				<template is="dom-if" if="[[showCountdown]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownDays]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Days</div>
+								<div class="flex"></div>
+							</div>
 						</div>
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-title">Hours</div>
-							<div class="flex"></div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownHours]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Hours</div>
+								<div class="flex"></div>
+							</div>
 						</div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownMinutes]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Minutes</div>
+								<div class="flex"></div>
+							</div>
+						</div>
+						<div class="layout vertical" style="width:220px;">
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-number">[[countdownSeconds]]</div>
+								<div class="flex"></div>
+							</div>
+							<div class="layout horizontal">
+								<div class="flex"></div>
+								<div class="countdown-title">Seconds</div>
+								<div class="flex"></div>
+							</div>
+						</div>
+						<div class="flex"></div>
 					</div>
-					<div class="layout vertical" style="width:220px;">
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-number">[[countdownMinutes]]</div>
-							<div class="flex"></div>
-						</div>
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-title">Minutes</div>
-							<div class="flex"></div>
-						</div>
+				</template>
+				<template is="dom-if" if="[[showRegistrationClosed]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<div style="margin-bottom:100px;">Registrations are closed at the moment.</div>
+						<div class="flex"></div>
 					</div>
-					<div class="layout vertical" style="width:220px;">
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-number">[[countdownSeconds]]</div>
-							<div class="flex"></div>
-						</div>
-						<div class="layout horizontal">
-							<div class="flex"></div>
-							<div class="countdown-title">Seconds</div>
-							<div class="flex"></div>
-						</div>
-					</div>
-					<div class="flex"></div>
-				</div>
-			</template>
-			<template is="dom-if" if="[[showRegistrationClosed]]">
-				<div class="layout horizontal">
-					<div class="flex"></div>
-					<div style="margin-bottom:100px;">Registrations are closed at the moment.</div>
-					<div class="flex"></div>
-				</div>
-			</template>
-			<template is="dom-if" if="[[showRegistration]]">
-				<div class="layout horizontal">
-					<div class="flex"></div>
-					<paper-button class="discord-login-button" raised on-click="_getDiscordUri">Register</paper-button>
-					<div class="flex"></div>
-				</div>
-			</template>
-		</div>
+				</template>
+				<template is="dom-if" if="[[showRegistration]]">
+					<vaadin-button class="discord-login-button-small" raised on-click="_getDiscordUri">Register</vaadin-button>
+				</template>
+			</div>
+		</template>
 	</template>
 	<script>
 		class LoginPage extends Polymer.Element {
@@ -267,10 +363,10 @@
 					this.countdownHours = this.openTime.diff(now, 'hours') - 24 * this.countdownDays;
 
 					// minutes
-					this.countdownMinutes = this.openTime.diff(now, 'minutes') - (24 * this.countdownDays + 60 * this.countdownHours);
+					this.countdownMinutes = this.openTime.diff(now, 'minutes') - (1440 * this.countdownDays + 60 * this.countdownHours);
 
 					// seconds
-					this.countdownSeconds = this.openTime.diff(now, 'seconds') - (24 * this.countdownDays + 60 * this.countdownHours + 60 * this.countdownMinutes);
+					this.countdownSeconds = this.openTime.diff(now, 'seconds') - (86400 * this.countdownDays + 3600 * this.countdownHours + 60 * this.countdownMinutes);
 
 					setTimeout(() => this._countdownTick(), 1000);
 				} else {
