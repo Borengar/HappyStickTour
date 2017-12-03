@@ -1,7 +1,7 @@
 RewriteEngine On
 RewriteRule ^user/?$ data.php?query=user
 RewriteRule ^registrations/([^/]+)/discordId/?$ data.php?query=registrationDiscordId&registration=$1
-RewriteRule ^registrations/([^/]+)/?$ data.php?query=registration&registration=$1
+RewriteRule ^registrations/([^/]+)/?$ data.php?query=registrations&registration=$1
 RewriteRule ^registrations/?$ data.php?query=registrations
 RewriteRule ^players/([^/]+)/discordId/?$ data.php?query=playerDiscordId&player=$1
 RewriteRule ^players/([^/]+)/trivia/?$ data.php?query=playerTrivia&player=$1

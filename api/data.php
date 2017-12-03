@@ -38,16 +38,12 @@ switch ($_GET['query']) {
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'GET': getRegistrations(); break; // get a list of all registrations
 			case 'POST': postRegistration(); break; // create new registration
+			case 'DELETE': deleteRegistration(); break; // delete a registration
 		}
 		break;
 	case 'registrationDiscordId':
 		switch ($_SERVER['REQUEST_METHOD']) {
 			case 'PUT': putRegistrationDiscordId(); break; // change registration discord id
-		}
-		break;
-	case 'registration':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'DELETE': deleteRegistration(); break; // delete a registration
 		}
 		break;
 	case 'players':
