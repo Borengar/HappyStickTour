@@ -1,12 +1,6 @@
 <dom-module id="registrations-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
-			paper-checkbox {
-				--paper-checkbox-checked-color: var(--happystick-green);
-			}
-			paper-input {
-				--paper-input-container-focus-color: var(--happystick-green);
-			}
 			vaadin-date-picker {
 				margin-left: 10px;
 				margin-top: 25px;
@@ -28,6 +22,12 @@
 				margin: 10px;
 				flex-shrink: 0;
 			}
+			.delete-button {
+				background-color: var(--error-red);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+			}
 			.list-wrapper {
 				width: 800px;
 				padding: 10px;
@@ -44,6 +44,7 @@
 			.time-input {
 				width: 30px;
 				margin-left: 10px;
+				margin-top: 25px;
 			}
 			#errorToast {
 				--paper-toast-background-color: var(--error-red);
@@ -53,31 +54,32 @@
 		<iron-ajax id="putSettingsAjax" url="../api/settings" method="PUT" content-type="application/json" on-response="_putSettingsResponse"></iron-ajax>
 		<iron-ajax id="getRegistrationsAjax" url="../api/registrations" method="GET" last-response="{{registrations}}"></iron-ajax>
 		<iron-ajax id="putRegistrationAjax" url="../api/registrations" method="PUT" content-type="application/json" on-response="_putRegistrationResponse"></iron-ajax>
+		<iron-ajax id="deleteRegistrationAjax" url="../api/registrations/" method="DELETE" on-response="_deleteRegistrationResponse"></iron-ajax>
 		<div class="wrapper layout vertical">
 			<div class="header">Settings</div>
 			<div class="edit-section">
-				<paper-checkbox checked="{{registrationsOpen}}">Registrations open</paper-checkbox>
+				<vaadin-checkbox checked="{{registrationsOpen}}">Registrations open</vaadin-checkbox>
 			</div>
 			<div class="edit-section">
 				<template is="dom-if" if="[[registrationsOpen]]" on-dom-change="_settingsCreated">
 					<div class="layout horizontal">
 						<vaadin-date-picker placeholder="Date" id="fromDatePicker" value="{{dateFrom}}"></vaadin-date-picker>
-						<paper-input class="time-input" value="{{hourFrom}}"></paper-input>
-						<div style="margin-top:30px;margin-left:10px;">:</div>
-						<paper-input class="time-input" value="{{minutesFrom}}"></paper-input>
-						<div style="margin-top:30px;margin-left:10px;">UTC</div>
+						<vaadin-text-field class="time-input" value="{{hourFrom}}"></vaadin-text-field>
+						<div style="margin-top:50px;margin-left:10px;">:</div>
+						<vaadin-text-field class="time-input" value="{{minutesFrom}}"></vaadin-text-field>
+						<div style="margin-top:50px;margin-left:10px;">UTC</div>
 					</div>
 					<div class="layout horizontal">
 						<vaadin-date-picker placeholder="Date" id="toDatePicker" value="{{dateTo}}"></vaadin-date-picker>
-						<paper-input class="time-input" value="{{hourTo}}"></paper-input>
-						<div style="margin-top:30px;margin-left:10px;">:</div>
-						<paper-input class="time-input" value="{{minutesTo}}"></paper-input>
-						<div style="margin-top:30px;margin-left:10px;">UTC</div>
+						<vaadin-text-field class="time-input" value="{{hourTo}}"></vaadin-text-field>
+						<div style="margin-top:50px;margin-left:10px;">:</div>
+						<vaadin-text-field class="time-input" value="{{minutesTo}}"></vaadin-text-field>
+						<div style="margin-top:50px;margin-left:10px;">UTC</div>
 					</div>
 				</template>
 			</div>
 			<div class="action-wrapper layout horizontal">
-				<paper-button class="action-button" raised on-click="_saveSettings">Save</paper-button>
+				<vaadin-button class="action-button" raised on-click="_saveSettings">Save</vaadin-button>
 			</div>
 			<div class="layout horizontal">
 				<div class="list-wrapper layout vertical">
@@ -111,10 +113,10 @@
 						<div class="edit-section">
 							<discord-profile id="[[discordId]]" avatar="[[discordAvatar]]" username="[[discordUsername]]" discriminator="[[discordDiscriminator]]" on-click="_showChangeDiscordId"></discord-profile>
 							<div hidden$="[[!newDiscordIdVisible]]">
-								<paper-input label="New Discord ID" value="{{newDiscordId}}"></paper-input>
+								<vaadin-text-field label="New Discord ID" value="{{newDiscordId}}"></vaadin-text-field>
 								<div class="action-wrapper layout horizontal">
-									<paper-button class="action-button" on-click="_cancelNewDiscordId">Cancel</paper-button>
-									<paper-button class="action-button" on-click="_changeNewDiscordId">Change</paper-button>
+									<vaadin-button class="action-button" on-click="_cancelNewDiscordId">Cancel</vaadin-button>
+									<vaadin-button class="action-button" on-click="_changeNewDiscordId">Change</vaadin-button>
 								</div>
 							</div>
 						</div>
@@ -132,6 +134,9 @@
 							<a href="https://osu.ppy.sh/users/[[osuId]]" target="_blank">
 								<osu-profile avatar-url="[[osuAvatarUrl]]" username="[[osuUsername]]" pp="[[osuPp]]" hit-accuracy="[[osuHitAccuracy]]" play-count="[[osuPlayCount]]" level="[[osuLevel]]" rank="[[osuRank]]"></osu-profile>
 							</a>
+						</div>
+						<div class="edit-section">
+							<vaadin-button class="delete-button" on-click="_delete">Delete Registration</vaadin-button>
 						</div>
 					</div>
 				</div>
@@ -311,6 +316,26 @@
 				} else {
 					this.$.successToast.open();
 					this._cancelNewDiscordId();
+					this.editVisible = false;
+					this.$.getRegistrationsAjax.generateRequest();
+				}
+			}
+
+			_delete() {
+				this.$.deleteRegistrationAjax.url = '../api/registrations/' + this.discordId;
+				this.$.deleteRegistrationAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.deleteRegistrationAjax.generateRequest();
+			}
+
+			_deleteRegistrationResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
 					this.editVisible = false;
 					this.$.getRegistrationsAjax.generateRequest();
 				}
