@@ -65,6 +65,13 @@
 						<div class="flex"></div>
 					</div>
 				</template>
+				<template is="dom-if" if="[[showGuildJoin]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<vaadin-button class="discord-login-button" on-click="_joinGuild">Join HappyStick Guild</vaadin-button>
+						<div class="flex"></div>
+					</div>
+				</template>
 				<template is="dom-if" if="[[showCountdown]]">
 					<div class="layout horizontal">
 						<div class="flex"></div>
@@ -161,6 +168,13 @@
 						<div class="flex"></div>
 					</div>
 				</template>
+				<template is="dom-if" if="[[showGuildJoin]]">
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<vaadin-button class="discord-login-button" on-click="_joinGuild">Join HappyStick Guild</vaadin-button>
+						<div class="flex"></div>
+					</div>
+				</template>
 				<template is="dom-if" if="[[showCountdown]]">
 					<div class="layout horizontal">
 						<div class="flex"></div>
@@ -253,6 +267,10 @@
 					showRegistration: {
 						type: Boolean,
 						value: false
+					},
+					showGuildJoin: {
+						type: Boolean,
+						value: false
 					}
 				};
 			}
@@ -288,6 +306,7 @@
 				this.showCountdown = false;
 				this.showRegistrationClosed = false;
 				this.showRegistration = false;
+				this.showGuildJoin = false;
 			}
 
 			_getDiscordUri() {
@@ -318,6 +337,9 @@
 						case 'PLAYER': window.location = 'player/index.html'; break;
 						case 'REGISTRATION': window.location = 'registration/index.html'; break;
 					}
+				} else if (response.message == 'Unknown Member') {
+					this._hideEverything();
+					this.showGuildJoin = true;
 				}
 			}
 
@@ -373,6 +395,10 @@
 					this._hideEverything();
 					this.showRegistration = true;
 				}
+			}
+
+			_joinGuild() {
+				window.location = 'https://discord.gg/happystick';
 			}
 		}
 

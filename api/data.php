@@ -1024,6 +1024,14 @@ function postDiscordLogin() {
 	$user = $discordApi->getUser($body->accessToken);
 	$member = $discordApi->getGuildMember($user->id);
 
+	if (!$member) {
+		$response = new stdClass;
+		$response->error = '1';
+		$response->message = 'Unknown Member';
+		echo json_encode($response);
+		return;
+	}
+
 	$roles = $database->getRoles();
 
 	$settings = $database->getSettings();
