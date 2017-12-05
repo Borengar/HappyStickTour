@@ -52,8 +52,9 @@
 			}
 		</style>
 		<iron-ajax id="getLobbiesAjax" url="../api/rounds//tiers//lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}" on-response="_getLobbiesResponse"></iron-ajax>
-		<iron-ajax id="putLobbiesAjax" url="../api/lobbies" method="PUT" content-type="application/json" on-response="_putLobbiesResponse"></iron-ajax>
-		<iron-ajax id="postLobbiesAjax" url="../api/lobbies" method="POST" content-type="application/json" on-response="_postLobbiesResponse"></iron-ajax>
+		<iron-ajax id="putLobbiesAjax" url="../api/rounds//tiers//lobbies" method="PUT" content-type="application/json" on-response="_putLobbiesResponse"></iron-ajax>
+		<iron-ajax id="postLobbiesAjax" url="../api/rounds//tiers//lobbies" method="POST" content-type="application/json" on-response="_postLobbiesResponse"></iron-ajax>
+		<iron-ajax id="deleteLobbiesAjax" url="../api/rounds//tiers//lobbies" method="DELETE" content-type="application/json" on-response="_deleteLobbiesResponse"></iron-ajax>
 		<iron-ajax id="getPlayersAjax" url="../api/players" method="GET" content-type="application/json" last-response="{{players}}" on-response="_getPlayersResponse"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="filter-wrapper layout horizontal">
@@ -75,7 +76,7 @@
 			<div class="layout horizontal">
 				<paper-button class="action-button" on-click="_createLobbies" hidden$="[[!createVisible]]">Create lobbies</paper-button>
 				<paper-button class="action-button" on-click="_saveLobbies" hidden$="[[!saveVisible]]">Save lobbies</paper-button>
-				<paper-button class="action-button" on-click="_deleteLobbies" hidden$="[[!deleteVisible]]">Delete lobbies</paper-button>
+				<paper-button class="action-button" on-click="_showDeleteLobbies" hidden$="[[!deleteVisible]]">Delete lobbies</paper-button>
 			</div>
 			<div class="flex layout horizontal">
 				<div class="lobbies-wrapper layout horizontal wrap">
@@ -125,6 +126,14 @@
 				</div>
 			</div>
 		</div>
+		<paper-dialog id="deleteDialog">
+			<h2>Delete lobbies</h2>
+			<div>Do you really want to delete these lobbies?</div>
+			<div class="buttons">
+				<vaadin-button dialog-dismiss>Cancel</vaadin-button>
+				<vaadin-button dialog-confirm on-click="_deleteLobbies" style="color:red;">Delete</vaadin-button>
+			</div>
+		</paper-dialog>
 		<paper-toast id="successToast" text="[[message]]"></paper-toast>
 		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
@@ -199,12 +208,9 @@
 			}
 
 			_createLobbies() {
+				this.$.postLobbiesAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/lobbies';
 				this.$.postLobbiesAjax.headers = {
 					'Authorization': localStorage.getItem('token')
-				}
-				this.$.postLobbiesAjax.body = {
-					'round': this.selectedRound,
-					'tier': this.selectedTier
 				}
 				this.$.postLobbiesAjax.generateRequest();
 			}
@@ -238,6 +244,30 @@
 					this.$.errorToast.open();
 				} else {
 					this.$.successToast.open();
+				}
+			}
+
+			_showDeleteLobbies() {
+				this.$.deleteDialog.open();
+			}
+
+			_deleteLobbies() {
+				this.$.deleteDialog.close();
+				this.$.deleteLobbiesAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/lobbies';
+				this.$.deleteLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.deleteLobbiesAjax.generateRequest();
+			}
+
+			_deleteLobbiesResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getLobbiesAjax.generateRequest();
 				}
 			}
 
