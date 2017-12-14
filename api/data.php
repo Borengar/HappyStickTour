@@ -850,7 +850,7 @@ function putFeedback() {
 
 	$body = file_get_contents('php://input');
 
-	$database->putMappoolFeedback($mappoolId, $user->userId, $body->feedback);
+	$database->putMappoolFeedback($mappoolId, $user->userId, $body);
 
 	echoSuccess('Feedback saved');
 }
