@@ -757,6 +757,15 @@ function getMappool() {
 		if ($round->mappoolsReleased == 0) {
 			echo403();
 		}
+		$feedback = new stdClass;
+		if ($scope == SCOPE::PLAYER) {
+			foreach ($mappool->feedback as $feedbackItem) {
+				if ($feedbackItem->discord->id == $user->discord->id) {
+					$feedback = $feedbackItem->feedback;
+				}
+			}
+		}
+		$mappool->feedback = $feedback;
 	}
 
 	if ($scope == SCOPE::MAPPOOLER) {
