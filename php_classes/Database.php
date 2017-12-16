@@ -502,7 +502,7 @@ class Database {
 
 	public function getLobbies($tierId, $roundId) {
 		$osuApi = new OsuApi();
-		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
+		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.round = :round AND lobbies.tier = :tier');
 		$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
@@ -587,7 +587,7 @@ class Database {
 	public function getLobby($lobbyId) {
 		$osuApi = new OsuApi();
 
-		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime
+		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.id = :id');
 		$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
