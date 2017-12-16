@@ -99,7 +99,8 @@
 		</style>
 		<iron-ajax id="putLobbyAjax" url="../api/lobbies/" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="getMatchAjax" url="../api/osumatch/" method="GET" last-response="{{matchHistory}}" on-response="_getMatchResponse"></iron-ajax>
-		<iron-ajax id="putGameAjax" url="../api/osugame/" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putPickedByAjax" url="../api/osugame//pickedby" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="putCountsAjax" url="../api/osugame//counts" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="postGameAjax" url="../api/osumatch//games" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="deleteGameAjax" url="../api/osugame/" method="DELETE" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="getMappoolAjax" url="../api/rounds//tiers//mappool" method="GET" last-response="{{mappool}}" on-response="_getMappoolResponse"></iron-ajax>
@@ -365,26 +366,26 @@
 			}
 
 			_countsChanged(e) {
-				this.$.putGameAjax.url = '../api/osugame/' + e.model.item.id;
-				this.$.putGameAjax.headers = {
+				this.$.putCountsAjax.url = '../api/osugame/' + e.model.item.id + '/counts';
+				this.$.putCountsAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putGameAjax.body = {
+				this.$.putCountsAjax.body = {
 					'counts': e.detail.value
 				}
-				this.$.putGameAjax.generateRequest();
+				this.$.putCountsAjax.generateRequest();
 			}
 
 			_pickedByChanged(e) {
 				var item = e.model.item;
-				this.$.putGameAjax.url = '../api/osugame/' + item.id;
-				this.$.putGameAjax.headers = {
+				this.$.putPickedByAjax.url = '../api/osugame/' + item.id + '/pickedby';
+				this.$.putPickedByAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putGameAjax.body = {
+				this.$.putPickedByAjax.body = {
 					'pickedBy': item.game.picked_by
 				}
-				this.$.putGameAjax.generateRequest();
+				this.$.putPickedByAjax.generateRequest();
 			}
 
 			_insertBracketReset(e) {
