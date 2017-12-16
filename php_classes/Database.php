@@ -65,6 +65,11 @@ class Database {
 			}
 		}
 
+		$stmt = $this->db->prepare('DELETE FROM bearer_tokens
+			WHERE user_id = :user_id');
+		$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+		$stmt->execute();
+
 		$stmt = $this->db->prepare('INSERT INTO bearer_tokens (token, user_id, scope)
 			VALUES (:token, :user_id, :scope)');
 		$stmt->bindValue(':token', $token, PDO::PARAM_STR);
