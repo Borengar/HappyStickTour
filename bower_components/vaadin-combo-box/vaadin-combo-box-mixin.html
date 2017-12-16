@@ -7,7 +7,6 @@ This program is available under Apache License Version 2.0, available at https:/
 <link rel="import" href="../polymer/polymer-element.html">
 
 <link rel="import" href="../iron-a11y-announcer/iron-a11y-announcer.html">
-<link rel="import" href="vaadin-combo-box-dropdown-mixin.html">
 
 <script>
   window.Vaadin = window.Vaadin || {};
@@ -15,12 +14,40 @@ This program is available under Apache License Version 2.0, available at https:/
   /**
    * @polymerMixin
    * @memberof Vaadin
-   * @mixes Vaadin.ComboBoxDropdownMixin
    */
-  Vaadin.ComboBoxMixin = subclass => class VaadinComboBoxMixinElement extends Vaadin.ComboBoxDropdownMixin(subclass) {
+  Vaadin.ComboBoxMixin = subclass => class VaadinComboBoxMixinElement extends subclass {
 
     static get properties() {
       return {
+        /**
+         * True if the dropdown is open, false otherwise.
+         */
+        opened: {
+          type: Boolean,
+          notify: true,
+          value: false,
+          reflectToAttribute: true,
+          observer: '_openedChanged'
+        },
+
+        /**
+         * Set to true to disable this element.
+         */
+        disabled: {
+          type: Boolean,
+          value: false,
+          reflectToAttribute: true
+        },
+
+        /**
+         * When present, it specifies that the element field is read-only.
+         */
+        readonly: {
+          type: Boolean,
+          value: false,
+          reflectToAttribute: true
+        },
+
         /**
          * A full set of items to filter the visible options from.
          * The items can be of either `String` or `Object` type.
@@ -73,6 +100,7 @@ This program is available under Apache License Version 2.0, available at https:/
         /**
          * A read-only property indicating whether this combo box has a value
          * selected or not. It can be used for example in styling of the component.
+         * @private
          */
         hasValue: {
           type: Boolean,
@@ -82,11 +110,12 @@ This program is available under Apache License Version 2.0, available at https:/
         },
 
         /*
-         * When set to `true`, a loading spinner is displayed on top of the list of options.
+         * When set to `true`, "loading" attibute is added to host and the overlay element.
          */
         loading: {
           type: Boolean,
-          value: false
+          value: false,
+          reflectToAttribute: true
         },
 
         _focusedIndex: {
@@ -141,27 +170,20 @@ This program is available under Apache License Version 2.0, available at https:/
         },
 
         /**
-         * Returns a reference to the native input element.
-         * @deprecated will be dropped in 3.0
-         */
-        inputElement: {
-          type: HTMLElement,
-          readOnly: true
-        },
-
-        /**
-         * Set to true to mark the input as required.
-         */
-        required: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
          * The name of this element.
          */
         name: {
           type: String
+        },
+
+        /**
+         * Set to true if the value is invalid.
+         */
+        invalid: {
+          type: Boolean,
+          reflectToAttribute: true,
+          notify: true,
+          value: false
         },
 
         _toggleElement: Object,
@@ -189,6 +211,12 @@ This program is available under Apache License Version 2.0, available at https:/
     ready() {
       super.ready();
 
+      this.addEventListener('focusout', e => {
+        if (!this._closeOnBlurIsPrevented) {
+          this.close();
+        }
+      });
+
       this._lastCommittedValue = this.value;
       Polymer.IronA11yAnnouncer.requestAvailability();
 
@@ -199,22 +227,51 @@ This program is available under Apache License Version 2.0, available at https:/
       this.addEventListener('vaadin-combo-box-dropdown-opened', this._onOpened.bind(this));
       this.addEventListener('keydown', this._onKeyDown.bind(this));
       this.addEventListener('click', this._onClick.bind(this));
+
+      this.$.overlay.addEventListener('vaadin-overlay-touch-start', this._onOverlayTouchStart.bind(this));
     }
 
-    _onBlur() {
-      if (!this._closeOnBlurIsPrevented) {
-        this.close();
+    /**
+     * Opens the dropdown list.
+     */
+    open() {
+      // Prevent _open() being called when input is disabled or read-only
+      if (!this.disabled && !this.readonly) {
+        this.opened = true;
       }
     }
 
-    _onOverlayClick(event) {
-      if (this.$.overlay.touchDevice && event.target !== this.$.overlay._scroller) {
-        // On touch devices, blur the input on touch start inside the overlay, in order to hide
-        // the virtual keyboard. But don't close the overlay on this blur.
-        this._closeOnBlurIsPrevented = true;
-        this.inputElement.blur();
-        this._closeOnBlurIsPrevented = false;
+    /**
+     * Closes the dropdown list.
+     */
+    close() {
+      this.opened = false;
+    }
+
+    _openedChanged(value, old) {
+      // Prevent _close() being called when opened is set to its default value (false).
+      if (old === undefined) {
+        return;
       }
+
+      if (this.opened) {
+        // For touch devices, we don't want to popup virtual keyboard on touch devices unless input
+        // is explicitly focused by the user.
+        if (!this.$.overlay.touchDevice) {
+          // Check to see if there is a focused property and if it's already true.
+          if (!this.focused) {
+            this.focus();
+          }
+        }
+      }
+    }
+
+    _onOverlayTouchStart(event) {
+      // On touch devices, blur the input on touch start inside the overlay, in order to hide
+      // the virtual keyboard. But don't close the overlay on this blur.
+      this._closeOnBlurIsPrevented = true;
+      this.inputElement.blur();
+      this._closeOnBlurIsPrevented = false;
     }
 
     _onClick(e) {
@@ -224,7 +281,11 @@ This program is available under Apache License Version 2.0, available at https:/
       if (path.indexOf(this._clearElement) !== -1) {
         this._clear();
       } else if (path.indexOf(this.inputElement) !== -1) {
-        this._openAsync();
+        if (path.indexOf(this._toggleElement) > -1 && this.opened) {
+          this.close();
+        } else {
+          this.open();
+        }
       }
 
       this._closeOnBlurIsPrevented = false;
@@ -367,35 +428,11 @@ This program is available under Apache License Version 2.0, available at https:/
       }
     }
 
-    /**
-     * Opening and closing related functionality
-     */
-
-    /**
-     * Opens the dropdown list asynchronously.
-     */
-    _openAsync() {
-      // Needed for MS Edge. Otherwise, it does not pop the virtual keyboard up
-      // when tapping the combobox that has non-empty value.
-      Polymer.Async.microTask.run(() => this.open());
-    }
-
-    /**
-     * Opens and closes the dropdown list.
-     */
-    _toggle() {
-      if (this.opened) {
-        this.close();
-      } else {
-        this.open();
-      }
-    }
-
     _toggleElementChanged(toggleElement) {
-      toggleElement && toggleElement.addEventListener('click', (e) => {
-        this._toggle();
-        e.stopPropagation();
-      });
+      if (toggleElement) {
+        // Don't blur the input on toggle mousedown
+        toggleElement.addEventListener('mousedown', e => e.preventDefault());
+      }
     }
 
     /**
@@ -408,10 +445,9 @@ This program is available under Apache License Version 2.0, available at https:/
         this.value = '';
       }
 
-      if (this.opened) {
-        this.close();
-      } else {
+      if (!this.opened) {
         this._detectAndDispatchChange();
+        this.open();
       }
     }
 
@@ -430,8 +466,6 @@ This program is available under Apache License Version 2.0, available at https:/
       // we need to flush the DOM to make sure it doesn't get flushed in the middle of _render call
       // because that will cause problems to say the least.
       Polymer.flush && Polymer.flush();
-
-      this.$.overlay.hidden = !this._hasItems(this.$.overlay._items) && !this.loading;
 
       // With iron-list v1.3.9, calling `notifyResize()` no longer renders
       // the items synchonously. It is required to have the items rendered
@@ -463,7 +497,11 @@ This program is available under Apache License Version 2.0, available at https:/
         // make sure input field is updated in case value doesn't change (i.e. FOO -> foo)
         this._inputElementValue = this._getItemLabel(this.selectedItem);
       } else if (this._inputElementValue === '' || this._inputElementValue === undefined) {
-        this._clear();
+        this.selectedItem = null;
+
+        if (this.allowCustomValue) {
+          this.value = '';
+        }
       } else {
         if (this.allowCustomValue) {
           const e = new CustomEvent('custom-value-set', {detail: this._inputElementValue, composed: true, cancelable: true, bubbles: true});
@@ -497,18 +535,17 @@ This program is available under Apache License Version 2.0, available at https:/
     }
 
     _filterFromInput(e) {
+      if (!this.opened) {
+        this.open();
+      }
+
       if (this.filter === this._inputElementValue) {
         // Filter and input value might get out of sync, while keyboard navigating for example.
         // Afterwards, input value might be changed to the same value as used in filtering.
         // In situation like these, we need to make sure all the filter changes handlers are run.
         this._filterChanged(this.filter, this.itemValuePath, this.itemLabelPath);
       } else {
-        this._userDefinedFilter = true;
         this.filter = this._inputElementValue;
-        this._userDefinedFilter = false;
-      }
-      if (!this.opened) {
-        this.open();
       }
     }
 
@@ -518,6 +555,11 @@ This program is available under Apache License Version 2.0, available at https:/
       }
       if (this.items) {
         this.filteredItems = this._filterItems(this.items, filter);
+      } else {
+        // With certain use cases (e. g., external filtering), `items` are
+        // undefined. Filtering is unnecessary per se, but the filteredItems
+        // observer should still be invoked to update focused item.
+        this._filteredItemsChanged({path: 'filteredItems'}, itemValuePath, itemLabelPath);
       }
     }
 
@@ -575,7 +617,11 @@ This program is available under Apache License Version 2.0, available at https:/
       this._focusedIndex = this.filteredItems.indexOf(selectedItem);
     }
 
-    _valueChanged(value) {
+    _valueChanged(value, oldVal) {
+      if (value === '' && oldVal === undefined) { // initializing, no need to do anything (#554)
+        return;
+      }
+
       if (this._isValidValue(value)) {
         let item;
         if (this._getItemValue(this.selectedItem) !== value) {
@@ -628,7 +674,7 @@ This program is available under Apache License Version 2.0, available at https:/
       if (e.path === 'filteredItems' || e.path === 'filteredItems.splices') {
         this._setOverlayItems(this.filteredItems);
 
-        this._focusedIndex = (this.opened || this._userDefinedFilter) ?
+        this._focusedIndex = this.opened ?
           this.$.overlay.indexOfLabel(this.filter) :
           this._indexOfValue(this.value, this.filteredItems);
 
@@ -653,18 +699,9 @@ This program is available under Apache License Version 2.0, available at https:/
     }
 
     _setOverlayItems(items) {
-      // TODO: There is something wrong with observers and using set function
-      // see here: https://github.com/Polymer/polymer/issues/3254
-      // As a workaround setting/notifying the observer with the value undefined helps
-      this.$.overlay.notifyPath('_items', undefined);
       this.$.overlay.set('_items', items);
 
-      this.$.overlay.hidden = !this._hasItems(items);
       this.$.overlay.$.dropdown.notifyResize();
-    }
-
-    _hasItems(array) {
-      return array && array.length;
     }
 
     _indexOfValue(value, items) {
@@ -707,8 +744,8 @@ This program is available under Apache License Version 2.0, available at https:/
      *
      * @return {boolean} True if the value is valid and sets the `invalid` flag appropriatelly
      */
-    validate(value) {
-      return !(this.invalid = !this.checkValidity(value));
+    validate() {
+      return !(this.invalid = !this.checkValidity());
     }
 
     /**
@@ -716,7 +753,7 @@ This program is available under Apache License Version 2.0, available at https:/
      *
      * You can override the `checkValidity` method for custom validations.
      */
-    checkValidity(value) {
+    checkValidity() {
       if (this._bindableInput.validate) {
         return this._bindableInput.validate();
       }

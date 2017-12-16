@@ -5,7 +5,6 @@ This program is available under Apache License Version 2.0, available at https:/
 -->
 
 <link rel="import" href="../polymer/polymer-element.html">
-<link rel="import" href="../polymer/lib/utils/gestures.html">
 <link rel="import" href="../vaadin-overlay/vaadin-overlay.html">
 <link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
 
@@ -20,17 +19,38 @@ This program is available under Apache License Version 2.0, available at https:/
         display: none;
       }
     </style>
-    <vaadin-overlay id="overlay" opened="[[opened]]" template="{{template}}">
+    <vaadin-combo-box-overlay id="overlay" hidden$="[[hidden]]" opened="[[opened]]" template="{{template}}" style="align-items: stretch; margin: 0;">
       <slot></slot>
-    </vaadin-overlay>
+    </vaadin-combo-box-overlay>
   </template>
 </dom-module>
 
 <script>
   {
     /**
-     * `<vaadin-combo-box-dropdown>` is a Polymer element for creating dropdowns.
+     * The overlay element.
+     *
+     * ### Styling
+     *
+     * See [`<vaadin-overlay>` documentation](https://github.com/vaadin/vaadin-overlay/blob/master/vaadin-overlay.html)
+     * for `<vaadin-combo-box-overlay>` parts.
+     *
      * @memberof Vaadin
+     * @private
+     */
+    class VaadinComboBoxOverlay extends Vaadin.OverlayElement {
+      static get is() {
+        return 'vaadin-combo-box-overlay';
+      }
+    }
+
+    customElements.define(VaadinComboBoxOverlay.is, VaadinComboBoxOverlay);
+
+    /**
+     * Element for internal use only.
+     *
+     * @memberof Vaadin
+     * @private
      */
     class DropdownElement extends Polymer.mixinBehaviors(Polymer.IronResizableBehavior, Polymer.Element) {
       static get is() {
@@ -122,8 +142,12 @@ This program is available under Apache License Version 2.0, available at https:/
       }
 
       notifyResize() {
-        if (this.positionTarget) {
+        super.notifyResize();
+
+        if (this.positionTarget && this.opened) {
           this._setPosition();
+          // Schedule another position update (to cover virtual keyboard opening for example)
+          requestAnimationFrame(this._setPosition.bind(this));
         }
       }
 
@@ -144,43 +168,23 @@ This program is available under Apache License Version 2.0, available at https:/
           this._setPosition();
 
           window.addEventListener('scroll', this._boundSetPosition, true);
-          this._addOutsideClickListener();
+          document.addEventListener('click', this._outsideClickListener.bind(this), true);
           this.dispatchEvent(new CustomEvent('vaadin-combo-box-dropdown-opened', {bubbles: true, composed: true}));
         } else {
           window.removeEventListener('scroll', this._boundSetPosition, true);
-          this._removeOutsideClickListener();
+          document.removeEventListener('click', this._outsideClickListener.bind(this), true);
           this.dispatchEvent(new CustomEvent('vaadin-combo-box-dropdown-closed', {bubbles: true, composed: true}));
         }
       }
 
 
-      // We need to listen on 'click' / 'tap' event and capture it and close the overlay before
+      // We need to listen on 'click' event and capture it and close the overlay before
       // propagating the event to the listener in the button. Otherwise, if the clicked button would call
       // open(), this would happen: https://www.youtube.com/watch?v=Z86V_ICUCD4
       _outsideClickListener(event) {
         const eventPath = event.composedPath();
         if (eventPath.indexOf(this.positionTarget) < 0 && eventPath.indexOf(this.$.overlay) < 0) {
           this.opened = false;
-        }
-      }
-
-      _addOutsideClickListener() {
-        // With desktop mouse, 'click' will make Polymer to fire 'tap' event.
-        // With touch devices, 'touchend' will make Polymer to fire 'tap' event, but browser will also fire 'click'.
-        // So, 'click' and 'tap' can come in any order and we need to make sure that the first one fired will close the overlay.
-        if (this.touchDevice) {
-          Polymer.Gestures.add(document, 'tap', null);
-          document.addEventListener('tap', this._outsideClickListener.bind(this), true);
-        } else {
-          document.addEventListener('click', this._outsideClickListener.bind(this), true);
-        }
-      }
-
-      _removeOutsideClickListener() {
-        if (this.touchDevice) {
-          document.removeEventListener('tap', this._outsideClickListener.bind(this), true);
-        } else {
-          document.removeEventListener('click', this._outsideClickListener.bind(this), true);
         }
       }
 
@@ -246,6 +250,7 @@ This program is available under Apache License Version 2.0, available at https:/
         this.$.overlay.style.transform = `translate3d(${this._translateX}px, ${this._translateY}px, 0)`;
 
         this.$.overlay.style.width = this.positionTarget.clientWidth + 'px';
+        this.$.overlay.style.justifyContent = this.alignedAbove ? 'flex-end' : 'flex-start';
 
         // TODO: fire only when position actually changes changes
         this.dispatchEvent(new CustomEvent('position-changed'));

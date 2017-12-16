@@ -6,16 +6,14 @@ This program is available under Apache License Version 2.0, available at https:/
 
 <link rel="import" href="../polymer/polymer-element.html">
 <link rel="import" href="../polymer/lib/utils/debounce.html">
-<link rel="import" href="../polymer/lib/mixins/gesture-event-listeners.html">
 <link rel="import" href="../iron-list/iron-list.html">
 <link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
 <link rel="import" href="vaadin-combo-box-item.html">
-<link rel="import" href="vaadin-combo-box-spinner.html">
 <link rel="import" href="vaadin-combo-box-dropdown.html">
 
-<dom-module id="vaadin-combo-box-overlay">
+<dom-module id="vaadin-combo-box-dropdown-wrapper">
   <template>
-    <vaadin-combo-box-dropdown id="dropdown" opened="{{opened}}" position-target="[[positionTarget]]" vertical-offset="[[verticalOffset]]"
+    <vaadin-combo-box-dropdown id="dropdown" opened="{{opened}}" hidden="[[_hidden(_items.*, loading)]]" position-target="[[positionTarget]]" vertical-offset="[[verticalOffset]]"
       on-template-changed="_templateChanged" on-position-changed="_setOverlayHeight">
       <template>
         <style>
@@ -41,12 +39,10 @@ This program is available under Apache License Version 2.0, available at https:/
             };
           }
         </style>
-        <vaadin-combo-box-spinner active="[[loading]]"></vaadin-combo-box-spinner>
-        <div id="scroller" on-tap="_stopPropagation" on-touchstart="_onTouchStart" on-touchend="_preventDefault"
-          on-scroll="_onScroll" hidden$="[[loading]]">
+        <div id="scroller" on-click="_stopPropagation" hidden$="[[loading]]">
           <iron-list id="selector" role="listbox" items="[[_items]]" scroll-target="[[_scroller]]">
             <template>
-              <vaadin-combo-box-item on-tap="_onTap" index="[[index]]" item="[[item]]" label="[[getItemLabel(item)]]" selected="[[_isItemSelected(item, _selectedItem)]]"
+              <vaadin-combo-box-item on-click="_onItemClick" index="[[index]]" item="[[item]]" label="[[getItemLabel(item)]]" selected="[[_isItemSelected(item, _selectedItem)]]"
                 role$="[[_getAriaRole(index)]]" aria-selected$="[[_getAriaSelected(_focusedIndex,index)]]" focused="[[_isItemFocused(_focusedIndex,index)]]" touch-device$="[[touchDevice]]">
               </vaadin-combo-box-item>
             </template>
@@ -60,11 +56,14 @@ This program is available under Apache License Version 2.0, available at https:/
 <script>
   {
     /**
+     * Element for internal use only.
+     *
      * @memberof Vaadin
+     * @private
      */
-    class ComboBoxOverlayElement extends Polymer.GestureEventListeners(Polymer.Element) {
+    class ComboBoxOverlayElement extends Polymer.Element {
       static get is() {
-        return 'vaadin-combo-box-overlay';
+        return 'vaadin-combo-box-dropdown-wrapper';
       }
 
       static get properties() {
@@ -135,10 +134,6 @@ This program is available under Apache License Version 2.0, available at https:/
             value: 'value'
           },
 
-          _notTapping: Boolean,
-
-          _ignoreTaps: Boolean,
-
           _selector: Object
         };
       }
@@ -155,6 +150,11 @@ This program is available under Apache License Version 2.0, available at https:/
         if (/Trident/.test(navigator.userAgent)) {
           this._scroller.setAttribute('unselectable', 'on');
         }
+
+        this.$.dropdown.$.overlay.addEventListener('touchstart', sourceEvent => {
+          const evt = new CustomEvent('vaadin-overlay-touch-start', {detail: {sourceEvent: sourceEvent}});
+          this.dispatchEvent(evt);
+        });
 
         // Prevent blurring the input when clicking inside the overlay.
         this.$.dropdown.$.overlay.addEventListener('mousedown', e => e.preventDefault());
@@ -219,25 +219,12 @@ This program is available under Apache License Version 2.0, available at https:/
         return item === selectedItem;
       }
 
-      _onTap(e) {
-        if (!this._notTapping && !this._ignoreTaps) {
-          if (e.detail && e.detail.sourceEvent && e.detail.sourceEvent.stopPropagation) {
-            this._stopPropagation(e.detail.sourceEvent);
-          }
-
-          this.dispatchEvent(new CustomEvent('selection-changed', {detail: {item: e.model.item}}));
+      _onItemClick(e) {
+        if (e.detail && e.detail.sourceEvent && e.detail.sourceEvent.stopPropagation) {
+          this._stopPropagation(e.detail.sourceEvent);
         }
-      }
 
-      _onTouchStart() {
-        this._notTapping = false;
-        setTimeout(() => this._notTapping = true, 300);
-      }
-
-      _onScroll() {
-        this._ignoreTaps = true;
-        this._restoreTaps = Polymer.Debouncer.debounce(this._restoreTaps,
-          Polymer.Async.timeOut.after(300), () => this._ignoreTaps = false);
+        this.dispatchEvent(new CustomEvent('selection-changed', {detail: {item: e.model.item}}));
       }
 
       /**
@@ -400,6 +387,10 @@ This program is available under Apache License Version 2.0, available at https:/
 
       _stopPropagation(e) {
         e.stopPropagation();
+      }
+
+      _hidden(itemsChange, loading) {
+        return !loading && (!this._items || !this._items.length);
       }
     }
 

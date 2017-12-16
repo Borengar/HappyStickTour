@@ -33,16 +33,8 @@
     let combobox;
     let comboboxLight;
 
-    function clickLabel() {
-      fire('click', combobox.inputElement.root.querySelector('label'));
-    }
-
-    function clickInput() {
-      fire('click', combobox.inputElement);
-    }
-
     function clickToggleIcon() {
-      fire('click', combobox._toggleElement);
+      fireMousedownMouseupClick(combobox._toggleElement);
     }
 
     function overlay() {
@@ -55,26 +47,16 @@
     });
 
     describe('opening', () => {
-      it('should open asynchronously by tapping label', done => {
+      it('should open synchronously by clicking label', () => {
         expect(combobox.opened).to.be.false;
-        clickLabel();
-        expect(combobox.opened).to.be.false;
-
-        setTimeout(() => {
-          expect(combobox.opened).to.be.true;
-          done();
-        }, 1);
+        fireMousedownMouseupClick(combobox.inputElement.root.querySelector('label'));
+        expect(combobox.opened).to.be.true;
       });
 
-      it('should open asynchronously by clicking input', done => {
+      it('should open synchronously by clicking input', () => {
         expect(combobox.opened).to.be.false;
-        clickInput();
-        expect(combobox.opened).to.be.false;
-
-        setTimeout(() => {
-          expect(combobox.opened).to.be.true;
-          done();
-        }, 1);
+        fireMousedownMouseupClick(combobox.inputElement);
+        expect(combobox.opened).to.be.true;
       });
 
       it('should open by clicking icon', () => {
@@ -115,7 +97,7 @@
         combobox.open();
 
         expect(combobox.opened);
-        expect(combobox.$.overlay.hidden).to.be.true;
+        expect(combobox.$.overlay.$.dropdown.$.overlay.hidden).to.be.true;
       });
 
       it('should be hidden with no items', () => {
@@ -124,7 +106,7 @@
         combobox.open();
 
         expect(combobox.opened);
-        expect(combobox.$.overlay.hidden).to.be.true;
+        expect(combobox.$.overlay.$.dropdown.$.overlay.hidden).to.be.true;
       });
 
       // When using Shadow DOM polyfill, the style scope of the combobox might
@@ -157,12 +139,12 @@
 
         if (touchDevice) {
           it('should not focus input on dropdown open', () => {
-            expect(combobox.inputElement.focused).to.be.undefined;
+            expect(combobox.inputElement.focused).to.equal(false);
           });
 
           it('should not refocus the input field when closed from icon', () => {
             clickToggleIcon();
-            expect(combobox.inputElement.focused).to.be.undefined;
+            expect(combobox.inputElement.focused).to.equal(false);
           });
         } else {
           it('should focus input on dropdown open', done => {
@@ -202,10 +184,10 @@
 
     describe('closing', () => {
       if (touchDevice) {
-        it('should close popup when tapping outside overlay', () => {
+        it('should close popup when clicking outside overlay', () => {
           combobox.open();
 
-          fire('tap', document.body);
+          fire('click', document.body);
 
           expect(combobox.opened).to.be.false;
         });
@@ -219,10 +201,10 @@
         });
       }
 
-      it('should not close when tapping on the overlay', () => {
+      it('should not close when clicking on the overlay', () => {
         combobox.open();
 
-        fire('tap', combobox.$.overlay.$.dropdown.$.overlay);
+        fire('click', combobox.$.overlay.$.dropdown.$.overlay);
 
         expect(combobox.opened).to.be.true;
       });
@@ -246,7 +228,7 @@
       it('should close the overlay when focus is lost', () => {
         combobox.open();
 
-        fire('blur', combobox.inputElement);
+        fire('focusout', combobox.inputElement);
 
         expect(combobox.opened).to.equal(false);
       });
@@ -286,7 +268,7 @@
       });
 
       it('dropdown should not be shown when disabled', () => {
-        combobox.inputElement.dispatchEvent(new CustomEvent('tap'));
+        combobox.inputElement.dispatchEvent(new CustomEvent('click'));
         expect(combobox.opened).to.be.false;
       });
     });
@@ -306,7 +288,7 @@
       });
 
       it('dropdown should not be shown when read-only', () => {
-        combobox.inputElement.dispatchEvent(new CustomEvent('tap'));
+        combobox.inputElement.dispatchEvent(new CustomEvent('click'));
         expect(combobox.opened).to.be.false;
       });
     });

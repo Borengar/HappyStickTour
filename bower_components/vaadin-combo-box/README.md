@@ -6,9 +6,11 @@
 
 # &lt;vaadin-combo-box&gt;
 
-[Live Demo ↗](https://cdn.vaadin.com/vaadin-core-elements/master/vaadin-combo-box/demo/)
+[Live Demo ↗](https://vaadin.com/elements/vaadin-combo-box/html-examples)
+|
+[API documentation ↗](https://vaadin.com/elements/vaadin-combo-box/html-api)
 
-[&lt;vaadin-combo-box&gt;](https://vaadin.com/elements/-/element/vaadin-combo-box) is a [Polymer](http://polymer-project.org) element combining a dropdown list with an input field for filtering the list of items, part of the [Vaadin Core Elements](https://vaadin.com/elements).
+[&lt;vaadin-combo-box&gt;](https://vaadin.com/elements/vaadin-combo-box) is a [Polymer](http://polymer-project.org) element combining a dropdown list with an input field for filtering the list of items, part of the [Vaadin Core Elements](https://vaadin.com/elements).
 
 <!--
 ```
@@ -18,28 +20,31 @@
     <link rel="import" href="../iron-ajax/iron-ajax.html">
     <link rel="import" href="../paper-item/all-imports.html">
     <link rel="import" href="vaadin-combo-box.html">
+    <style>
+      vaadin-combo-box {
+        width: 300px;
+      }
+    </style>
     <next-code-block></next-code-block>
   </template>
 </custom-element-demo>
 ```
 -->
 ```html
-<div>
-  <style is="custom-style">
-    paper-icon-item {
-      margin: -13px -16px;
-    }
-    paper-icon-item img {
-      border-radius: 50%;
-    }
-  </style>
+<dom-bind>
   <template is="dom-bind">
     <iron-ajax url="https://randomuser.me/api?results=100&inc=name,email,picture" last-response="{{response}}" auto></iron-ajax>
 
     <vaadin-combo-box items="[[response.results]]" item-value-path="email" item-label-path="email">
       <template>
+        <style>
+          paper-icon-item img {
+            border-radius: 50%;
+            margin-right: 10px;
+          }
+        </style>
         <paper-icon-item>
-          <img src="[[item.picture.thumbnail]]" item-icon>
+          <img src="[[item.picture.thumbnail]]" slot="item-icon">
           <paper-item-body two-line>
             <div>[[item.name.first]] [[item.name.last]]</div>
             <div secondary>[[item.email]]</div>
@@ -48,7 +53,8 @@
       </template>
     </vaadin-combo-box>
   </template>
-</div>
+</dom-bind>
+
 
 ```
 

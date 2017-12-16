@@ -10,7 +10,7 @@ This program is available under Apache License Version 2.0, available at https:/
 <link rel="import" href="../vaadin-control-state-mixin/vaadin-control-state-mixin.html">
 <link rel="import" href="../vaadin-themable-mixin/vaadin-themable-mixin.html">
 <link rel="import" href="vaadin-combo-box-mixin.html">
-<link rel="import" href="vaadin-combo-box-overlay.html">
+<link rel="import" href="vaadin-combo-box-dropdown-wrapper.html">
 <link rel="import" href="vaadin-combo-box-styles.html">
 
 <dom-module id="vaadin-combo-box">
@@ -18,6 +18,11 @@ This program is available under Apache License Version 2.0, available at https:/
     <style>
       :host {
         display: inline-block;
+        width: 175px;
+      }
+
+      :host([hidden]) {
+        display: none !important;
       }
 
       :host([opened]) {
@@ -49,7 +54,7 @@ This program is available under Apache License Version 2.0, available at https:/
     </style>
 
     <vaadin-text-field part="text-field" id="input"
-        allowed-pattern="[[allowedPattern]]"
+        pattern="[[pattern]]"
         prevent-invalid-input="[[preventInvalidInput]]"
 
         value="{{_inputElementValue}}"
@@ -67,43 +72,34 @@ This program is available under Apache License Version 2.0, available at https:/
         autocapitalize="none"
 
         autofocus="[[autofocus]]"
-        inputmode="[[inputmode]]"
 
-        on-blur="_onBlur"
         on-change="_stopPropagation"
         on-input="_inputValueChanged"
-        on-tap="_openAsync"
       >
       <slot name="prefix" slot="prefix"></slot>
 
       <div part="clear-button" id="clearButton" slot="suffix" role="button" aria-label="Clear"></div>
-      <div part="toggle-button" id="toggleButton" slot="suffix" role="button" aria-label="Toggle" class="rotate-on-open"></div>
+      <div part="toggle-button" id="toggleButton" slot="suffix" role="button" aria-label="Toggle"></div>
 
     </vaadin-text-field>
 
-    <!-- Cannot use part since the internal vaadin-overlay is detached. Theme vaadin-overlay instead -->
-    <vaadin-combo-box-overlay id="overlay"
+    <vaadin-combo-box-dropdown-wrapper id="overlay"
       opened=[[opened]]
       position-target="[[_getPositionTarget()]]"
       _focused-index="[[_focusedIndex]]"
       _item-label-path="[[itemLabelPath]]"
-      on-click="_onOverlayClick"
       loading="[[loading]]">
-    </vaadin-combo-box-overlay>
+    </vaadin-combo-box-dropdown-wrapper>
   </template>
 </dom-module>
 
   <script>
-    if (!Polymer.Element) {
-      throw new Error(`Unexpected Polymer version ${Polymer.version} is used, expected v2.0.0 or later.`);
-    }
-
     {
       /**
        * `<vaadin-combo-box>` is a combo box element combining a dropdown list with an
        * input field for filtering the list of items. If you want to replace the default
        * input field with a custom implementation, you should use the
-       * [`<vaadin-combo-box-light>`](#vaadin-combo-box-light) element.
+       * [`<vaadin-combo-box-light>`](#/elements/vaadin-combo-box-light) element.
        *
        * Items in the dropdown list must be provided as a list of `String` values.
        * Defining the items is done using the `items` property, which can be assigned
@@ -146,14 +142,42 @@ This program is available under Apache License Version 2.0, available at https:/
        * `selected` | Boolean | True when item is selected
        * `focused` | Boolean | True when item is focused
        *
-       * See the [Item Template Live Demos](demo/item-template.html) for more examples.
-       *
        * ### Styling
-       * There are custom properties and mixins you can use to style the component:
+       *
+       * [Generic styling/theming documentation](https://cdn.vaadin.com/vaadin-valo-theme/0.3.1/demo/customization.html)
+       *
+       * The following custom properties are available for styling:
        *
        * Custom property | Description | Default
        * ----------------|-------------|-------------
        * `--vaadin-combo-box-overlay-max-height` | Property that determines the max height of overlay | `65vh`
+       *
+       * The following shadow DOM parts are available for styling:
+       *
+       * Part name | Description
+       * ----------------|----------------
+       * `text-field` | The text field
+       * `clear-button` | The clear button
+       * `toggle-button` | The toggle button
+       *
+       * See [`<vaadin-overlay>` documentation](https://github.com/vaadin/vaadin-overlay/blob/master/vaadin-overlay.html)
+       * for `<vaadin-combo-box-overlay>` parts.
+       *
+       * See [`<vaadin-text-field>` documentation](https://vaadin.com/elements/vaadin-text-field/html-api/elements/Vaadin.TextFieldElement)
+       * for the text field parts.
+       *
+       * The following state attributes are available for styling:
+       *
+       * Attribute    | Description | Part name
+       * -------------|-------------|------------
+       * `opened` | Set when the combo box dropdown is open | :host
+       * `disabled` | Set to a disabled combo box | :host
+       * `readonly` | Set to a read only combo box | :host
+       * `has-value` | Set when the element has a value | :host
+       * `invalid` | Set when the element is invalid | :host
+       * `focused` | Set when the element is focused | :host
+       * `focus-ring` | Set when the element is keyboard focused | :host
+       * `loading` | Set when new items are expected | :host
        *
        * @memberof Vaadin
        * @mixes Vaadin.ComboBoxMixin
@@ -164,6 +188,10 @@ This program is available under Apache License Version 2.0, available at https:/
 
         static get is() {
           return 'vaadin-combo-box';
+        }
+
+        static get version() {
+          return '3.0.2';
         }
 
         static get properties() {
@@ -177,17 +205,9 @@ This program is available under Apache License Version 2.0, available at https:/
             },
 
             /**
-             * Set to true to disable the floating label.
+             * Set to true to mark the input as required.
              */
-            noLabelFloat: {
-              type: Boolean,
-              value: false
-            },
-
-            /**
-             * Set to true to always float the label.
-             */
-            alwaysFloatLabel: {
+            required: {
               type: Boolean,
               value: false
             },
@@ -208,13 +228,6 @@ This program is available under Apache License Version 2.0, available at https:/
             },
 
             /**
-             * Set this to specify the pattern allowed by `preventInvalidInput`.
-             */
-            allowedPattern: {
-              type: String
-            },
-
-            /**
              * A pattern to validate the `input` with.
              */
             pattern: {
@@ -232,37 +245,17 @@ This program is available under Apache License Version 2.0, available at https:/
               type: Boolean
             },
 
-            inputmode: {
-              type: String
-            },
-
             /**
-             * A placeholder string in addition to the label. If this is set, the label will always float.
+             * A placeholder string in addition to the label.
              */
             placeholder: {
               type: String,
-              // need to set a default so _computeAlwaysFloatLabel is run
               value: ''
             },
 
             readonly: {
               type: Boolean,
               value: false
-            },
-
-            size: {
-              type: Number
-            },
-
-            /**
-             * True when the input field has focus.
-             */
-            focused: {
-              type: Boolean,
-              value: false,
-              readOnly: true,
-              reflectToAttribute: true,
-              notify: true
             }
           };
         }
@@ -285,10 +278,7 @@ This program is available under Apache License Version 2.0, available at https:/
 
         ready() {
           super.ready();
-          // 2.0 does not support nested syntax for listeners
-          this.$.input.addEventListener('focused-changed', this._onInputContainerFocusedChanged.bind(this));
 
-          this._setInputElement(this.$.input);
           this._bindableInput = this.$.input;
           this._nativeInput = this.$.input.focusElement;
           this._toggleElement = this.$.toggleButton;
@@ -309,10 +299,6 @@ This program is available under Apache License Version 2.0, available at https:/
           this._restoreInputBlur();
         }
 
-        _computeAlwaysFloatLabel(alwaysFloatLabel, placeholder) {
-          return placeholder || alwaysFloatLabel;
-        }
-
         _getPositionTarget() {
           return this.$.input;
         }
@@ -324,11 +310,8 @@ This program is available under Apache License Version 2.0, available at https:/
           }
         }
 
-        /**
-         * Sets focus on the input field.
-         */
-        focus() {
-          this.inputElement.focus();
+        get inputElement() {
+          return this.$.input;
         }
 
         /**
@@ -337,17 +320,6 @@ This program is available under Apache License Version 2.0, available at https:/
         get focusElement() {
           // inputElement might not be defined on property changes before ready.
           return this.inputElement || this;
-        }
-
-        /**
-         * Removes focus from the input field.
-         */
-        blur() {
-          this.inputElement && this.inputElement.blur();
-        }
-
-        _onInputContainerFocusedChanged(e) {
-          this._setFocused(e.detail.value);
         }
       }
 

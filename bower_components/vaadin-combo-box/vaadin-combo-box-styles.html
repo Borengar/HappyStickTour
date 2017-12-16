@@ -18,26 +18,9 @@ This program is available under Apache License Version 2.0, available at https:/
 <dom-module id="vaadin-combo-box-default-theme" theme-for="vaadin-combo-box vaadin-combo-box-light" >
   <template>
     <style>
-      :host {
-        padding: 8px 0;
-      }
-
       [part="clear-button"],
       [part="toggle-button"] {
         cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-    </style>
-  </template>
-</dom-module>
-
-<dom-module id="vaadin-combo-box-vaadin-overlay-theme" theme-for="vaadin-overlay">
-  <template>
-    <style include="vaadin-overlay-default-theme">
-      :host {
-        box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.3);
       }
     </style>
   </template>
@@ -61,20 +44,10 @@ This program is available under Apache License Version 2.0, available at https:/
   </template>
 </dom-module>
 
-<dom-module id="vaadin-combo-box-spinner-default-theme" theme-for="vaadin-combo-box-spinner">
+<dom-module id="vaadin-combo-box-overlay-default-theme">
   <template>
     <style>
-      :host {
-        border: 2px solid #eee;
-        border-radius: 50%;
-        border-right-color: transparent;
-        border-top-color: transparent;
-        content: "";
-        height: 24px;
-        margin-left: -12px;
-        margin-top: -12px;
-        width: 24px;
-      }
+      /* This is here to avoid a themable mixin warning */
     </style>
   </template>
 </dom-module>
