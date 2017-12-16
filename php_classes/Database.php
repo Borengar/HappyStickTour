@@ -525,7 +525,7 @@ class Database {
 		$stmt->execute();
 		$lobby = $stmt->fetch();
 
-		$stmt = $this->db->prepare('SELECT lobby_slots.id, lobby_slots.user_id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
+		$stmt = $this->db->prepare('SELECT lobby_slots.id, lobby_slots.user_id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, lobby_slots.eliminated, lobby_slots.forfeit, lobby_slots.noshow, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
 			FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN discord_users ON players.discord_id = discord_users.id
 			WHERE lobby_slots.lobby = :id');
 		$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
