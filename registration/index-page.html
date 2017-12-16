@@ -35,6 +35,10 @@
 				height: 35px;
 				margin-top: 30px;
 			}
+			.search-spinner {
+				margin-left: 10px;
+				margin-top: 30px;
+			}
 			.tier-wrapper {
 				flex-shrink: 0;
 				margin-top: 10px;
@@ -84,6 +88,7 @@
 					<div class="layout horizontal search-wrapper">
 						<vaadin-text-field class="search-input" label="osu! ID or Username" value="{{osuId}}" on-keydown="_searchKeyDown"></vaadin-text-field>
 						<vaadin-button class="search-button" raised on-click="_searchOsuProfile">Search</vaadin-button>
+						<paper-spinner class="search-spinner" active="[[searchingProfile]]"></paper-spinner>
 					</div>
 				</template>
 				<osu-profile avatar-url="[[osuProfile.avatarUrl]]" username="[[osuProfile.username]]" pp="[[osuProfile.pp]]" hit-accuracy="[[osuProfile.hitAccuracy]]" play-count="[[osuProfile.playCount]]" level="[[osuProfile.level]]" rank="[[osuProfile.rank]]"></osu-profile>
@@ -132,6 +137,10 @@
 						value: false
 					},
 					showDelete: {
+						type: Boolean,
+						value: false
+					},
+					searchingProfile: {
 						type: Boolean,
 						value: false
 					}
@@ -207,11 +216,13 @@
 			}
 
 			_searchOsuProfile() {
+				this.searchingProfile = true;
 				this.$.osuProfileAjax.url = '../api/osuprofile/' + this.osuId;
 				this.$.osuProfileAjax.generateRequest();
 			}
 
 			_osuProfileChanged(e) {
+				this.searchingProfile = false;
 				this.tier = null;
 				this.showRegister = false;
 				if (this.tiers) {
