@@ -1,5 +1,3 @@
-<link rel="import" href="../bower_components/polymer/polymer-element.html">
-
 <dom-module id="lobbies-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
@@ -83,12 +81,12 @@
 						<paper-button class="action-button" raised on-click="_openLobby">Open</paper-button>
 						<template is="dom-if" if="[[showPlayers]]">
 							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
-								<div hidden$="[[!slot.osuId]]">
+								<div hidden$="[[!slot.userId]]">
 									<div class="player-drop-wrapper layout vertical">
-										<osu-profile avatar-url="[[slot.osuAvatarUrl]]" username="[[slot.osuUsername]]" pp="[[slot.osuPp]]" hit-accuracy="[[slot.osuHitAccuracy]]" play-count="[[slot.osuPlayCount]]" level="[[slot.osuLevel]]" rank="[[slot.osuRank]]"></osu-profile>
+										<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]"></osu-profile>
 									</div>
 								</div>
-								<div hidden$="[[slot.osuId]]">
+								<div hidden$="[[slot.userId]]">
 									<div class="player-drop-wrapper layout vertical">
 										<div class="player-empty layout horizontal">
 											<div class="flex"></div>
