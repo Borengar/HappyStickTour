@@ -510,76 +510,7 @@ class Database {
 		$stmt->execute();
 		$lobbies = $stmt->fetchAll();
 		foreach ($lobbies as &$lobby) {
-			$stmt = $this->db->prepare('SELECT lobby_slots.id, lobby_slots.user_id as userId, lobby_slots.continue_to_upper as continueToUpper, lobby_slots.drop_down as dropDown, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
-				FROM lobby_slots LEFT JOIN players ON lobby_slots.user_id = players.id LEFT JOIN discord_users ON players.discord_id = discord_users.id
-				WHERE lobby_slots.lobby = :id
-				ORDER BY lobby_slots.id');
-			$stmt->bindValue(':id', $lobby->id, PDO::PARAM_INT);
-			$stmt->execute();
-			$rows = $stmt->fetchAll();
-			$lobby->slots = [];
-			foreach ($rows as $row) {
-				$slot = new stdClass;
-				$slot->id = $row->id;
-				if ($row->userId) {
-					$slot->userId = $row->userId;
-					if ($row->continueToUpper) {
-						$slot->continue = 'Continue';
-					} elseif ($row->dropDown) {
-						$slot->continue = 'Drop down';
-					} elseif ($row->eliminated) {
-						$slot->continue = 'Eliminated';
-					} elseif ($row->forfeit) {
-						$slot->continue = 'Forfeit';
-					} elseif ($row->noshow) {
-						$slot->continue = 'Noshow';
-					} else {
-						$slot->continue = null;
-					}
-					$slot->osu = $osuApi->getUser($row->osuId);
-					$slot->discord = new stdClass;
-					$slot->discord->id = $row->discordId;
-					$slot->discord->username = $row->discordUsername;
-					$slot->discord->discriminator = $row->discordDiscriminator;
-					$slot->discord->avatar = $row->discordAvatar;
-				}
-				$lobby->slots[] = $slot;
-			}
-			foreach ($lobby->slots as &$slot) {
-				if (!empty($slot->userId)) {
-					$stmt = $this->db->prepare('SELECT time_from as timeFrom, time_to as timeTo
-						FROM availabilities
-						WHERE round = :round AND user_id = :user_id
-						ORDER BY time_from ASC');
-					$stmt->bindValue(':round', $lobby->round, PDO::PARAM_INT);
-					$stmt->bindValue(':user_id', $slot->userId, PDO::PARAM_INT);
-					$stmt->execute();
-					$slot->availabilities = $stmt->fetchAll();
-				} else {
-					$slot->availabilities = [];
-				}
-			}
-			$stmt = $this->db->prepare('SELECT lobby_bans.beatmap_id as beatmapId, lobby_bans.banned_by as bannedBy, lobby_bans.after_bracket_reset as afterBracketReset, players.osu_id as osuId, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
-				FROM lobby_bans INNER JOIN players ON lobby_bans.banned_by = players.id INNER JOIN discord_users ON players.discord_id = discord_users.id
-				WHERE lobby = :lobby');
-			$stmt->bindValue(':lobby', $lobby->id, PDO::PARAM_INT);
-			$stmt->execute();
-			$rows = $stmt->fetchAll(PDO::FETCH_OBJ);
-			$lobby->bans = [];
-			foreach ($rows as $row) {
-				$ban = new stdClass;
-				$ban->beatmapId = $row->beatmapId;
-				$ban->afterBracketReset = $row->afterBracketReset;
-				$ban->bannedBy = new stdClass;
-				$ban->bannedBy->userId = $row->bannedBy;
-				$ban->bannedBy->osu = $osuApi->getUser($row->osuId);
-				$ban->bannedBy->discord = new stdClass;
-				$ban->bannedBy->discord->id = $row->discordId;
-				$ban->bannedBy->discord->username = $row->discordUsername;
-				$ban->bannedBy->discord->discriminator = $row->discordDiscriminator;
-				$ban->bannedBy->discord->avatar = $row->discordAvatar;
-				$lobby->bans[] = $ban;
-			}
+			$lobby = $this->getLobby($lobby->id);
 		}
 		return $lobbies;
 	}
