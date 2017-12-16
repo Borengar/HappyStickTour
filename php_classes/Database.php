@@ -600,7 +600,7 @@ class Database {
 		return $lobby;
 	}
 
-	public function putLobbyTime($lobbyId, $matchTime = '', $matchId = '', $comment = '') {
+	public function putLobbyTime($lobbyId, $matchTime) {
 		if (!empty($matchTime)) {
 			$stmt = $this->db->prepare('UPDATE lobbies
 				SET match_time = :match_time
@@ -611,7 +611,7 @@ class Database {
 		}
 	}
 
-	public function putLobbyMatchId($lobby, $matchId) {
+	public function putLobbyMatchId($lobbyId, $matchId) {
 		$stmt = $this->db->prepare('UPDATE lobbies
 			SET match_id = :match_id
 			WHERE id = :id');
