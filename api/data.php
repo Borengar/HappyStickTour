@@ -685,7 +685,7 @@ function putMatchId() {
 
 	$body = json_decode(file_get_contents('php://input'));
 
-	$database->putLobby($_GET['lobby'], '', $body->matchId);
+	$database->putLobbyMatchId($_GET['lobby'], $body);
 
 	echoSuccess('Match ID saved');
 }
@@ -704,7 +704,7 @@ function putComment() {
 
 	$body = file_get_contents('php://input');
 
-	$database->putLobby($_GET['lobby'], '', '', $body->comment);
+	$database->putLobbyComment($_GET['lobby'], $body);
 
 	echoSuccess('Comment saved');
 }
