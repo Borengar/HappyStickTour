@@ -171,21 +171,24 @@ class Database {
 		return $user;
 	}
 
-	public function getPlayers($tierId, $roundId = 0) {
+	public function getPlayers($tierId = 0, $roundId = 0) {
 		$osuApi = new OsuApi();
 		$players = [];
 
 		if ($roundId != 0) {
-			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
-				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id
-				WHERE players.tier = :tier AND next_round = :next_round');
+			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName
+				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN tiers ON players.tier = tiers.id
+				WHERE tiers.id = :tier AND next_round = :next_round');
 			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
 			$stmt->bindValue(':next_round', $roundId, PDO::PARAM_INT);
-		} else {
-			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
-				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id
-				WHERE players.tier = :tier');
+		} elseif ($tierId != 0) {
+			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName
+				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN tiers ON players.tier = tiers.id
+				WHERE tiers.id = :tier');
 			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
+		} else {
+			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName
+				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN tiers ON players.tier = tiers.id');
 		}
 		$stmt->execute();
 		$rows = $stmt->fetchAll();
@@ -201,6 +204,10 @@ class Database {
 			$player->discord->avatar = $row->discordAvatar;
 
 			$player->osu = $osuApi->getUser($row->osuId);
+
+			$player->tier = new stdClass;
+			$player->tier->id = $row->tierId;
+			$player->tier->name = $row->tierName;
 			$players[] = $player;
 		}
 

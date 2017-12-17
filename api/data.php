@@ -375,6 +375,11 @@ function deleteRegistration() {
 function getPlayers() {
 	global $database;
 
+	if (!isset($_GET['tier'])) {
+		echo json_encode($database->getPlayers());
+		return;
+	}
+
 	if (!isset($_GET['round'])) {
 		echo json_encode($database->getPlayers($_GET['tier']));
 		return;
@@ -660,7 +665,7 @@ function putBans() {
 		echo401();
 	}
 
-	if ($database->getScope() != SCOPE::ADMIN) {
+	if ($database->getScope() != SCOPE::REFEREE) {
 		echo403();
 	}
 

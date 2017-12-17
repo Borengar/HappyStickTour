@@ -1,0 +1,85 @@
+<dom-module id="spreadsheets-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				margin: 10px;
+			}
+			.filter-wrapper {
+				flex-shrink: 0;
+			}
+			paper-dropdown-menu {
+				margin-left: 10px;
+			}
+			vaadin-button {
+				background-color: var(--happystick-green);
+				color: white;
+				width: 400px;
+			}
+		</style>
+		<iron-ajax id="getPlayersAjax" url="../api/players" method="GET" content-type="application/json" on-response="_playersResponse"></iron-ajax>
+		<div class="wrapper flex layout vertical">
+			<div class="filter-wrapper layout horizontal">
+				<paper-dropdown-menu label="Round">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedRound}}">
+						<template is="dom-repeat" items="[[rounds]]" as="round">
+							<paper-item value="[[round.id]]">[[round.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				<paper-dropdown-menu label="Tier">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{selectedTier}}">
+						<template is="dom-repeat" items="[[tiers]]" as="tier">
+							<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+						</template>
+					</paper-listbox>
+				</paper-dropdown-menu>
+			</div>
+			<vaadin-button on-click="_players">All players</vaadin-button>
+			<vaadin-button on-click="_availability">Availability for selected round and tier</vaadin-button>
+			<vaadin-button on-click="_lobbies">Lobbies for selected round</vaadin-button>
+		</div>
+	</template>
+	<script>
+		class SpreadsheetsPage extends Polymer.Element {
+			static get is() { return 'spreadsheets-page' }
+
+			static get properties() {
+				return {
+
+				}
+			}
+
+			_players() {
+				this.$.getPlayersAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getPlayersAjax.generateRequest();
+			}
+
+			_playersResponse(e) {
+				var response = e.detail.response;
+				var content = 'Discord username,osu username,Discord ID,osu ID,osu rank,tier\r\n';
+				for (var i = 0; i < response.length; i++) {
+					content += response[i].discord.username + ',';
+					content += response[i].osu.username + ',';
+					content += response[i].discord.id + ',';
+					content += response[i].osu.id + ',';
+					content += response[i].osu.rank + ',';
+					content += response[i].tier.name + '\r\n';
+				}
+				this._createCsv(content, 'players');
+			}
+
+			_createCsv(data, name) {
+				var encodeUri = encodeURI('data:text/csv;charset=utf-8,' + data);
+				var link = document.createElement('a');
+				link.setAttribute('href', encodeUri);
+				link.setAttribute('download', name + '.csv');
+				document.body.appendChild(link);
+				link.click();
+			}
+		}
+
+		window.customElements.define(SpreadsheetsPage.is, SpreadsheetsPage);
+	</script>
+</dom-module>
