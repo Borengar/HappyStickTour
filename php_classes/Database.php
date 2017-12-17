@@ -708,16 +708,16 @@ class Database {
 			$stmt->bindValue(':user_id', $player->userId, PDO::PARAM_INT);
 			$stmt->execute();
 			$nextRound = null;
-			switch ($player->continues) {
-				case 'continue': $nextRound = $round->continueRound; break;
-				case 'dropdown': $nextRound = $round->dropDownRound; break;
+			switch ($player->continue) {
+				case 'Continue': $nextRound = $round->continueRound; break;
+				case 'Drop down': $nextRound = $round->dropDownRound; break;
 				default: $nextRound = null;
 			}
 			$stmt = $this->db->prepare('UPDATE players
 				SET next_round = :next_round
 				WHERE id = :id');
 			$stmt->bindValue(':next_round', $nextRound, PDO::PARAM_INT);
-			$stmt->bindValue(':id', $player->id, PDO::PARAM_INT);
+			$stmt->bindValue(':id', $player->userId, PDO::PARAM_INT);
 			$stmt->execute();
 
 			$player->score = 0;
