@@ -109,7 +109,6 @@
 
 			_lobbiesResponse(e) {
 				var response = e.detail.response;
-				console.log(response);
 				var content = 'lobby ID,tier,time\r\n';
 				for (var i = 0; i < response.length; i++) {
 					content += response[i].id + ',';
