@@ -12,6 +12,7 @@ RewriteRule ^rounds/([^/]+)/tiers/([^/]+)/mappool/slots/?$ data.php?query=mappoo
 RewriteRule ^rounds/([^/]+)/tiers/([^/]+)/mappool/mappack/?$ data.php?query=mappack&round=$1&tier=$2
 RewriteRule ^rounds/([^/]+)/tiers/([^/]+)/mappool/?$ data.php?query=mappool&round=$1&tier=$2
 RewriteRule ^rounds/([^/]+)/availability/?$ data.php?query=availability&round=$1
+RewriteRule ^rounds/([^/]+)/lobbies/?$ data.php?query=lobbies&round=$1
 RewriteRule ^rounds/([^/]+)/?$ data.php?query=round&round=$1
 RewriteRule ^rounds/?$ data.php?query=rounds
 RewriteRule ^tiers/([^/]+)/players/?$ data.php?query=players&tier=$1

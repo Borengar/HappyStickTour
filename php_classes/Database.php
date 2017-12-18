@@ -507,13 +507,19 @@ class Database {
 		$stmt->execute();
 	}
 
-	public function getLobbies($tierId, $roundId) {
-		$osuApi = new OsuApi();
-		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
-			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
-			WHERE lobbies.round = :round AND lobbies.tier = :tier');
-		$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
-		$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
+	public function getLobbies($roundId, $tierId = 0) {
+		if ($tierId != 0) {
+			$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
+				FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
+				WHERE lobbies.round = :round AND lobbies.tier = :tier');
+			$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
+			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
+		} else {
+			$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
+				FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
+				WHERE lobbies.round = :round');
+			$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
+		}
 		$stmt->execute();
 		$lobbies = $stmt->fetchAll();
 		foreach ($lobbies as &$lobby) {

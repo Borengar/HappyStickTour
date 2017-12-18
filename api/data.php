@@ -376,16 +376,20 @@ function getPlayers() {
 	global $database;
 
 	if (!isset($_GET['tier'])) {
-		echo json_encode($database->getPlayers());
-		return;
+		$players = $database->getPlayers();
+	} elseif (!isset($_GET['round'])) {
+		$players = $database->getPlayers($_GET['tier']);
+	} else {
+		$players = $database->getPlayers($_GET['tier'], $_GET['round']);
 	}
 
-	if (!isset($_GET['round'])) {
-		echo json_encode($database->getPlayers($_GET['tier']));
-		return;
+	if ($database->getScope() == SCOPE::ADMIN && isset($_GET['round'])) {
+		foreach ($players as &$player) {
+			$player->availabilities = $database->getAvailability($player->userId, $_GET['round']);
+		}
 	}
 
-	echo json_encode($database->getPlayers($_GET['tier'], $_GET['round']));
+	echo json_encode($players);
 }
 
 function getRounds() {
@@ -549,7 +553,11 @@ function getLobbies() {
 		}
 	}
 
-	$lobbies = $database->getLobbies($_GET['tier'], $_GET['round']);
+	if (isset($_GET['tier'])) {
+		$lobbies = $database->getLobbies($_GET['round'], $_GET['tier']);
+	} else {
+		$lobbies = $database->getLobbies($_GET['round']);
+	}
 
 	if ($scope != SCOPE::ADMIN) {
 		foreach ($lobbies as &$lobby) {

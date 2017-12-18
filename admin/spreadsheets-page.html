@@ -17,6 +17,8 @@
 			}
 		</style>
 		<iron-ajax id="getPlayersAjax" url="../api/players" method="GET" content-type="application/json" on-response="_playersResponse"></iron-ajax>
+		<iron-ajax id="getAvailabilityAjax" url="../api/rounds//tiers//players" method="GET" content-type="application/json" on-response="_availabilityResponse"></iron-ajax>
+		<iron-ajax id="getLobbiesAjax" url="../api/rounds//lobbies" method="GET" content-type="application/json" on-response="_lobbiesResponse"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="filter-wrapper layout horizontal">
 				<paper-dropdown-menu label="Round">
@@ -56,6 +58,22 @@
 				this.$.getPlayersAjax.generateRequest();
 			}
 
+			_availability() {
+				this.$.getAvailabilityAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/players';
+				this.$.getAvailabilityAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getAvailabilityAjax.generateRequest();
+			}
+
+			_lobbies() {
+				this.$.getLobbiesAjax.url = '../api/rounds/' + this.selectedRound + '/lobbies';
+				this.$.getLobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getLobbiesAjax.generateRequest();
+			}
+
 			_playersResponse(e) {
 				var response = e.detail.response;
 				var content = 'Discord username,osu username,Discord ID,osu ID,osu rank,tier\r\n';
@@ -68,6 +86,40 @@
 					content += response[i].tier.name + '\r\n';
 				}
 				this._createCsv(content, 'players');
+			}
+
+			_availabilityResponse(e) {
+				var response = e.detail.response;
+				var content = 'Discord username,osu username,availability\r\n';
+				for (var i = 0; i < response.length; i++) {
+					if (response[i].availabilities.length == 0) {
+						content += response[i].discord.username + ',';
+						content += response[i].osu.username + ',';
+						content += 'NO AVAILABILITY\r\n';
+					} else {
+						for (var j = 0; j < response[i].availabilities.length; j++) {
+							content += response[i].discord.username + ',';
+							content += response[i].osu.username + ',';
+							content += response[i].availabilities[j].timeFrom + ' - ' + response[i].availabilities[j].timeTo + '\r\n';
+						}
+					}
+				}
+				this._createCsv(content, 'availabilities');
+			}
+
+			_lobbiesResponse(e) {
+				var response = e.detail.response;
+				console.log(response);
+				var content = 'lobby ID,tier,time\r\n';
+				for (var i = 0; i < response.length; i++) {
+					content += response[i].id + ',';
+					var tier = this.tiers.find((item) => {
+						return item.id == response[i].tier
+					});
+					content += tier.name + ',';
+					content += response[i].matchTime + '\r\n';
+				}
+				this._createCsv(content, 'lobbies');
 			}
 
 			_createCsv(data, name) {
