@@ -1,0 +1,87 @@
+<dom-module id="time-picker">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			.time-input {
+				width: 30px;
+				margin-left: 10px;
+			}
+			.label {
+				margin-top: 30px;
+				margin-left: 10px;
+			}
+			#datePicker {
+				margin-top: 5px;
+			}
+		</style>
+		<div class="layout horizontal">
+			<vaadin-date-picker placeholder="Date" id="datePicker" value="{{day}}"></vaadin-date-picker>
+			<paper-input class="time-input" value="{{hours}}"></paper-input>
+			<div class="label">:</div>
+			<paper-input class="time-input" value="{{minutes}}"></paper-input>
+			<div class="label">UTC</div>
+		</div>
+	</template>
+	<script>
+		class TimePicker extends Polymer.Element {
+			static get is() { return 'time-picker' }
+
+			static get properties() {
+				return {
+					date: {
+						type: Object,
+						observer: '_dateChanged',
+						notify: true
+					},
+					day: {
+						type: Object,
+						observer: '_calculateDate'
+					},
+					hours: {
+						type: Number,
+						observer: '_calculateDate'
+					},
+					minutes: {
+						type: Number,
+						observer: '_calculateDate'
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.shadowRoot.querySelector('#datePicker').set('i18n.formatDate', function(d) {
+					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
+				});
+				this.shadowRoot.querySelector('#datePicker').set('i18n.parseDate', function(text) {
+					var parts = text.split('-');
+					if (parts.length === 3) {
+						var date = new Date(0, 0);
+						date.setFullYear(parseInt(parts[0]));
+						date.setMonth(parseInt(parts[1]) - 1);
+						date.setDate(parseInt(parts[2]));
+						return date;
+					}
+				});
+				this.shadowRoot.querySelector('#datePicker').set('i18n.firstDayOfWeek', 1);
+			}
+
+			_dateChanged(e) {
+				if (e) {
+					this.observersDisabled = true;
+					this.day = e.split(' ')[0];
+					this.hours = e.split(' ')[1].split(':')[0];
+					this.minutes = e.split(' ')[1].split(':')[1];
+					this.observersDisabled = false;
+				}
+			}
+
+			_calculateDate() {
+				if (this.day && this.hours && this.minutes) {
+					this.date = this.day + ' ' + this.hours + ':' + this.minutes;
+				}
+			}
+		}
+
+		window.customElements.define(TimePicker.is, TimePicker);
+	</script>
+</dom-module>
