@@ -50,6 +50,13 @@
 			#errorToast {
 				--paper-toast-background-color: var(--error-red);
 			}
+			.time-input {
+				width: 30px;
+				margin-left: 10px;
+			}
+			.lobby-time {
+				margin-left: 25px;
+			}
 		</style>
 		<iron-ajax id="getLobbiesAjax" url="../api/rounds//tiers//lobbies" method="GET" content-type="application/json" last-response="{{lobbies}}" on-response="_getLobbiesResponse"></iron-ajax>
 		<iron-ajax id="putLobbiesAjax" url="../api/rounds//tiers//lobbies" method="PUT" content-type="application/json" on-response="_putLobbiesResponse"></iron-ajax>
@@ -83,7 +90,7 @@
 					<template is="dom-repeat" items="{{lobbies}}" as="lobby" mutable-data>
 						<div class="lobby-wrapper layout vertical">
 							<div>Lobby <span>[[lobby.id]]</span></div>
-							<paper-input label="Match time" value="{{lobby.matchTime}}"></paper-input>
+							<time-picker class="lobby-time" date="{{lobby.matchTime}}"></time-picker>
 							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
 								<div hidden$="[[!slot.userId]]">
 									<div class="player-drop-wrapper layout vertical">
