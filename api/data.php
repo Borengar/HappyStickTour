@@ -1,5 +1,9 @@
 <?php
 
+use \Psr\Http\Message\ServerRequestInterface as Request;
+use \Psr\Http\Message\ResponseInterface as Response;
+
+require_once '../php_classes/vendor/autoload.php';
 require_once '../php_classes/Database.php';
 require_once '../php_classes/OsuApi.php';
 require_once '../php_classes/TwitchApi.php';
@@ -16,229 +20,40 @@ $discordApi = new DiscordApi();
 
 date_default_timezone_set('UTC');
 
-header('Content-Type: application/json; charset=UTF-8');
+function echoError(Response $response, $message) {
+	$responseObject = new stdClass;
+	$responseObject->error = '1';
+	$responseObject->message = $message;
 
-switch ($_GET['query']) {
-	case 'user':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getUser(); break; // get user data
-		}
-		break;
-	case 'playerDiscordId':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putPlayerDiscordId(); break; // change player discord account
-		}
-		break;
-	case 'playerTrivia':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putPlayerTrivia(); break; // update player trivia
-		}
-		break;
-	case 'registrations':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getRegistrations(); break; // get a list of all registrations
-			case 'POST': postRegistration(); break; // create new registration
-			case 'DELETE': deleteRegistration(); break; // delete a registration
-		}
-		break;
-	case 'registrationDiscordId':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putRegistrationDiscordId(); break; // change registration discord id
-		}
-		break;
-	case 'players':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getPlayers(); break; // get a list of all players
-		}
-		break;
-	case 'rounds':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getRounds(); break; // get a list of rounds in a tier
-			case 'POST': postRound(); break; // create new round
-		}
-		break;
-	case 'round':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putRound(); break; // update a round
-			case 'DELETE': deleteRound(); break; // delete round
-		}
-		break;
-	case 'tiers':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getTiers(); break; // get a list of all tiers
-			case 'POST': postTier(); break; // create a new tier
-		}
-		break;
-	case 'tier':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putTier(); break; // update a tier
-			case 'DELETE': deleteTier(); break; // delete a tier
-		}
-		break;
-	case 'lobbies':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getLobbies(); break; // get a list of lobbies in a round
-			case 'PUT': putLobbies(); break; // update lobbies
-			case 'POST': postLobbies(); break; // create lobbies for a round
-			case 'DELETE': deleteLobbies(); break; // delete all lobbies of a round
-		}
-		break;
-	case 'lobby':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getLobby(); break; // get lobby by id
-		}
-		break;
-	case 'bans':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putBans(); break; // update lobby bans
-		}
-		break;
-	case 'matchId':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putMatchId(); break; // update lobby match id
-		}
-		break;
-	case 'comment':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putComment(); break; // update lobby comment
-		}
-		break;
-	case 'result':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putResult(); break; // update lobby result
-		}
-		break;
-	case 'mappool':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getMappool(); break; // get mappool
-		}
-		break;
-	case 'mappoolSlots':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putMappoolSlots(); break; // update mappool slots
-		}
-		break;
-	case 'mappack':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putMappack(); break; // update mappack uri
-		}
-		break;
-	case 'feedback':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putFeedback(); break; // update mappool feedback
-		}
-		break;
-	case 'osuprofile':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getOsuProfile(); break; // get an osu account over the osu api
-		}
-		break;
-	case 'osubeatmap':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getOsuBeatmap(); break; // get an osu beatmap over the osu api
-		}
-		break;
-	case 'osumatch':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getOsuMatch(); break; // get an osu match over the osu api
-		}
-		break;
-	case 'osugames':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'POST': postOsuGame(); break; // insert a bracket reset
-		}
-		break;
-	case 'osugame':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'DELETE': deleteOsuGame(); break; // delete a bracket reset
-		}
-		break;
-	case 'counts':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putCounts(); break; // update an osu game
-		}
-		break;
-	case 'pickedBy':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putPickedBy(); break; // update an osu game
-		}
-		break;
-	case 'availability':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getAvailability(); break; // returns a list of availabilites for a round
-			case 'PUT': putAvailability(); break; // save availability for a round
-		}
-		break;
-	case 'settings':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getSettings(); break; // get general settings
-			case 'PUT': putSettings(); break; // update general settings
-		}
-		break;
-	case 'discordlogin':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getDiscordLogin(); break; // get discord login uri
-			case 'POST': postDiscordLogin(); break; // try to login with access token
-		}
-		break;
-	case 'discordroles':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getDiscordRoles(); break; // get discord roles
-			case 'POST': postDiscordRoles(); break; // refresh discord role list
-		}
-		break;
-	case 'twitchlogin':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getTwitchLogin(); break; // get twitch login uri
-			case 'POST': postTwitchLogin(); break; // try to login with code
-		}
-		break;
-	case 'mappoolers':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'GET': getMappoolers(); break; // get mappoolers
-			case 'POST': postMappoolers(); break; // refresh list of mappoolers
-		}
-		break;
-	case 'mappooler':
-		switch ($_SERVER['REQUEST_METHOD']) {
-			case 'PUT': putMappooler(); break; // update mappooler
-		}
-		break;
+	return $response->withJson($responseObject);
 }
 
-function echoError($message) {
-	$response = new stdClass;
-	$response->error = '1';
-	$response->message = $message;
-	echo json_encode($response);
+function echoSuccess(Response $response, $message) {
+	$responseObject = new stdClass;
+	$responseObject->error = '0';
+	$responseObject->message = $message;
+
+	return $response->withJson($responseObject);
 }
 
-function echoSuccess($message) {
-	$response = new stdClass;
-	$response->error = '0';
-	$response->message = $message;
-	echo json_encode($response);
-}
-
-function echo400($message) {
-	http_response_code(400);
-	echoError($message);
-	exit;
+function echo400(Response $response, $message) {
+	$response = echoError($response, $message);
+	return $response->withStatus(400);
 }
 
 function echo401() {
-	http_response_code(401);
-	echoError('Authentication required');
-	exit;
+	$response = echoError($response, 'Authentication required');
+	return $response->withStatus(401);
 }
 
 function echo403() {
-	http_response_code(403);
-	echoError('Insufficient permissions');
-	exit;
+	$response = echoError($response, 'Insufficient permissions');
+	return $response->withStatus(403);
 }
 
-function getUser() {
+$app = new \Slim\App;
+
+$app->get('/user', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
@@ -247,295 +62,312 @@ function getUser() {
 		return;
 	}
 
-	echo json_encode($user);
-}
+	return $response->withJson($user);
+});
 
-function putPlayerDiscordId() {
+$app->put('/registrations/{id}/discordId', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	if (empty($body)) {
-		echo400('Value for new Discord ID missing');
+		return echo400($response, 'Value for new Discord ID missing');
 	}
 
-	$database->putPlayerDiscordId($_GET['player'], $body->discordId);
-	echoSuccess('Discord ID changed');
-}
+	$database->putPlayerDiscordId($args['id'], $body->discordId);
+	return echoSuccess($response, 'Discord ID changed');
+});
 
-function putPlayerTrivia() {
+$app->get('/registrations', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
-	}
-
-	if ($database->getScope() != SCOPE::PLAYER) {
-		echo403();
-	}
-
-	$body = json_decode(file_get_contents('php://input'));
-
-	$database->putPlayerTrivia($user->userId, $body->trivia);
-	echoSuccess('Trivia saved');
-}
-
-function getRegistrations() {
-	global $database;
-
-	$user = $database->getUser();
-	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	echo json_encode($database->getRegistrations());
-}
+	return $response->withJson($database->getRegistrations());
+});
 
-function putRegistrationDiscordId() {
+$app->post('/registrations', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
-	}
-
-	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
-	}
-
-	$body = json_decode(file_get_contents('php://input'));
-
-	if (empty($body)) {
-		echo400('Value for new Discord ID missing');
-	}
-
-	$database->putRegistrationDiscordId($_GET['registration'], $body->idNew);
-	echoSuccess('Discord ID changed');
-}
-
-function postRegistration() {
-	global $database;
-
-	$user = $database->getUser();
-	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REGISTRATION) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	if (empty($body)) {
-		echo400('Value for osu ID missing');
+		return echo400('Value for osu ID missing');
 	}
 
 	$database->postRegistration($body->osuId);
-	echoSuccess('Registration successfull');
-}
+	return echoSuccess($response, 'Registration successfull');
+});
 
-function deleteRegistration() {
+$app->delete('/registrations/{id}', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
-	}
-
-	if ($database->getScope() == SCOPE::REGISTRATION) {
-		$database->deleteRegistration($user->discord->id);
-		echoSuccess('Registration deleted');
-		return;
-	}
-
-	if ($database->getScope() == SCOPE::ADMIN) {
-		$database->deleteRegistration($_GET['registration']);
-		echoSuccess('Registration deleted');
-		return;
-	}
-
-	echo403();
-}
-
-function getPlayers() {
-	global $database;
-
-	if (!isset($_GET['tier'])) {
-		$players = $database->getPlayers();
-	} elseif (!isset($_GET['round'])) {
-		$players = $database->getPlayers($_GET['tier']);
-	} else {
-		$players = $database->getPlayers($_GET['tier'], $_GET['round']);
-	}
-
-	if ($database->getScope() == SCOPE::ADMIN && isset($_GET['round'])) {
-		foreach ($players as &$player) {
-			$player->availabilities = $database->getAvailability($player->userId, $_GET['round']);
-		}
-	}
-
-	echo json_encode($players);
-}
-
-function getRounds() {
-	global $database;
-	echo json_encode($database->getRounds());
-}
-
-function postRound() {
-	global $database;
-
-	$user = $database->getUser();
-	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$database->deleteRegistration($args['id']);
+	return echoSuccess($response, 'Registration deleted');
+});
+
+$app->delete('/registrations', function($request, $response) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::REGISTRATION) {
+		return echo403($response);
+	}
+
+	$database->deleteRegistration($user->discord->id);
+	return echoSuccess($response, 'Registration deleted');
+});
+
+$app->put('/players/{id}/discordId', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::ADMIN) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	if (empty($body)) {
+		return echo400($response, 'Value for new Discord ID missing');
+	}
+
+	$database->putPlayerDiscordId($args['id'], $body);
+	return echoSuccess($response, 'Discord ID changed');
+});
+
+$app->put('/players/{id}/trivia', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::PLAYER) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	$database->putPlayerTrivia($user->userId, $body);
+	return echoSuccess('Trivia saved');
+});
+
+$app->get('/rounds/{round}/tiers/{tier}/players', function($request, $response, $args) {
+	global $database;
+
+	$players = $database->getPlayers($args['tier'], $args['round']);
+
+	if ($database->getScope() == SCOPE::ADMIN && isset($args['round'])) {
+		foreach ($players as &$player) {
+			$player->availabilities = $database->getAvailability($player->userId, $args['round']);
+		}
+	}
+
+	return $response->withJson($players);
+});
+
+$app->get('/tiers/{tier}/players', function($request, $response, $args) {
+	global $database;
+
+	$players = $database->getPlayers($args['tier']);
+
+	return $response->withJson($players);
+});
+
+$app->get('/players', function($request, $response) {
+	global $database;
+
+	$players = $database->getPlayers();
+
+	return $response->withJson($players);
+});
+
+$app->get('/rounds', function($request, $response) {
+	global $database;
+	return $response->withJson($database->getRounds());
+});
+
+$app->post('/rounds', function($request, $response) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::ADMIN) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
 
 	$roundId = $database->postRound($body->name, $body->lobbySize, $body->bestOf, $body->isFirstRound, $body->playerAmount, $body->isStartRound, $body->hasContinue, $body->continueAmount, $body->continueRoundId, $body->hasDropDown, $body->dropDownAmount, $body->dropDownRoundId, $body->hasElimination, $body->eliminatedAmount, $body->hasBracketReset, $body->mappoolsReleased, $body->lobbiesReleased, $body->copyMappool, $body->copyMappoolFrom);
 
 	$database->putRoundTimes($roundId, $body->times);
 
-	echoSuccess('Round saved');
-}
+	return echoSuccess($response, 'Round saved');
+});
 
-function putRound() {
+$app->put('/rounds/{id}', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putRound($_GET['round'], $body->name, $body->lobbySize, $body->bestOf, $body->isFirstRound, $body->playerAmount, $body->isStartRound, $body->hasContinue, $body->continueAmount, $body->continueRoundId, $body->hasDropDown, $body->dropDownAmount, $body->dropDownRoundId, $body->hasElimination, $body->eliminatedAmount, $body->hasBracketReset, $body->mappoolsReleased, $body->lobbiesReleased, $body->copyMappool, $body->copyMappoolFrom);
+	$database->putRound($args['id'], $body->name, $body->lobbySize, $body->bestOf, $body->isFirstRound, $body->playerAmount, $body->isStartRound, $body->hasContinue, $body->continueAmount, $body->continueRoundId, $body->hasDropDown, $body->dropDownAmount, $body->dropDownRoundId, $body->hasElimination, $body->eliminatedAmount, $body->hasBracketReset, $body->mappoolsReleased, $body->lobbiesReleased, $body->copyMappool, $body->copyMappoolFrom);
 
-	$database->putRoundTimes($_GET['round'], $body->times);
+	$database->putRoundTimes($args['id'], $body->times);
 
-	echoSuccess('Round saved');
-}
+	return echoSuccess($response, 'Round saved');
+});
 
-function deleteRound() {
+$app->delete('/rounds/{id}', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$database->deleteRound($_GET['round']);
+	$database->deleteRound($args['id']);
 
-	echoSuccess('Round deleted');
-}
+	return echoSuccess($response, 'Round deleted');
+});
 
-function getTiers() {
+$app->get('/tiers', function($request, $response) {
 	global $database;
 
-	echo json_encode($database->getTiers());
-}
+	return $response->withJson($database->getTiers());
+});
 
-function postTier() {
+$app->post('/tiers', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	$tiers = $database->getTiers();
 
 	foreach ($tiers as $tier) {
 		if (($body->lowerEndpoint >= $tier->lowerEndpoint && $body->lowerEndpoint <= $tier->upperEndpoint) || ($body->upperEndpoint >= $tier->lowerEndpoint && $body->upperEndpoint <= $tier->upperEndpoint)) {
-			echoError('Ranks are overlapping with existing tiers');
-			return;
+			return echoError($response, 'Ranks are overlapping with existing tiers');
 		}
 	}
 
 	$database->postTier($body->name, $body->lowerEndpoint, $body->upperEndpoint, $body->startingRound, $body->selectedSeeding, $body->subBonus);
 
-	echoSuccess('Tier saved');
-}
+	return echoSuccess($response, 'Tier saved');
+});
 
-function putTier() {
+$app->put('/tiers/{id}', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
 	$tiers = $database->getTiers();
 
 	foreach ($tiers as $tier) {
-		if ($tier->id != $_GET['tier'] && (($body->lowerEndpoint >= $tier->lowerEndpoint && $body->lowerEndpoint <= $tier->upperEndpoint) || ($body->upperEndpoint >= $tier->lowerEndpoint && $body->upperEndpoint <= $tier->upperEndpoint))) {
-			echoError('Ranks are overlapping with existing tiers');
-			return;
+		if ($tier->id != $args['id'] && (($body->lowerEndpoint >= $tier->lowerEndpoint && $body->lowerEndpoint <= $tier->upperEndpoint) || ($body->upperEndpoint >= $tier->lowerEndpoint && $body->upperEndpoint <= $tier->upperEndpoint))) {
+			return echoError($response, 'Ranks are overlapping with existing tiers');
 		}
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putTier($_GET['tier'], $body->name, $body->lowerEndpoint, $body->upperEndpoint, $body->startingRound, $body->selectedSeeding, $body->subBonus);
+	$database->putTier($args['id'], $body->name, $body->lowerEndpoint, $body->upperEndpoint, $body->startingRound, $body->selectedSeeding, $body->subBonus);
 
-	echoSuccess('Tier saved');
-}
+	return echoSuccess($response, 'Tier saved');
+});
 
-function deleteTier() {
+$app->delete('/tiers/{id}', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$database->deleteTier($_GET['tier']);
+	$database->deleteTier($args['id']);
 
-	echoSuccess('Tier deleted');
-}
+	return echoSuccess($response, 'Tier deleted');
+});
 
-function getLobbies() {
+$app->get('/rounds/{round}/tiers/{tier}/lobbies', function($request, $response, $args) {
 	global $database;
 
 	$scope = $database->getScope();
@@ -543,21 +375,17 @@ function getLobbies() {
 		$rounds = $database->getRounds();
 		$accessGranted = false;
 		foreach ($rounds as $round) {
-			if ($round->id == $_GET['round'] && $round->lobbiesReleased == '1') {
+			if ($round->id == $args['round'] && $round->lobbiesReleased == '1') {
 				$accessGranted = true;
 				break;
 			}
 		}
 		if (!$accessGranted) {
-			echo403();
+			return echo403($response);
 		}
 	}
 
-	if (isset($_GET['tier'])) {
-		$lobbies = $database->getLobbies($_GET['round'], $_GET['tier']);
-	} else {
-		$lobbies = $database->getLobbies($_GET['round']);
-	}
+	$lobbies = $database->getLobbies($args['round'], $args['tier']);
 
 	if ($scope != SCOPE::ADMIN) {
 		foreach ($lobbies as &$lobby) {
@@ -567,22 +395,53 @@ function getLobbies() {
 		}
 	}
 
-	echo json_encode($lobbies);
-}
+	return $response->withJson($lobbies);
+});
 
-function putLobbies() {
+$app->get('/rounds/{round}/lobbies', function($request, $response, $args) {
+	global $database;
+
+	$scope = $database->getScope();
+	if ($scope != SCOPE::ADMIN) {
+		$rounds = $database->getRounds();
+		$accessGranted = false;
+		foreach ($rounds as $round) {
+			if ($round->id == $args['round'] && $round->lobbiesReleased == '1') {
+				$accessGranted = true;
+				break;
+			}
+		}
+		if (!$accessGranted) {
+			echo403();
+		}
+	}
+
+	$lobbies = $database->getLobbies($args['round']);
+
+	if ($scope != SCOPE::ADMIN) {
+		foreach ($lobbies as &$lobby) {
+			foreach ($lobby->slots as &$slot) {
+				unset($slot->availabilities);
+			}
+		}
+	}
+
+	return $response->withJson($lobbies);
+});
+
+$app->put('/rounds/{round}/tiers/{tier}/lobbies', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	foreach ($body->lobbies as $lobby) {
 		$database->putLobbyTime($lobby->id, $lobby->matchTime);
@@ -594,181 +453,177 @@ function putLobbies() {
 		}
 	}
 
-	echoSuccess('Lobbies saved');
-}
+	return echoSuccess($response, 'Lobbies saved');
+});
 
-function postLobbies() {
+$app->post('/rounds/{round}/tiers/{tier}/lobbies', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$lobbies = $database->getLobbies($_GET['tier'], $_GET['round']);
+	$lobbies = $database->getLobbies($args['tier'], $args['round']);
 	if (count($lobbies) > 0) {
-		echo400('There are already existing lobbies');
+		return echo400($response, 'There are already existing lobbies');
 	}
 
-	$round = $database->getRound($_GET['round']);
+	$round = $database->getRound($args['round']);
 	if (!$round) {
-		echo400('Round ID not found');
+		return echo400($response, 'Round ID not found');
 	}
 
 	for ($i = 0; $i < ((int)$round->playerAmount / (int)$round->lobbySize); $i++) {
-		$lobbyId = $database->postLobby($_GET['tier'], $_GET['round']);
+		$lobbyId = $database->postLobby($args['tier'], $args['round']);
 		for ($j = 0; $j < (int)$round->lobbySize; $j++) {
 			$database->postLobbySlot($lobbyId);
 		}
 	}
 
-	echoSuccess('Lobbies created');
-}
+	return echoSuccess($response, 'Lobbies created');
+});
 
-function deleteLobbies() {
+$app->delete('/rounds/{round}/tiers/{tier}/lobbies', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$database->deleteLobbies($_GET['tier'], $_GET['round']);
+	$database->deleteLobbies($args['tier'], $args['round']);
 
-	echoSuccess('Lobbies deleted');
-}
+	return echoSuccess($response, 'Lobbies deleted');
+});
 
-function getLobby() {
+$app->get('/lobbies/{id}', function($request, $response, $args) {
 	global $database;
 
-	$lobby = $database->getLobby($_GET['lobby']);
+	$lobby = $database->getLobby($args['id']);
 
 	$scope = $database->getScope();
 	if ($scope != SCOPE::ADMIN) {
 		$round = $database->getRound($lobby->round);
 		if ($round->lobbiesReleased != '1') {
-			echo403();
+			return echo403($response);
 		}
 		foreach ($lobby->slots as &$slot) {
 			unset($slot->availabilities);
 		}
 	}
 
-	echo json_encode($lobby);
-}
+	return $response->withJson($lobby);
+});
 
-function putBans() {
+$app->put('/lobbies/{id}/bans', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putBans($_GET['lobby'], $body);
+	$database->putBans($args['id'], $body);
 
-	echoSuccess('Bans saved');
-}
+	return echoSuccess($response, 'Bans saved');
+});
 
-function putMatchId() {
+$app->put('/lobbies/{id}/matchId', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putLobbyMatchId($_GET['lobby'], $body);
+	$database->putLobbyMatchId($args['id'], $body);
 
-	echoSuccess('Match ID saved');
-}
+	return echoSuccess($response, 'Match ID saved');
+});
 
-function putComment() {
+$app->put('/lobbies/{id}/comment', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = file_get_contents('php://input');
+	$body = $request->getParsedBody();
 
-	$database->putLobbyComment($_GET['lobby'], $body);
+	$database->putLobbyComment($args['id'], $body);
 
-	echoSuccess('Comment saved');
-}
+	return echoSuccess($response, 'Comment saved');
+});
 
-function putResult() {
+$app->put('/lobbies/{id}/result', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+		return echo403($response);
 	}
 
-	$lobby = $database->getLobby($_GET['lobby']);
+	$lobby = $database->getLobby($args['id']);
 	$players = $database->getPlayers($lobby->tier);
 	foreach ($lobby->slots as $slot) {
 		foreach ($players as $player) {
-			if ($player->userId == $slot->userId && $player->currentLobby != $_GET['lobby']) {
+			if ($player->userId == $slot->userId && $player->currentLobby != $args['id']) {
 				echo400('Some players already moved to another round');
 			}
 		}
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putResult($_GET['lobby'], $body);
+	$database->putResult($_GET['id'], $body);
 
-	echoSuccess('Results saved');
-}
+	return echoSuccess($response, 'Results saved');
+});
 
-function getMappool() {
+$app->get('/rounds/{round}/tiers/{tier}/mappool', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	$scope = $database->getScope();
 
-	if (!isset($_GET['mappool'])) {
-		$mappoolId = $database->getMappoolId($_GET['tier'], $_GET['round']);
-	} else {
-		$mappoolId = $_GET['mappool'];
-	}
+	$mappoolId = $database->getMappoolId($args['tier'], $args['round']);
 
 	$mappool = $database->getMappool($mappoolId);
 
 	if ($scope != SCOPE::ADMIN && $scope != SCOPE::HEADPOOLER && $scope != SCOPE::MAPPOOLER) {
 		$round = $database->getRound($mappool->round);
 		if ($round->mappoolsReleased == 0) {
-			echo403();
+			return echo403($response);
 		}
 		$feedback = new stdClass;
 		if ($scope == SCOPE::PLAYER) {
@@ -783,244 +638,337 @@ function getMappool() {
 
 	if ($scope == SCOPE::MAPPOOLER) {
 		if ($user->tier != $mappool->tier) {
-			echo403();
+			return echo403($response);
 		}
 	}
 	
-	echo json_encode($mappool);
-}
+	return $response->withJson($mappool);
+});
 
-function putMappoolSlots() {
+$app->get('/mappools/{id}', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	$scope = $database->getScope();
+
+	$mappool = $database->getMappool($args['id']);
+
+	if ($scope != SCOPE::ADMIN && $scope != SCOPE::HEADPOOLER && $scope != SCOPE::MAPPOOLER) {
+		$round = $database->getRound($mappool->round);
+		if ($round->mappoolsReleased == 0) {
+			return echo403($response);
+		}
+		$feedback = new stdClass;
+		if ($scope == SCOPE::PLAYER) {
+			foreach ($mappool->feedback as $feedbackItem) {
+				if ($feedbackItem->discord->id == $user->discord->id) {
+					$feedback = $feedbackItem->feedback;
+				}
+			}
+		}
+		$mappool->feedback = $feedback;
+	}
+
+	if ($scope == SCOPE::MAPPOOLER) {
+		if ($user->tier != $mappool->tier) {
+			return echo403($response);
+		}
+	}
+	
+	return $response->withJson($mappool);
+});
+
+$app->put('/rounds/{round}/tiers/{tier}/mappool/slots', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	$scope = $database->getScope();
 
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($scope != SCOPE::HEADPOOLER && $scope != SCOPE::MAPPOOLER) {
-		echo403();
+		return echo403($response);
 	}
 
-	if (!isset($_GET['mappool'])) {
-		$mappoolId = $database->getMappoolId($_GET['tier'], $_GET['round']);
-	} else {
-		$mappoolId = $_GET['mappool'];
-	}
+	$mappoolId = $database->getMappoolId($args['tier'], $args['round']);
 
 	$mappool = $database->getMappool($mappoolId);
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	if ($scope == SCOPE::MAPPOOLER) {
 		if ($user->tier != $mappool->tier) {
-			echo403();
+			return echo403($response);
 		}
 	}
 
 	$database->putMappoolSlots($mappool->id, $body);
 
-	echoSuccess('Mappool saved');
-}
+	return echoSuccess($response, 'Mappool saved');
+});
 
-function putMappack() {
+$app->put('/mappools/{id}/slots', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	$scope = $database->getScope();
 
 	if (!$user) {
-		echo401();
+		return echo401($response);
+	}
+
+	if ($scope != SCOPE::HEADPOOLER && $scope != SCOPE::MAPPOOLER) {
+		return echo403($response);
+	}
+
+	$mappool = $database->getMappool($args['id']);
+
+	$body = $request->getParsedBody();
+
+	if ($scope == SCOPE::MAPPOOLER) {
+		if ($user->tier != $mappool->tier) {
+			return echo403($response);
+		}
+	}
+
+	$database->putMappoolSlots($mappool->id, $body);
+
+	return echoSuccess($response, 'Mappool saved');
+});
+
+$app->put('/rounds/{round}/tiers/{tier}/mappool/mappack', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	$scope = $database->getScope();
+
+	if (!$user) {
+		return echo401($response);
 	}
 
 	if ($scope != SCOPE::HEADPOOLER) {
-		echo403();
+		return echo403($response);
 	}
 
-	if (!isset($_GET['mappool'])) {
-		$mappoolId = $database->getMappoolId($_GET['tier'], $_GET['round']);
-	} else {
-		$mappoolId = $_GET['mappool'];
-	}
+	$mappoolId = $database->getMappoolId($args['tier'], $args['round']);
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	$database->putMappoolMappack($mappoolId, $body->mappack);
 
-	echoSuccess('Mappack URL saved');
-}
+	return echoSuccess($response, 'Mappack URL saved');
+});
 
-function putFeedback() {
+$app->put('/mappools/{id}/mappack', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	$scope = $database->getScope();
+
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($scope != SCOPE::HEADPOOLER) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	$database->putMappoolMappack($args['id'], $body->mappack);
+
+	return echoSuccess($response, 'Mappack URL saved');
+});
+
+$app->put('/rounds/{round}/tiers/{tier}/mappool/feedback', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::PLAYER) {
-		echo403();
+		return echo403($response);
 	}
 
-	if (!isset($_GET['mappool'])) {
-		$mappoolId = $database->getMappoolId($_GET['tier'], $_GET['round']);
-	} else {
-		$mappoolId = $_GET['mappool'];
-	}
+	$mappoolId = $database->getMappoolId($args['tier'], $args['round']);
 
-	$body = file_get_contents('php://input');
+	$body = $request->getParsedBody();
 
 	$database->putMappoolFeedback($mappoolId, $user->userId, $body);
 
-	echoSuccess('Feedback saved');
-}
+	return echoSuccess($response, 'Feedback saved');
+});
 
-function getOsuProfile() {
-	global $osuApi;
-	echo json_encode($osuApi->getUser($_GET['id']));
-}
-
-function getOsuBeatmap() {
-	global $osuApi;
-	echo json_encode($osuApi->getBeatmap($_GET['id']));
-}
-
-function getOsuMatch() {
-	global $osuApi;
-	echo json_encode($osuApi->getMatch($_GET['id']));
-}
-
-function putCounts() {
+$app->put('/mappools/{id}/feedback', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+	if ($database->getScope() != SCOPE::PLAYER) {
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putOsuGameCounts($_GET['game'], $body->counts);
+	$database->putMappoolFeedback($args['id'], $user->userId, $body);
 
-	echoSuccess('Game saved');
-}
+	return echoSuccess($response, 'Feedback saved');
+});
 
-function putPickedBy() {
+$app->get('/osuprofile/{id}', function($request, $response, $args) {
+	global $osuApi;
+
+	return $response->withJson($osuApi->getUser($args['id']));
+});
+
+$app->get('/osubeatmap/{id}', function($request, $response, $args) {
+	global $osuApi;
+
+	return $response->withJson($osuApi->getBeatmap($args['id']));
+});
+
+$app->get('/osumatch/{id}', function($request, $response, $args) {
+	global $osuApi;
+
+	return $response->withJson($osuApi->getMatch($args['id']));
+});
+
+$app->post('/osumatch/{id}/games', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putOsuGamePickedBy($_GET['game'], $body->pickedBy);
-
-	echoSuccess('Game saved');
-}
-
-function postOsuGame() {
-	global $database;
-
-	$user = $database->getUser();
-	if (!$user) {
-		echo401();
-	}
-
-	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
-	}
-
-	$body = json_decode(file_get_contents('php://input'));
-
-	$database->postBracketReset($_GET['match'], $body->time);
+	$database->postBracketReset($args['id'], $body->time);
 
 	echoSuccess('Bracket reset created');
-}
+});
 
-function deleteOsuGame() {
+$app->put('/osugame/{id}/counts', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REFEREE) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->deleteBracketReset($_GET['id']);
+	$database->putOsuGameCounts($args['id'], $body->counts);
 
-	echoSuccess('Bracket reset removed');
-}
+	return echoSuccess($response, 'Game saved');
+});
 
-function getAvailability() {
+$app->put('/osugame/{id}/pickedby', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::REFEREE) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	$database->putOsuGamePickedBy($args['id'], $body->pickedBy);
+
+	return echoSuccess($response, 'Game saved');
+});
+
+$app->delete('/osugame/{id}', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::REFEREE) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	$database->deleteBracketReset($args['id']);
+
+	return echoSuccess($response, 'Bracket reset removed');
+});
+
+$app->get('/rounds/{id}/availability', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::PLAYER) {
-		echo403();
+		return echo403($response);
 	}
 
-	echo json_encode($database->getAvailability($user->userId, $_GET['round']));
-}
+	return $response->withJson($database->getAvailability($user->userId, $args['id']));
+});
 
-function putAvailability() {
+$app->put('/rounds/{id}/availability', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::PLAYER) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putAvailability($user->userId, $_GET['round'], $body->availabilities);
+	$database->putAvailability($user->userId, $args['id'], $body->availabilities);
 
-	echoSuccess('Availability saved');
-}
+	return echoSuccess($response, 'Availability saved');
+});
 
-function getSettings() {
+$app->get('/settings', function($request, $response) {
 	global $database;
 
-	echo json_encode($database->getSettings());
-}
+	return $response->withJson($database->getSettings());
+});
 
-function putSettings() {
+$app->put('/settings', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	if (isset($body->registrationsOpen)) {
 		$database->putRegistrationSettings($body->registrationsOpen, $body->registrationsFrom, $body->registrationsTo);
@@ -1030,28 +978,25 @@ function putSettings() {
 		$database->putRoles($body->roleAdmin, $body->roleHeadpooler, $body->roleMappooler, $body->roleReferee, $body->rolePlayer);
 	}
 
-	echoSuccess('Settings saved');
-}
+	return echoSuccess($response, 'Settings saved');
+});
 
-function getDiscordLogin() {
+$app->get('/discordlogin', function($request, $response) {
 	global $discordApi;
-	echo json_encode(array('uri' => $discordApi->getLoginUri()));
-}
 
-function postDiscordLogin() {
+	return $response->withJson(array('uri' => $discordApi->getLoginUri()));
+});
+
+$app->post('/discordlogin', function($request, $response) {
 	global $database;
 	global $discordApi;
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 	$user = $discordApi->getUser($body->accessToken);
 	$member = $discordApi->getGuildMember($user->id);
 
 	if (!$member) {
-		$response = new stdClass;
-		$response->error = '1';
-		$response->message = 'Unknown Member';
-		echo json_encode($response);
-		return;
+		return echoError($response, 'Unknown Member');
 	}
 
 	$roles = $database->getRoles();
@@ -1091,138 +1036,136 @@ function postDiscordLogin() {
 	if (count($possibleRoles) == 1) {
 		$token = $database->loginUser($user->id, $possibleRoles[0]);
 
-		$response = new stdClass;
-		$response->error = '0';
-		$response->message = 'Login successfull';
-		$response->token = $token;
-		$response->scope = $possibleRoles[0];
-		echo json_encode($response);
-		return;
+		$responseObject = new stdClass;
+		$responseObject->error = '0';
+		$responseObject->message = 'Login successfull';
+		$responseObject->token = $token;
+		$responseObject->scope = $possibleRoles[0];
+		return $response->withJson($responseObject);
 	}
-
-	$body = json_decode(file_get_contents('php://input'));
 
 	if (isset($body->scope) && in_array($body->scope, $possibleRoles)) {
 		$token = $database->loginUser($user->id, $body->scope);
 
-		$response = new stdClass;
-		$response->error = '0';
-		$response->message = 'Login successfull';
-		$response->token = $token;
-		$response->scope = $body->scope;
-		echo json_encode($response);
-		return;
+		$responseObject = new stdClass;
+		$responseObject->error = '0';
+		$responseObject->message = 'Login successfull';
+		$responseObject->token = $token;
+		$responseObject->scope = $body->scope;
+		return $response->withJson($responseObject);
 	}
 
 	if (count($possibleRoles) > 1) {
-		$response = new stdClass;
-		$response->error = '0';
-		$response->message = 'Multiple roles possible';
-		$response->scopes = $possibleRoles;
-		echo json_encode($response);
-		return;
+		$responseObject = new stdClass;
+		$responseObject->error = '0';
+		$responseObject->message = 'Multiple roles possible';
+		$responseObject->scopes = $possibleRoles;
+		return $response->withJson($responseObject);
 	}
 
-	echoError('Error when trying to login');
-}
+	return echoError($response, 'Error when trying to login');
+});
 
-function getDiscordRoles() {
+$app->get('/discordroles', function($request, $response) {
 	global $database;
 
-	echo json_encode($database->getRoles());
-}
+	return $response->withJson($database->getRoles());
+});
 
-function postDiscordRoles() {
+$app->post('/discordroles', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
 	$database->postRoles();
 
-	echoSuccess('Roles refreshed');
-}
+	return echoSuccess($response, 'Roles refreshed');
+});
 
-function getTwitchLogin() {
+$app->get('/twitchlogin', function($request, $response) {
 	global $twitchApi;
-	echo json_encode(array('uri' => $twitchApi->getLoginUri()));
-}
 
-function postTwitchLogin() {
+	return $response->withJson(array('uri' => $twitchApi->getLoginUri()));
+});
+
+$app->post('/twitchlogin', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::REGISTRATION) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
 	$twitchId = $database->cacheNewTwitchAccount($body->token);
 
 	$database->putRegistrationTwitchId($user->discord->id, $twitchId);
-	echoSuccess('Twitch account linked');
-}
+	return echoSuccess($response, 'Twitch account linked');
+});
 
-function getMappoolers() {
+$app->get('/mappoolers', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	echo json_encode($database->getMappoolers());
-}
+	return $response->withJson($database->getMappoolers());
+});
 
-function postMappoolers() {
+$app->post('/mappoolers', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
 	$database->postMappoolers();
 
-	echoSuccess('Mappoolers refreshed');
-}
+	return echoSuccess($response, 'Mappoolers refreshed');
+});
 
-function putMappooler() {
+$app->put('/mappoolers/{id}', function($request, $response, $args) {
 	global $database;
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		return echo401($response);
 	}
 
 	if ($database->getScope() != SCOPE::ADMIN) {
-		echo403();
+		return echo403($response);
 	}
 
-	$body = json_decode(file_get_contents('php://input'));
+	$body = $request->getParsedBody();
 
-	$database->putMappooler($_GET['id'], $body->tier);
+	$database->putMappooler($args['id'], $body->tier);
 
-	echoSuccess('Mappoolers updated');
-}
+	return echoSuccess($response, 'Mappoolers updated');
+});
+
+$app->run();
 
 ?>

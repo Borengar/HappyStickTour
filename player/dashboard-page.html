@@ -72,9 +72,7 @@
 				this.$.putTriviaAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putTriviaAjax.body = {
-					'trivia': JSON.stringify(this.editor.getContents())
-				}
+				this.$.putTriviaAjax.body = JSON.stringify(this.editor.getContents())
 				this.$.putTriviaAjax.generateRequest();
 			}
 
