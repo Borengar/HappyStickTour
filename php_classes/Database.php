@@ -53,7 +53,7 @@ class Database {
 
 	public function loginUser($userId, $scope) {
 		while (true) {
-			$token = str_replace('.', '', uniqid('', true));
+			$token = random_int(PHP_INT_MIN, PHP_INT_MAX);
 			$stmt = $this->db->prepare('SELECT COUNT(*) as rowcount
 				FROM bearer_tokens
 				WHERE token = :token');

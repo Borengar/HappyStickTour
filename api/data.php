@@ -1047,7 +1047,7 @@ $app->post('/discordlogin', function($request, $response) {
 		$responseObject = new stdClass;
 		$responseObject->error = '0';
 		$responseObject->message = 'Login successfull';
-		$responseObject->token = $token;
+		$responseObject->token = (string) $token;
 		$responseObject->scope = $possibleRoles[0];
 		return $response->withJson($responseObject);
 	}
@@ -1058,7 +1058,7 @@ $app->post('/discordlogin', function($request, $response) {
 		$responseObject = new stdClass;
 		$responseObject->error = '0';
 		$responseObject->message = 'Login successfull';
-		$responseObject->token = $token;
+		$responseObject->token = (string) $token;
 		$responseObject->scope = $body->scope;
 		return $response->withJson($responseObject);
 	}
