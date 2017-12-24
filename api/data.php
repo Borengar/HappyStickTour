@@ -53,6 +53,14 @@ function echo403() {
 
 $app = new \Slim\App;
 
+$app->add(function ($request, $response, $next) {
+	$request->registerMediaTypeParser('application/json', function($input) {
+		return json_decode($input);
+	});
+
+	return $next($request, $response);
+});
+
 $app->get('/user', function($request, $response) {
 	global $database;
 
