@@ -61,20 +61,12 @@
 				<vaadin-checkbox checked="{{registrationsOpen}}">Registrations open</vaadin-checkbox>
 			</div>
 			<div class="edit-section">
-				<template is="dom-if" if="[[registrationsOpen]]" on-dom-change="_settingsCreated">
+				<template is="dom-if" if="[[registrationsOpen]]">
 					<div class="layout horizontal">
-						<vaadin-date-picker placeholder="Date" id="fromDatePicker" value="{{dateFrom}}"></vaadin-date-picker>
-						<vaadin-text-field class="time-input" value="{{hourFrom}}"></vaadin-text-field>
-						<div style="margin-top:50px;margin-left:10px;">:</div>
-						<vaadin-text-field class="time-input" value="{{minutesFrom}}"></vaadin-text-field>
-						<div style="margin-top:50px;margin-left:10px;">UTC</div>
+						<time-picker date="{{dateFrom}}"></time-picker>
 					</div>
 					<div class="layout horizontal">
-						<vaadin-date-picker placeholder="Date" id="toDatePicker" value="{{dateTo}}"></vaadin-date-picker>
-						<vaadin-text-field class="time-input" value="{{hourTo}}"></vaadin-text-field>
-						<div style="margin-top:50px;margin-left:10px;">:</div>
-						<vaadin-text-field class="time-input" value="{{minutesTo}}"></vaadin-text-field>
-						<div style="margin-top:50px;margin-left:10px;">UTC</div>
+						<time-picker date="{{dateTo}}"></time-picker>
 					</div>
 				</template>
 			</div>
@@ -173,57 +165,14 @@
 				this.$.getRegistrationsAjax.generateRequest();
 			}
 
-			_settingsCreated() {
-				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.formatDate', function(d) {
-					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
-				});
-				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.parseDate', function(text) {
-					var parts = text.split('-');
-					if (parts.length === 3) {
-						var date = new Date(0, 0);
-						date.setFullYear(parseInt(parts[0]));
-						date.setMonth(parseInt(parts[1]) - 1);
-						date.setDate(parseInt(parts[2]));
-						return date;
-					}
-				});
-				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.firstDayOfWeek', 1);
-				this.shadowRoot.querySelector('#toDatePicker').set('i18n.formatDate', function(d) {
-					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
-				});
-				this.shadowRoot.querySelector('#toDatePicker').set('i18n.parseDate', function(text) {
-					var parts = text.split('-');
-					if (parts.length === 3) {
-						var date = new Date(0, 0);
-						date.setFullYear(parseInt(parts[0]));
-						date.setMonth(parseInt(parts[1]) - 1);
-						date.setDate(parseInt(parts[2]));
-						return date;
-					}
-				});
-				this.shadowRoot.querySelector('#toDatePicker').set('i18n.firstDayOfWeek', 1);
-			}
-
 			_settingsResponse(e) {
 				var response = e.detail.response;
 				this.registrationsOpen = response.registrationsOpen == '1';
 				if (response.registrationsFrom) {
-					this.dateFrom = response.registrationsFrom.split(' ')[0];
-					this.hourFrom = response.registrationsFrom.split(' ')[1].split(':')[0];
-					this.minutesFrom = response.registrationsFrom.split(' ')[1].split(':')[1];
-				} else {
-					this.dateFrom = null;
-					this.hourFrom = '00';
-					this.minutesFrom = '00';
+					this.dateFrom = response.registrationsFrom;
 				}
 				if (response.registrationsTo) {
-					this.dateTo = response.registrationsTo.split(' ')[0];
-					this.hourTo = response.registrationsTo.split(' ')[1].split(':')[0];
-					this.minutesTo = response.registrationsTo.split(' ')[1].split(':')[1];
-				} else {
-					this.dateTo = null;
-					this.hourTo = '00';
-					this.minutesTo = '00';
+					this.dateTo = response.registrationsTo;
 				}
 			}
 
@@ -233,8 +182,8 @@
 				}
 				this.$.putSettingsAjax.body = {
 					'registrationsOpen': this.registrationsOpen,
-					'registrationsFrom': this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2),
-					'registrationsTo': this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2)
+					'registrationsFrom': this.dateFrom,
+					'registrationsTo': this.dateTo
 				};
 				this.$.putSettingsAjax.generateRequest();
 			}
