@@ -66,18 +66,10 @@
 						<div hidden$="[[!isNewAvailability]]">New availability</div>
 						<div hidden$="[[isNewAvailability]]">Edit availability</div>
 						<div class="layout horizontal">
-							<vaadin-date-picker placeholder="From" id="fromDatePicker" value="{{dateFrom}}"></vaadin-date-picker>
-							<paper-input class="time-input" value="{{hourFrom}}" pattern="([01]{0,1}[0-9]|2[0-3])" auto-validate required invalid="{{hourFromInvalid}}"></paper-input>
-							<div style="margin-top:30px;margin-left:10px;">:</div>
-							<paper-input class="time-input" value="{{minutesFrom}}" pattern="[0-5]{0,1}[0-9]" auto-validate required invalid="{{minutesFromInvalid}}"></paper-input>
-							<div style="margin-top:30px;margin-left:10px;">UTC</div>
+							<time-picker date="{{timeFrom}}"></time-picker>
 						</div>
 						<div class="layout horizontal">
-							<vaadin-date-picker placeholder="To" id="toDatePicker" value="{{dateTo}}"></vaadin-date-picker>
-							<paper-input class="time-input" value="{{hourTo}}" pattern="([01]{0,1}[0-9]|2[0-3])" auto-validate required invalid="{{hourToInvalid}}"></paper-input>
-							<div style="margin-top:30px;margin-left:10px;">:</div>
-							<paper-input class="time-input" value="{{minutesTo}}" pattern="[0-5]{0,1}[0-9]" auto-validate required invalid="{{minutesToInvalid}}"></paper-input>
-							<div style="margin-top:30px;margin-left:10px;">UTC</div>
+							<time-picker date="{{timeTo}}"></time-picker>
 						</div>
 						<div class="action-wrapper layout horizontal">
 							<paper-button class="action-button" raised on-click="_saveAvailability">Save</paper-button>
@@ -112,38 +104,6 @@
 				}
 			}
 
-			ready() {
-				super.ready();
-				this.$.fromDatePicker.set('i18n.formatDate', function(d) {
-					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
-				});
-				this.$.fromDatePicker.set('i18n.parseDate', function(text) {
-					var parts = text.split('-');
-					if (parts.length === 3) {
-						var date = new Date(0, 0);
-						date.setFullYear(parseInt(parts[0]));
-						date.setMonth(parseInt(parts[1]) - 1);
-						date.setDate(parseInt(parts[2]));
-						return date;
-					}
-				});
-				this.$.fromDatePicker.set('i18n.firstDayOfWeek', 1);
-				this.$.toDatePicker.set('i18n.formatDate', function(d) {
-					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
-				});
-				this.$.toDatePicker.set('i18n.parseDate', function(text) {
-					var parts = text.split('-');
-					if (parts.length === 3) {
-						var date = new Date(0, 0);
-						date.setFullYear(parseInt(parts[0]));
-						date.setMonth(parseInt(parts[1]) - 1);
-						date.setDate(parseInt(parts[2]));
-						return date;
-					}
-				});
-				this.$.toDatePicker.set('i18n.firstDayOfWeek', 1);
-			}
-
 			_roundChanged(e) {
 				this.$.getAvailabilityAjax.url = '../api/rounds/' + e.id + '/availability';
 				this.$.getAvailabilityAjax.headers = {
@@ -153,12 +113,8 @@
 			}
 
 			_add() {
-				this.dateFrom = null;
-				this.dateTo = null;
-				this.hourFrom = '00';
-				this.hourTo = '00';
-				this.minutesFrom = '00';
-				this.minutesTo = '00';
+				this.timeFrom = moment().format('YYYY-MM-DD HH:mm') + ':00';
+				this.timeTo = moment().format('YYYY-MM-DD HH:mm') + ':00';
 				this.isNewAvailability = true;
 				this.editVisible = true;
 			}
@@ -171,12 +127,8 @@
 						}
 					}
 					this.isNewAvailability = false;
-					this.dateFrom = e.timeFrom.split(' ')[0];
-					this.dateTo = e.timeTo.split(' ')[0];
-					this.hourFrom = e.timeFrom.split(' ')[1].split(':')[0];
-					this.hourTo = e.timeTo.split(' ')[1].split(':')[0];
-					this.minutesFrom = e.timeFrom.split(' ')[1].split(':')[1];
-					this.minutesTo = e.timeTo.split(' ')[1].split(':')[1];
+					this.timeFrom = e.timeFrom;
+					this.timeTo = e.timeTo;
 					this.editVisible = true;
 				}
 			}
@@ -186,14 +138,14 @@
 			}
 
 			_saveAvailability() {
-				if (this.hourFromInvalid || this.minutesFromInvalid || this.hourToInvalid || this.minutesToInvalid || !this.dateFrom || !this.dateTo) {
+				if (!this.timeFrom || !this.timeTo) {
 					this.message = 'Invalid time format';
 					this.$.errorToast.open();
 					return;
 				}
 				var inRoundTimes = false;
-				var fromDate = new Date(this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
-				var toDate = new Date(this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
+				var fromDate = new Date(this.timeFrom);
+				var toDate = new Date(this.timeTo);
 				for (var i = 0; i < this.round.times.length; i++) {
 					var roundFrom = new Date(this.round.times[i].from);
 					var roundTo = new Date(this.round.times[i].to);
@@ -210,22 +162,22 @@
 				if (this.isNewAvailability) {
 					if (fromDate < toDate) {
 						this.push('availabilities', {
-							timeFrom: this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00',
-							timeTo: this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00'
+							timeFrom: this.timeFrom,
+							timeTo: this.timeTo
 						});
 					} else {
 						this.push('availabilities', {
-							timeTo: this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00',
-							timeFrom: this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00'
+							timeTo: this.timeFrom,
+							timeFrom: this.timeTo
 						});
 					}
 				} else {
 					if (fromDate < toDate) {
-						this.set('availabilities.' + this.index + '.timeFrom', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
-						this.set('availabilities.' + this.index + '.timeTo', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
+						this.set('availabilities.' + this.index + '.timeFrom', this.timeFrom);
+						this.set('availabilities.' + this.index + '.timeTo', this.timeTo);
 					} else {
-						this.set('availabilities.' + this.index + '.timeTo', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2) + ':00');
-						this.set('availabilities.' + this.index + '.timeFrom', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2) + ':00');
+						this.set('availabilities.' + this.index + '.timeTo', this.timeFrom);
+						this.set('availabilities.' + this.index + '.timeFrom', this.timeTo);
 					}
 				}
 				this.editVisible = false;
