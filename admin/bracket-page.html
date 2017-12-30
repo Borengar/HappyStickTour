@@ -155,21 +155,13 @@
 						<template is="dom-if" if="[[!timeEditVisible]]">
 							<paper-icon-button icon="add" class="add-button" on-click="_addTime"></paper-icon-button>
 						</template>
-						<template is="dom-if" if="[[timeEditVisible]]" on-dom-change="_timeEditorCreated">
+						<template is="dom-if" if="[[timeEditVisible]]">
 							<div class="layout vertical">
 								<div class="layout horizontal">
-									<vaadin-date-picker placeholder="Date" id="fromDatePicker" value="{{dateFrom}}"></vaadin-date-picker>
-									<paper-input class="time-input" value="{{hourFrom}}"></paper-input>
-									<div style="margin-top:30px;margin-left:10px;">:</div>
-									<paper-input class="time-input" value="{{minutesFrom}}"></paper-input>
-									<div style="margin-top:30px;margin-left:10px;">UTC</div>
+									<time-picker date="{{fromDate}}"></time-picker>
 								</div>
 								<div class="layout horizontal">
-									<vaadin-date-picker placeholder="Date" id="toDatePicker" value="{{dateTo}}"></vaadin-date-picker>
-									<paper-input class="time-input" value="{{hourTo}}"></paper-input>
-									<div style="margin-top:30px;margin-left:10px;">:</div>
-									<paper-input class="time-input" value="{{minutesTo}}"></paper-input>
-									<div style="margin-top:30px;margin-left:10px;">UTC</div>
+									<time-picker date="{{toDate}}"></time-picker>
 								</div>
 								<div class="action-wrapper layout horizontal">
 									<paper-button class="action-button" raised on-click="_saveTime">Save</paper-button>
@@ -264,37 +256,6 @@
 						observer: '_selectedTimeChanged'
 					}
 				}
-			}
-
-			_timeEditorCreated() {
-				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.formatDate', function(d) {
-					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
-				});
-				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.parseDate', function(text) {
-					var parts = text.split('-');
-					if (parts.length === 3) {
-						var date = new Date(0, 0);
-						date.setFullYear(parseInt(parts[0]));
-						date.setMonth(parseInt(parts[1]) - 1);
-						date.setDate(parseInt(parts[2]));
-						return date;
-					}
-				});
-				this.shadowRoot.querySelector('#fromDatePicker').set('i18n.firstDayOfWeek', 1);
-				this.shadowRoot.querySelector('#toDatePicker').set('i18n.formatDate', function(d) {
-					return [d.getFullYear(), ('00' + (d.getMonth() + 1)).slice(-2), ('00' + d.getDate()).slice(-2)].join('-');
-				});
-				this.shadowRoot.querySelector('#toDatePicker').set('i18n.parseDate', function(text) {
-					var parts = text.split('-');
-					if (parts.length === 3) {
-						var date = new Date(0, 0);
-						date.setFullYear(parseInt(parts[0]));
-						date.setMonth(parseInt(parts[1]) - 1);
-						date.setDate(parseInt(parts[2]));
-						return date;
-					}
-				});
-				this.shadowRoot.querySelector('#toDatePicker').set('i18n.firstDayOfWeek', 1);
 			}
 
 			_addRound() {
@@ -539,12 +500,12 @@
 			_saveTime() {
 				if (this.isNewTime) {
 					this.push('times', {
-						from: this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2),
-						to: this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2)
+						from: this.fromDate,
+						to: this.toDate
 					});
 				} else {
-					this.set('times.' + this.timeEditorIndex + '.from', this.dateFrom + ' ' + ('00' + this.hourFrom).slice(-2) + ':' + ('00' + this.minutesFrom).slice(-2));
-					this.set('times.' + this.timeEditorIndex + '.to', this.dateTo + ' ' + ('00' + this.hourTo).slice(-2) + ':' + ('00' + this.minutesTo).slice(-2));
+					this.set('times.' + this.timeEditorIndex + '.from', this.fromDate);
+					this.set('times.' + this.timeEditorIndex + '.to', this.toDate);
 				}
 				this.timeEditVisible = false;
 			}
@@ -560,12 +521,8 @@
 							this.timeEditorIndex = i;
 						}
 					}
-					this.dateFrom = e.from.split(' ')[0];
-					this.dateTo = e.to.split(' ')[0];
-					this.hourFrom = e.from.split(' ')[1].split(':')[0];
-					this.hourTo = e.to.split(' ')[1].split(':')[0];
-					this.minutesFrom = e.from.split(' ')[1].split(':')[1];
-					this.minutesTo = e.to.split(' ')[1].split(':')[1];
+					this.fromDate = e.from;
+					this.toDate = e.to;
 					this.isNewTime = false;
 					this.timeEditVisible = true;
 				}
