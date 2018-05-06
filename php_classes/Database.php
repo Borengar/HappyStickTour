@@ -158,13 +158,12 @@ class Database {
 
 		// mappooler data
 		if ($this->scope == SCOPE::MAPPOOLER) {
-			$stmt = $this->db->prepare('SELECT tier
-				FROM mappoolers
-				WHERE discord_id = :discord_id');
+			$stmt = $this->db->prepare('SELECT tiers.id, tiers.name, tiers.lower_endpoint as lowerEndpoint, tiers.upper_endpoint as upperEndpoint
+				FROM mappooler_tiers INNER JOIN tiers ON mappooler_tiers.tier = tiers.id
+				WHERE mappooler_tiers.discord_id = :discord_id');
 			$stmt->bindValue(':discord_id', $this->discordId, PDO::PARAM_INT);
 			$stmt->execute();
-			$row = $stmt->fetch();
-			$user->tier = $row->tier;
+			$user->tiers = $stmt->fetchAll();
 		}
 
 		return $user;
@@ -1088,9 +1087,8 @@ class Database {
 	}
 
 	public function getMappoolers() {
-		$stmt = $this->db->prepare('SELECT discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, mappoolers.tier as tierId, tiers.name as tierName, tiers.lower_endpoint as tierLowerEndpoint, tiers.upper_endpoint as tierUpperEndpoint
-		FROM mappoolers INNER JOIN discord_users ON mappoolers.discord_id = discord_users.id LEFT JOIN tiers ON mappoolers.tier = tiers.id
-		ORDER BY tiers.lower_endpoint ASC, discord_users.username');
+		$stmt = $this->db->prepare('SELECT discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
+			FROM mappoolers INNER JOIN discord_users ON mappoolers.discord_id = discord_users.id');
 		$stmt->execute();
 		$rows = $stmt->fetchAll();
 		$mappoolers = [];
@@ -1102,15 +1100,12 @@ class Database {
 			$mappooler->discord->discriminator = $row->discordDiscriminator;
 			$mappooler->discord->avatar = $row->discordAvatar;
 
-			if ($row->tierId) {
-				$mappooler->tier = new stdClass;
-				$mappooler->tier->id = $row->tierId;
-				$mappooler->tier->name = $row->tierName;
-				$mappooler->tier->lowerEndpoint = $row->tierUpperEndpoint;
-				$mappooler->tier->upperEndpoint = $row->tierLowerEndpoint;
-			} else {
-				$mappooler->tier = null;
-			}
+			$stmt = $this->db->prepare('SELECT mappooler_tiers.tier as id, tiers.name as name, tiers.lower_endpoint as lowerEndpoint, tiers.upper_endpoint as upperEndpoint
+				FROM mappooler_tiers INNER JOIN tiers ON mappooler_tiers.tier = tiers.id
+				WHERE mappooler_tiers.discord_id = :discord_id');
+			$stmt->bindValue(':discord_id', $mappooler->discord->id, PDO::PARAM_INT);
+			$stmt->execute();
+			$mappooler->tiers = $stmt->fetchAll();
 
 			$mappoolers[] = $mappooler;
 		}
@@ -1140,7 +1135,7 @@ class Database {
 			}
 		}
 
-		$stmt = $this->db->prepare('SELECT id, discord_id as discordId, tier
+		$stmt = $this->db->prepare('SELECT id, discord_id as discordId
 			FROM mappoolers');
 		$stmt->execute();
 		$existingMappoolers = $stmt->fetchAll();
@@ -1156,6 +1151,10 @@ class Database {
 			}
 			if (!$found) {
 				$stmt = $this->db->prepare('DELETE FROM mappoolers
+					WHERE discord_id = :discord_id');
+				$stmt->bindValue(':discord_id', $existingMappooler->discordId, PDO::PARAM_INT);
+				$stmt->execute();
+				$stmt = $this->db->prepare('DELETE FROM mappooler_tiers
 					WHERE discord_id = :discord_id');
 				$stmt->bindValue(':discord_id', $existingMappooler->discordId, PDO::PARAM_INT);
 				$stmt->execute();
@@ -1182,13 +1181,19 @@ class Database {
 		}
 	}
 
-	public function putMappooler($userId, $tier) {
-		$stmt = $this->db->prepare('UPDATE mappoolers
-			SET tier = :tier
+	public function putMappooler($userId, $tiers) {
+		$stmt = $this->db->prepare('DELETE FROM mappooler_tiers
 			WHERE discord_id = :discord_id');
-		$stmt->bindValue(':tier', $tier, PDO::PARAM_INT);
 		$stmt->bindValue(':discord_id', $userId, PDO::PARAM_INT);
 		$stmt->execute();
+
+		foreach ($tiers as $tier) {
+			$stmt = $this->db->prepare('INSERT INTO mappooler_tiers (discord_id, tier)
+				VALUES (:discord_id, :tier)');
+			$stmt->bindValue(':discord_id', $userId, PDO::PARAM_INT);
+			$stmt->bindValue(':tier', $tier, PDO::PARAM_INT);
+			$stmt->execute();
+		}
 	}
 
 	public function cacheNewTwitchAccount($accessToken) {

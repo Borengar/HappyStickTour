@@ -645,7 +645,14 @@ $app->get('/rounds/{round}/tiers/{tier}/mappool', function($request, $response, 
 	}
 
 	if ($scope == SCOPE::MAPPOOLER) {
-		if ($user->tier != $mappool->tier) {
+		$hasAccess = false;
+		foreach ($user->tiers as $tier) {
+			if ($tier->id == $mappool->tier) {
+				$hasAccess = true;
+				break;
+			}
+		}
+		if (!$hasAccess) {
 			return echo403($response);
 		}
 	}
@@ -678,7 +685,14 @@ $app->get('/mappools/{id}', function($request, $response, $args) {
 	}
 
 	if ($scope == SCOPE::MAPPOOLER) {
-		if ($user->tier != $mappool->tier) {
+		$hasAccess = false;
+		foreach ($user->tiers as $tier) {
+			if ($tier->id == $mappool->tier) {
+				$hasAccess = true;
+				break;
+			}
+		}
+		if (!$hasAccess) {
 			return echo403($response);
 		}
 	}
@@ -707,7 +721,14 @@ $app->put('/rounds/{round}/tiers/{tier}/mappool/slots', function($request, $resp
 	$body = $request->getParsedBody();
 
 	if ($scope == SCOPE::MAPPOOLER) {
-		if ($user->tier != $mappool->tier) {
+		$hasAccess = false;
+		foreach ($user->tiers as $tier) {
+			if ($tier->id == $mappool->tier) {
+				$hasAccess = true;
+				break;
+			}
+		}
+		if (!$hasAccess) {
 			return echo403($response);
 		}
 	}
@@ -736,7 +757,14 @@ $app->put('/mappools/{id}/slots', function($request, $response, $args) {
 	$body = $request->getParsedBody();
 
 	if ($scope == SCOPE::MAPPOOLER) {
-		if ($user->tier != $mappool->tier) {
+		$hasAccess = false;
+		foreach ($user->tiers as $tier) {
+			if ($tier->id == $mappool->tier) {
+				$hasAccess = true;
+				break;
+			}
+		}
+		if (!$hasAccess) {
 			return echo403($response);
 		}
 	}
@@ -1169,7 +1197,7 @@ $app->put('/mappoolers/{id}', function($request, $response, $args) {
 
 	$body = $request->getParsedBody();
 
-	$database->putMappooler($args['id'], $body->tier);
+	$database->putMappooler($args['id'], $body->tiers);
 
 	return echoSuccess($response, 'Mappoolers updated');
 });

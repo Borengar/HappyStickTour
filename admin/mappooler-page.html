@@ -40,10 +40,6 @@
 						<template class="header">Discord</template>
 						<template>[[item.discord.username]]</template>
 					</vaadin-grid-column>
-					<vaadin-grid-column>
-						<template class="header">Tier</template>
-						<template>[[item.tier.name]]</template>
-					</vaadin-grid-column>
 				</vaadin-grid>
 				<div class="action-wrapper layout horizontal">
 					<paper-button raised class="action-button" on-click="_reload">Reload From Discord</paper-button>
@@ -56,13 +52,17 @@
 						<discord-profile id="[[discordId]]" avatar="[[discordAvatar]]" username="[[discordUsername]]" discriminator="[[discordDiscriminator]]"></discord-profile>
 					</div>
 					<div class="edit-section">
-						<paper-dropdown-menu label="Tier">
-							<paper-listbox slot="dropdown-content" selected="{{tierId}}" attr-for-selected="value">
-								<template is="dom-repeat" items="[[tiers]]" as="tier">
-									<paper-item value="[[tier.id]]">[[tier.name]]</paper-item>
+						<vaadin-grid class="tiers-grid" items="[[mappoolerTiers]]">
+							<vaadin-grid-column width="60px" flex-grow="0">
+								<template>
+									<input type="checkbox" checked="[[item.isMappooler]]" on-change="_selectTier">
 								</template>
-							</paper-listbox>
-						</paper-dropdown-menu>
+							</vaadin-grid-column>
+							<vaadin-grid-column>
+								<template class="header">Tier</template>
+								<template>[[item.name]]</template>
+							</vaadin-grid-column>
+						</vaadin-grid>
 					</div>
 					<div class="action-wrapper layout horizontal">
 						<paper-button raised class="action-button" on-click="_save">Save</paper-button>
@@ -104,18 +104,41 @@
 					this.discordUsername = e.discord.username;
 					this.discordAvatar = e.discord.avatar;
 					this.discordDiscriminator = e.discord.discriminator;
-					this.tierId = e.tier ? e.tier.id : null;
+					this.mappoolerTiers = [];
+					for (var i = 0; i < this.tiers.length; i++) {
+						var isMappooler = false;
+						for (var j = 0; j < e.tiers.length; j++) {
+							if (this.tiers[i].id == e.tiers[j].id) {
+								isMappooler = true;
+								break;
+							}
+						}
+						this.push('mappoolerTiers', {
+							id: this.tiers[i].id,
+							name: this.tiers[i].name,
+							isMappooler: isMappooler
+						});
+					}
 					this.editVisible = true;
 				}
 			}
+			_selectTier(e) {
+				this.set('mappoolerTiers.' + e.model.index + '.isMappooler', !e.model.item.isMappooler);
+			}
 
 			_save() {
+				var mappoolerTiers = [];
+				for (var i = 0; i < this.mappoolerTiers.length; i++) {
+					if (this.mappoolerTiers[i].isMappooler) {
+						mappoolerTiers.push(this.mappoolerTiers[i].id);
+					}
+				}
 				this.$.putMappoolersAjax.url = '../api/mappoolers/' + this.discordId;
 				this.$.putMappoolersAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.putMappoolersAjax.body = {
-					'tier': this.tierId
+					'tiers': mappoolerTiers
 				}
 				this.$.putMappoolersAjax.generateRequest();
 			}

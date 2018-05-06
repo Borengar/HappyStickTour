@@ -84,13 +84,22 @@
 				</app-toolbar>
 			</app-header>
 			<div class="wrapper flex layout vertical">
-				<paper-dropdown-menu label="Round" class="round-dropdown">
-					<paper-listbox slot="dropdown-content" selected="{{selectedRound}}" attr-for-selected="value">
-						<template is="dom-repeat" items="[[rounds]]" as="round">
-							<paper-item value="[[round]]">[[round.name]]</paper-item>
-						</template>
-					</paper-listbox>
-				</paper-dropdown-menu>
+				<div class="flex layout horizontal">
+					<paper-dropdown-menu label="Round" class="round-dropdown">
+						<paper-listbox slot="dropdown-content" selected="{{selectedRound}}" attr-for-selected="value">
+							<template is="dom-repeat" items="[[rounds]]" as="round">
+								<paper-item value="[[round]]">[[round.name]]</paper-item>
+							</template>
+						</paper-listbox>
+					</paper-dropdown-menu>
+					<paper-dropdown-menu label="Tier" class="round-dropdown">
+						<paper-listbox slot="dropdown-content" selected="{{selectedTier}}" attr-for-selected="value">
+							<template is="dom-repeat" items="[[user.tiers]]" as="tier">
+								<paper-item value="[[tier]]">[[tier.name]]</paper-item>
+							</template>
+						</paper-listbox>
+					</paper-dropdown-menu>
+				</div>
 				<div hidden$="[[!copyRound]]">
 					<div>Mappool is copied from <span>[[copyRoundName]]</span></div>
 				</div>
@@ -194,7 +203,10 @@
 			static get properties() {
 				return {
 					selectedRound: {
-						observer: '_selectedRoundChanged'
+						observer: '_roundOrTierChanged'
+					},
+					selectedTier: {
+						observer: '_roundOrTierChanged'
 					},
 					copyRound: {
 						type: Boolean,
@@ -236,13 +248,13 @@
 				this.$.getUserAjax.generateRequest();
 			}
 
-			_selectedRoundChanged(e) {
-				this.listVisible = false;
-				this.editVisible = false;
-				if (e) {
-					if (e.copyMappool == '1') {
+			_roundOrTierChanged(e) {
+				if (this.selectedRound && this.selectedTier) {
+					this.listVisible = false;
+					this.editVisible = false;
+					if (this.selectedRound.copyMappool == '1') {
 						for (var i = 0; i < this.rounds.length; i++) {
-							if (this.rounds[i].id == e.copyMappoolFrom) {
+							if (this.rounds[i].id == this.selectedRound.copyMappoolFrom) {
 								this.copyRoundName = this.rounds[i].name;
 								break;
 							}
@@ -250,7 +262,7 @@
 						this.copyRound = true;
 					} else {
 						this.copyRound = false;
-						this.$.getMappoolAjax.url = '../api/rounds/' + this.selectedRound.id + '/tiers/' + this.user.tier + '/mappool';
+						this.$.getMappoolAjax.url = '../api/rounds/' + this.selectedRound.id + '/tiers/' + this.selectedTier.id + '/mappool';
 						this.$.getMappoolAjax.headers = {
 							'Authorization': localStorage.getItem('token')
 						}
