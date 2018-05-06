@@ -39,7 +39,6 @@ class Database {
 			$this->scope = SCOPE::NONE;
 			return;
 		}
-		$this->user = new stdClass;
 		$this->discordId = $row->userId;
 		switch ($row->scope) {
 			case 'REGISTRATION': $this->scope = SCOPE::REGISTRATION; break;
