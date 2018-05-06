@@ -41,12 +41,12 @@ function echo400(Response $response, $message) {
 	return $response->withStatus(400);
 }
 
-function echo401() {
+function echo401(Response $response) {
 	$response = echoError($response, 'Authentication required');
 	return $response->withStatus(401);
 }
 
-function echo403() {
+function echo403(Response $response) {
 	$response = echoError($response, 'Insufficient permissions');
 	return $response->withStatus(403);
 }
@@ -66,7 +66,7 @@ $app->get('/user', function($request, $response) {
 
 	$user = $database->getUser();
 	if (!$user) {
-		echo401();
+		echo401($response);
 		return;
 	}
 
