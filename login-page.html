@@ -1,6 +1,9 @@
 <dom-module id="login-page">
 	<template>
 		<style include="iron-flex iron-flex-alignment">
+			.wrapper {
+				background-color: #ffffff;
+			}
 			.header-image {
 				width: 100%;
 			}
@@ -16,13 +19,9 @@
 				color: white;
 				font-size: 40px;
 				padding: 20px;
-			}
-			.discord-login-button-small {
-				background-color: var(--happystick-green);
-				color: white;
-				font-size: 40px;
-				padding: 20px;
-				width: calc(100% - 20px);
+				border-radius: 50%;
+				width: 250px;
+				height: 250px;
 			}
 			.scope-login-button {
 				margin-bottom: 10px;
@@ -40,207 +39,112 @@
 		<iron-ajax id="settingsAjax" url="api/settings" method="GET" on-response="_settingsResponse" auto></iron-ajax>
 		<iron-ajax id="getDiscordUriAjax" url="api/discordlogin" method="GET" on-response="_discordLogin"></iron-ajax>
 		<iron-ajax id="postDiscordLoginAjax" url="api/discordlogin" method="POST" content-type="application/json" on-response="_postDiscordLoginResponse"></iron-ajax>
-		<iron-media-query query="(max-width:999px)" query-matches="{{querySmall}}"></iron-media-query>
-		<template is="dom-if" if="[[!querySmall]]">
-			<div class="layout vertical">
-				<img src="images/index_header.png" class="header-image"></div>
-				<vaadin-button class="staff-login-button" on-click="_getDiscordUri">Staff login</vaadin-button>
-				<template is="dom-if" if="[[showDefault]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Player login</vaadin-button>
-						<div style="width:200px;"></div>
-						<vaadin-button class="discord-login-button" on-click="_publicLogin">Public Stats</vaadin-button>
-						<div class="flex"></div>
+		<div class="layout vertical wrapper">
+			<img src="images/index_header.png" class="header-image"></div>
+			<vaadin-button class="staff-login-button" on-click="_getDiscordUri">Staff login</vaadin-button>
+			<template is="dom-if" if="[[showDefault]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Player login</vaadin-button>
+					<div style="width:200px;"></div>
+					<vaadin-button class="discord-login-button" on-click="_publicLogin">Public Stats</vaadin-button>
+					<div class="flex"></div>
+				</div>
+			</template>
+			<template is="dom-if" if="[[showDiscordLoginError]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div style="margin-bottom:20px;color:red;">Please authorize Discord to proceed.</div>
+					<div class="flex"></div>
+				</div>
+			</template>
+			<template is="dom-if" if="[[showScopeChooser]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div class="layout vertical">
+						<template is="dom-repeat" items="[[scopes]]" as="scope">
+							<vaadin-button class="scope-login-button" on-click="_loginScope">[[scope]]</vaadin-button>
+						</template>
 					</div>
-				</template>
-				<template is="dom-if" if="[[showScopeChooser]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div class="layout vertical">
-							<template is="dom-repeat" items="[[scopes]]" as="scope">
-								<vaadin-button class="scope-login-button" on-click="_loginScope">[[scope]]</vaadin-button>
-							</template>
+					<div class="flex"></div>
+				</div>
+			</template>
+			<template is="dom-if" if="[[showGuildJoin]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<vaadin-button class="discord-login-button" on-click="_joinGuild">Join HappyStick Guild</vaadin-button>
+					<div class="flex"></div>
+				</div>
+			</template>
+			<template is="dom-if" if="[[showCountdown]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdownDays]]</div>
+							<div class="flex"></div>
 						</div>
-						<div class="flex"></div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Days</div>
+							<div class="flex"></div>
+						</div>
 					</div>
-				</template>
-				<template is="dom-if" if="[[showGuildJoin]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<vaadin-button class="discord-login-button" on-click="_joinGuild">Join HappyStick Guild</vaadin-button>
-						<div class="flex"></div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdownHours]]</div>
+							<div class="flex"></div>
+						</div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Hours</div>
+							<div class="flex"></div>
+						</div>
 					</div>
-				</template>
-				<template is="dom-if" if="[[showCountdown]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownDays]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Days</div>
-								<div class="flex"></div>
-							</div>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdownMinutes]]</div>
+							<div class="flex"></div>
 						</div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownHours]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Hours</div>
-								<div class="flex"></div>
-							</div>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Minutes</div>
+							<div class="flex"></div>
 						</div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownMinutes]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Minutes</div>
-								<div class="flex"></div>
-							</div>
-						</div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownSeconds]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Seconds</div>
-								<div class="flex"></div>
-							</div>
-						</div>
-						<div class="flex"></div>
 					</div>
-				</template>
-				<template is="dom-if" if="[[showRegistrationClosed]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div style="margin-bottom:100px;">Registrations are closed at the moment.</div>
-						<div class="flex"></div>
-					</div>
-				</template>
-				<template is="dom-if" if="[[showRegistration]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Register</vaadin-button>
-						<div class="flex"></div>
-					</div>
-				</template>
-			</div>
-		</template>
-		<template is="dom-if" if="[[querySmall]]">
-			<div class="layout vertical">
-				<img src="images/index_header_small.png" class="header-image"></div>
-				<vaadin-button class="staff-login-button" raised on-click="_getDiscordUri">Staff login</vaadin-button>
-				<template is="dom-if" if="[[showDefault]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div class="layout vertical">
-							<vaadin-button class="discord-login-button-small" on-click="_getDiscordUri">Player login</vaadin-button>
-							<div style="height:20px;"></div>
-							<vaadin-button class="discord-login-button-small" on-click="_publicLogin">Public Stats</vaadin-button>
+					<div class="layout vertical" style="width:220px;">
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-number">[[countdownSeconds]]</div>
+							<div class="flex"></div>
 						</div>
-						<div class="flex"></div>
-					</div>
-				</template>
-				<template is="dom-if" if="[[showScopeChooser]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div class="layout vertical">
-							<template is="dom-repeat" items="[[scopes]]" as="scope">
-								<vaadin-button class="scope-login-button" raised on-click="_loginScope">[[scope]]</vaadin-button>
-							</template>
+						<div class="layout horizontal">
+							<div class="flex"></div>
+							<div class="countdown-title">Seconds</div>
+							<div class="flex"></div>
 						</div>
-						<div class="flex"></div>
 					</div>
-				</template>
-				<template is="dom-if" if="[[showGuildJoin]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<vaadin-button class="discord-login-button" on-click="_joinGuild">Join HappyStick Guild</vaadin-button>
-						<div class="flex"></div>
-					</div>
-				</template>
-				<template is="dom-if" if="[[showCountdown]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownDays]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Days</div>
-								<div class="flex"></div>
-							</div>
-						</div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownHours]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Hours</div>
-								<div class="flex"></div>
-							</div>
-						</div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownMinutes]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Minutes</div>
-								<div class="flex"></div>
-							</div>
-						</div>
-						<div class="layout vertical" style="width:220px;">
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-number">[[countdownSeconds]]</div>
-								<div class="flex"></div>
-							</div>
-							<div class="layout horizontal">
-								<div class="flex"></div>
-								<div class="countdown-title">Seconds</div>
-								<div class="flex"></div>
-							</div>
-						</div>
-						<div class="flex"></div>
-					</div>
-				</template>
-				<template is="dom-if" if="[[showRegistrationClosed]]">
-					<div class="layout horizontal">
-						<div class="flex"></div>
-						<div style="margin-bottom:100px;">Registrations are closed at the moment.</div>
-						<div class="flex"></div>
-					</div>
-				</template>
-				<template is="dom-if" if="[[showRegistration]]">
-					<vaadin-button class="discord-login-button-small" raised on-click="_getDiscordUri">Register</vaadin-button>
-				</template>
-			</div>
-		</template>
+					<div class="flex"></div>
+				</div>
+			</template>
+			<template is="dom-if" if="[[showRegistrationClosed]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<div style="margin-bottom:100px;">Registrations are closed at the moment.</div>
+					<div class="flex"></div>
+				</div>
+			</template>
+			<template is="dom-if" if="[[showRegistration]]">
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Register</vaadin-button>
+					<div class="flex"></div>
+				</div>
+			</template>
+		</div>
 	</template>
 	<script>
 		class LoginPage extends Polymer.Element {
@@ -271,6 +175,10 @@
 					showGuildJoin: {
 						type: Boolean,
 						value: false
+					},
+					showDiscordLoginError: {
+						type: Boolean,
+						value: false
 					}
 				};
 			}
@@ -283,6 +191,11 @@
 		    		'accessToken': hash.access_token
 		    	};
 		    	this.$.postDiscordLoginAjax.generateRequest();
+		    }
+
+		    var error = this._getQueryParam('error');
+		    if (error == 'access_denied') {
+		    	this.showDiscordLoginError = true;
 		    }
 			}
 
@@ -298,6 +211,15 @@
 		       hashParams[d(e[1])] = d(e[2]);
 
 		    return hashParams;
+			}
+
+			_getQueryParam(name) {
+		    name = name.replace(/[\[\]]/g, "\\$&");
+		    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+		        results = regex.exec(window.location.href);
+		    if (!results) return null;
+		    if (!results[2]) return '';
+		    return decodeURIComponent(results[2].replace(/\+/g, " "));
 			}
 
 			_hideEverything() {
@@ -398,7 +320,7 @@
 			}
 
 			_joinGuild() {
-				window.location = 'https://discord.gg/happystick';
+				window.location = 'https://a.trigonocul.us/rekindling';
 			}
 		}
 
