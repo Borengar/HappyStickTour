@@ -100,12 +100,6 @@
 				<template is="dom-if" if="[[showRegister]]">
 					<vaadin-button class="register-button" raised on-click="_register">Register</vaadin-button>
 				</template>
-				<template is="dom-if" if="[[showTwitchLink]]">
-					<vaadin-button class="twitch-button" raised on-click="_twitchLink">Link Twitch</vaadin-button>
-				</template>
-				<template is="dom-if" if="[[user.twitch]]">
-					<twitch-profile avatar="[[user.twitch.avatar]]" display-name="[[user.twitch.displayName]]" sub-since="[[user.twitch.subSince]]"></twitch-profile>
-				</template>
 				<template is="dom-if" if="[[showDelete]]">
 					<vaadin-button class="delete-button" on-click="_delete">Delete Registration</vaadin-button>
 				</template>
@@ -131,10 +125,6 @@
 					showSearch: {
 						type: Boolean,
 						value: true
-					},
-					showTwitchLink: {
-						type: Boolean,
-						value: false
 					},
 					showDelete: {
 						type: Boolean,
@@ -201,15 +191,9 @@
 					this.showSearch = false;
 					this.showDelete = true;
 					this.osuProfile = this.user.osu;
-					if (!this.user.twitch) {
-						this.showTwitchLink = true;
-					} else {
-						this.showTwitchLink = false;
-					}
 				} else {
 					this.showSearch = true;
 					this.showDelete = false;
-					this.showTwitchLink = false;
 					this.showRegister = false;
 					this.osuProfile = undefined;
 				}
@@ -271,15 +255,6 @@
 					this.$.successToast.open();
 					this.$.getUserAjax.generateRequest();
 				}
-			}
-
-			_twitchLink() {
-				this.$.getTwitchLoginAjax.generateRequest();
-			}
-
-			_getTwitchLoginResponse(e) {
-				var response = e.detail.response;
-				window.location = response.uri;
 			}
 
 			_delete() {
