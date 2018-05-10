@@ -92,7 +92,7 @@ class OsuApi {
           CURLOPT_SSL_VERIFYPEER => 0,
           CURLOPT_RETURNTRANSFER => 1,
           CURLOPT_FOLLOWLOCATION => 1,
-          CURLOPT_URL => 'https://osu.ppy.sh/users/' . $userId
+          CURLOPT_URL => 'https://osu.ppy.sh/users/' . $userId . '/osu'
         )
       );
       $html = curl_exec($curl);
@@ -101,23 +101,22 @@ class OsuApi {
       @$dom->loadHTML($html);
       $user = json_decode($dom->getElementById('json-user')->textContent);
       $rankHistory = json_decode($dom->getElementById('json-rankHistory')->textContent);
-      $statistics = json_decode($dom->getElementById('json-statistics')->textContent);
-      $scores = json_decode($dom->getElementById('json-scores')->textContent);
+      $extras = json_decode($dom->getElementById('json-extras')->textContent);
 
       $returnValue->id = $user->id;
       $returnValue->username = $user->username;
       $returnValue->avatarUrl = $user->avatar_url;
-      $returnValue->hitAccuracy = $statistics->hit_accuracy;
-      $returnValue->level = $statistics->level->current;
-      $returnValue->playCount = $statistics->play_count;
-      $returnValue->pp = $statistics->pp;
-      $returnValue->rank = $statistics->rank->global;
+      $returnValue->hitAccuracy = $user->statistics->hit_accuracy;
+      $returnValue->level = $user->statistics->level->current;
+      $returnValue->playCount = $user->statistics->play_count;
+      $returnValue->pp = $user->statistics->pp;
+      $returnValue->rank = $user->statistics->rank->global;
       $returnValue->rankHistory = $rankHistory->data;
-      $returnValue->bestScore = $scores->best[0]->beatmapset->artist . ' - ' . $scores->best[0]->beatmapset->title . ' [' . $scores->best[0]->beatmap->version . ']';
-      if (count($scores->best[0]->mods) > 0) {
-        $returnValue->bestScore .= ' +' . join(',', $scores->best[0]->mods);
+      $returnValue->bestScore = $extras->scoresBest[0]->beatmapset->artist . ' - ' . $extras->scoresBest[0]->beatmapset->title . ' [' . $extras->scoresBest[0]->beatmap->version . ']';
+      if (count($extras->scoresBest[0]->mods) > 0) {
+        $returnValue->bestScore .= ' +' . join(',', $extras->scoresBest[0]->mods);
       }
-      $returnValue->bestScore .= ' (' . $scores->best[0]->pp . 'PP)';
+      $returnValue->bestScore .= ' (' . $extras->scoresBest[0]->pp . 'PP)';
       $returnValue->playstyle = join(' + ', $user->playstyle);
       $returnValue->joinDate = (new DateTime($user->join_date))->format('Y-m-d H:i:s');
       $returnValue->country = $user->country->code;
