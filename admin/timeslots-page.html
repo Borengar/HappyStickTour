@@ -1,0 +1,218 @@
+<dom-module id="timeslots-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment">
+			paper-checkbox {
+				--paper-checkbox-checked-color: var(--happystick-green);
+			}
+			paper-input {
+				--paper-input-container-focus-color: var(--happystick-green);
+			}
+			paper-dialog {
+				width: 500px;
+			}
+			vaadin-date-picker {
+				margin-left: 10px;
+				margin-top: 25px;
+				margin-left: 10px;
+			}
+			.list-wrapper, .edit-wrapper {
+				width: 500px;
+				padding: 10px;
+			}
+			.header {
+				margin: 10px;
+				font-size: 30px;
+				color: var(--happystick-green);
+			}
+			.add-button, .action-button {
+				background-color: var(--happystick-green);
+				color: white;
+				margin: 10px;
+				flex-shrink: 0;
+			}
+			.edit-section {
+				margin-top: 10px;
+				margin-bottom: 10px;
+				flex-shrink: 0;
+			}
+			.indented {
+				margin-left: 25px;
+			}
+			.time-input {
+				width: 30px;
+				margin-left: 10px;
+			}
+			.action-wrapper {
+				flex-shrink: 0;
+			}
+			#errorToast {
+				--paper-toast-background-color: var(--error-red);
+			}
+			.label {
+				margin-top: 30px;
+				margin-left: 10px;
+			}
+			.warning {
+				margin: 10px;
+				color: red;
+				font-size: 25px;
+			}
+		</style>
+		<iron-ajax id="getTimeslotsAjax" url="../api/timeslots" method="GET" content-type="application/json" last-response="{{timeslots}}"></iron-ajax>
+		<iron-ajax id="postTimeslotsAjax" url="../api/timeslots" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<div class="layout vertical">
+			<div class="header">Timeslots</div>
+			<div class="warning">Do NOT touch this after registrations are open! Saving will delete all availabilities!</div>
+			<div class="layout horizontal">
+				<div class="list-wrapper layout vertical">
+					<vaadin-grid class="timeslots-grid" items="[[timeslots]]" active-item="{{selectedTimeslot}}">
+						<vaadin-grid-column>
+							<template class="header">Day</template>
+							<template>[[item.day]]</template>
+						</vaadin-grid-column>
+						<vaadin-grid-column>
+							<template class="header">Time</template>
+							<template>[[item.time]]</template>
+						</vaadin-grid-column>
+					</vaadin-grid>
+					<div class="layout horizontal">
+						<paper-icon-button icon="add" class="add-button" on-click="_addTimeslot"></paper-icon-button>
+						<paper-icon-button icon="save" class="action-button" on-click="_save"></paper-icon-button>
+					</div>
+				</div>
+				<div class="edit-wrapper layout vertical">
+					<template is="dom-if" if="[[timeEditVisible]]">
+						<template is="dom-if" if="[[isNewTimeslot]]">
+							<div class="header">New Timeslot</div>
+						</template>
+						<template is="dom-if" if="[[!isNewTimeslot]]">
+							<div class="header">Edit Timeslot</div>
+						</template>
+						<div class="layout horizontal">
+							<paper-dropdown-menu label="Day">
+								<paper-listbox slot="dropdown-content" selected="{{day}}" attr-for-selected="value">
+									<template is="dom-repeat" items='["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]'>
+										<paper-item value="[[item]]">[[item]]</paper-item>
+									</template>
+								</paper-listbox>
+							</paper-dropdown-menu>
+						</div>
+						<div class="layout horizontal">
+							<div class="layout horizontal">
+								<paper-input class="time-input" value="{{hours}}"></paper-input>
+								<div class="label">:</div>
+								<paper-input class="time-input" value="{{minutes}}"></paper-input>
+								<div class="label">UTC</div>
+							</div>
+						</div>
+						<div class="action-wrapper layout horizontal">
+							<paper-button class="action-button" raised on-click="_saveTime">Save</paper-button>
+							<template is="dom-if" if="[[!isNewTimeslot]]">
+								<paper-button class="action-button" raised on-click="_deleteTime">Delete</paper-button>
+							</template>
+							<paper-button class="action-button" raised on-click="_cancelTime">Cancel</paper-button>
+						</div>
+					</template>
+				</div>
+			</div>
+		</div>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
+	</template>
+	<script>
+		class TimeslotsPage extends Polymer.Element {
+			static get is() { return 'timeslots-page' }
+
+			static get properties() {
+				return {
+					timeEditVisible: {
+						type: Boolean,
+						value: false
+					},
+					isNewTimeslot: {
+						type: Boolean,
+						value: false
+					},
+					selectedTimeslot: {
+						observer: '_selectedTimeslotChanged'
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getTimeslotsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getTimeslotsAjax.generateRequest();
+			}
+
+			_defaultResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.editVisible = false;
+				}
+			}
+
+			_addTimeslot() {
+				this.hours = '';
+				this.minutes = '00';
+				this.isNewTimeslot = true;
+				this.timeEditVisible = true;
+			}
+
+			_selectedTimeslotChanged(e) {
+				if (e) {
+					for (var i = 0; i < this.timeslots.length; i++) {
+						if (e.day == this.timeslots[i].day && e.time == this.timeslots[i].time) {
+							this.timeEditorIndex = i;
+						}
+					}
+					this.day = e.day;
+					this.hours = e.time.split(':')[0];
+					this.minutes = e.time.split(':')[1];
+					this.isNewTimeslot = false;
+					this.timeEditVisible = true;
+				}
+			}
+
+			_saveTime() {
+				if (this.isNewTimeslot) {
+					this.push('timeslots', {
+						day: this.day,
+						time: this.hours + ':' + this.minutes
+					});
+				} else {
+					this.set('timeslots.' + this.timeEditorIndex + '.day', this.day);
+					this.set('timeslots.' + this.timeEditorIndex + '.time', this.hours + ':' + this.minutes);
+				}
+				this.timeEditVisible = false;
+			}
+
+			_cancelTime() {
+				this.timeEditVisible = false;
+			}
+
+			_deleteTime() {
+				this.splice('timeslots', this.timeEditorIndex, 1);
+				this.timeEditVisible = false;
+			}
+
+			_save() {
+				this.$.postTimeslotsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.postTimeslotsAjax.body = {
+					'timeslots': this.timeslots
+				}
+				this.$.postTimeslotsAjax.generateRequest();
+			}
+		}
+
+		window.customElements.define(TimeslotsPage.is, TimeslotsPage);
+	</script>
+</dom-module>

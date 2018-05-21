@@ -134,6 +134,12 @@ class Database {
 			} else {
 				$user->twitch = null;
 			}
+			$stmt = $this->db->prepare('SELECT time_slots.id, time_slots.day, time_slots.time
+				FROM time_slots INNER JOIN availabilities ON time_slots.id = availabilities.time_slot
+				WHERE availabilities.user_id = :user_id');
+			$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+			$stmt->execute();
+			$user->timeslots = $stmt->fetchAll();
 		}
 
 		// player data
@@ -308,13 +314,41 @@ class Database {
 		$stmt->execute();
 	}
 
-	public function postRegistration($osuId) {
+	public function postRegistration($osuId, $availabilities) {
 		$stmt = $this->db->prepare('INSERT INTO registrations (id, osu_id, registration_time)
 			VALUES (:id, :osu_id, :registration_time)');
 		$stmt->bindValue(':id', $this->discordId, PDO::PARAM_INT);
 		$stmt->bindValue(':osu_id', $osuId, PDO::PARAM_INT);
 		$stmt->bindValue(':registration_time', gmdate('Y-m-d H:i:s'));
 		$stmt->execute();
+
+		$stmt = $this->db->prepare('DELETE FROM availabilities
+			WHERE user_id = :user_id');
+		$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+		$stmt->execute();
+
+		foreach ($availabilities as $availability) {
+			$stmt = $this->db->prepare('INSERT INTO availabilities (user_id, time_slot)
+				VALUES (:user_id, :time_slot)');
+			$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+			$stmt->bindValue(':time_slot', $availability->id, PDO::PARAM_INT);
+			$stmt->execute();
+		}
+	}
+
+	public function putRegistration($availabilities) {
+		$stmt = $this->db->prepare('DELETE FROM availabilities
+			WHERE user_id = :user_id');
+		$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+		$stmt->execute();
+
+		foreach ($availabilities as $availability) {
+			$stmt = $this->db->prepare('INSERT INTO availabilities (user_id, time_slot)
+				VALUES (:user_id, :time_slot)');
+			$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+			$stmt->bindValue(':time_slot', $availability->id, PDO::PARAM_INT);
+			$stmt->execute();
+		}
 	}
 
 	public function deleteRegistration($discordId) {
@@ -1220,6 +1254,27 @@ class Database {
 		$stmt->execute();
 
 		return $twitchUser->_id;
+	}
+
+	public function getTimeslots() {
+		$stmt = $this->db->prepare('SELECT id, day, `time`
+			FROM time_slots');
+		$stmt->execute();
+
+		return $stmt->fetchAll();
+	}
+
+	public function postTimeslots($timeslots) {
+		$stmt = $this->db->prepare('DELETE FROM time_slots');
+		$stmt->execute();
+
+		foreach ($timeslots as $timeslot) {
+			$stmt = $this->db->prepare('INSERT INTO time_slots (day, `time`)
+				VALUES (:day, :time)');
+			$stmt->bindValue(':day', $timeslot->day, PDO::PARAM_STR);
+			$stmt->bindValue(':time', $timeslot->time, PDO::PARAM_STR);
+			$stmt->execute();
+		}
 	}
 
 	private function recalculateRound($roundId = 0) {

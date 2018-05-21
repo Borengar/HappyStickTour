@@ -61,6 +61,15 @@
 				margin-top: 10px;
 				width: 400px;
 			}
+			.timeslots-grid {
+				width: 500px;
+				padding: 10px;
+			}
+			.small-heading {
+				font-size: 30px;
+				color: var(--happystick-green);
+				margin-top: 20px;
+			}
 		</style>
 		<iron-ajax id="getUserAjax" url="../api/user" method="GET" last-response="{{user}}" on-response="_getUserResponse"></iron-ajax>
 		<iron-ajax id="osuProfileAjax" url="../api/osuprofile/" method="GET" last-response="{{osuProfile}}"></iron-ajax>
@@ -69,6 +78,8 @@
 		<iron-ajax id="getTwitchLoginAjax" url="../api/twitchlogin" method="GET" content-type="application/json" on-response="_getTwitchLoginResponse"></iron-ajax>
 		<iron-ajax id="postTwitchLoginAjax" url="../api/twitchlogin" method="POST" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="deleteRegistrationAjax" url="../api/registrations" method="DELETE" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="getTimeslotsAjax" url="../api/timeslots" method="GET" last-response="{{timeslots}}" auto></iron-ajax>
+		<iron-ajax id="putRegistrationsAjax" url="../api/registrations" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<app-header-layout>
 			<app-header slot="header">
 				<app-toolbar class="layout horizontal">
@@ -84,6 +95,7 @@
 				<div class="text">There are a limited amount of slots so the earlier you register, the more likely you'll make it in!</div>
 				<div class="text">If your registration is accepted you will be automatically assigned the appropriate Discord role on our server.</div>
 				<!--<div class="text">For an in-depth look into how the Summer Tour is run take a look at <a href="https://google.com" target="_blank">this document.</a> Here you'll find an overview of the prizepool, format, rules, etc.</div>-->
+				<div class="small-heading">Your osu! account</div>
 				<template is="dom-if" if="[[showSearch]]">
 					<div class="layout horizontal search-wrapper">
 						<vaadin-text-field class="search-input" label="osu! ID or Username" value="{{osuId}}" on-keydown="_searchKeyDown"></vaadin-text-field>
@@ -93,15 +105,37 @@
 				</template>
 				<osu-profile avatar-url="[[osuProfile.avatarUrl]]" username="[[osuProfile.username]]" pp="[[osuProfile.pp]]" hit-accuracy="[[osuProfile.hitAccuracy]]" play-count="[[osuProfile.playCount]]" level="[[osuProfile.level]]" rank="[[osuProfile.rank]]"></osu-profile>
 				<template is="dom-if" if="[[tier]]">
+					<div class="small-heading">Your tier</div>
 					<div class="layout horizontal tier-wrapper">
-						<div>Your tier: <span>[[tier.name]]</span></div>
+						<div>[[tier.name]]</div>
 					</div>
 				</template>
+				<div class="small-heading">Your availability</div>
+				<vaadin-grid class="timeslots-grid" items="{{timeslots}}">
+					<vaadin-grid-column width="50px" flex-grow="0">
+						<template>
+							<paper-checkbox checked="{{item.selected}}"></paper-checkbox>
+						</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column>
+						<template class="header">Day</template>
+						<template>[[item.day]]</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column>
+						<template class="header">Time</template>
+						<template>[[item.time]] UTC</template>
+					</vaadin-grid-column>
+				</vaadin-grid>
 				<template is="dom-if" if="[[showRegister]]">
 					<vaadin-button class="register-button" raised on-click="_register">Register</vaadin-button>
 				</template>
 				<template is="dom-if" if="[[showDelete]]">
-					<vaadin-button class="delete-button" on-click="_delete">Delete Registration</vaadin-button>
+					<vaadin-button class="register-button" raised on-click="_update">Update availability</vaadin-button>
+					<div class="flex"></div>
+					<div class="layout horizontal">
+						<div class="flex"></div>
+						<vaadin-button class="delete-button" on-click="_delete">Delete Registration</vaadin-button>
+					</div>
 				</template>
 			</div>
 		</app-header-layout>
@@ -133,6 +167,12 @@
 					searchingProfile: {
 						type: Boolean,
 						value: false
+					},
+					timeslots: {
+						observer: '_updateTimeslots'
+					},
+					user: {
+						observer: '_updateTimeslots'
 					}
 				}
 			}
@@ -241,9 +281,20 @@
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.postRegistrationAjax.body = {
-					'osuId': this.osuProfile.id
+					'osuId': this.osuProfile.id,
+					'timeslots': this.timeslots.filter(slot => slot.selected)
 				}
 				this.$.postRegistrationAjax.generateRequest();
+			}
+
+			_update() {
+				this.$.putRegistrationsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putRegistrationsAjax.body = {
+					'timeslots': this.timeslots.filter(slot => slot.selected)
+				}
+				this.$.putRegistrationsAjax.generateRequest();
 			}
 
 			_defaultResponse(e) {
@@ -262,6 +313,18 @@
 					'Authorization': localStorage.getItem('token')
 				}
 				this.$.deleteRegistrationAjax.generateRequest();
+			}
+
+			_updateTimeslots() {
+				if (this.user && this.timeslots) {
+					for (var i = 0; i < this.user.timeslots.length; i++) {
+						for (var j = 0; j < this.timeslots.length; j++) {
+							if (this.user.timeslots[i].id == this.timeslots[j].id) {
+								this.set('timeslots.' + j + '.selected', true);
+							}
+						}
+					}
+				}
 			}
 		}
 

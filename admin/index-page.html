@@ -27,6 +27,7 @@
 				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
 					<paper-item value="Tiers">Tiers</paper-item>
 					<paper-item value="Bracket">Bracket</paper-item>
+					<paper-item value="Timeslots">Timeslots</paper-item>
 					<paper-item value="Registrations">Registrations</paper-item>
 					<paper-item value="Roles">Roles</paper-item>
 					<paper-item value="Lobbies">Lobbies</paper-item>
@@ -46,6 +47,7 @@
 				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value" on-updatetiers="_updateTiers" on-updaterounds="_updateRounds">
 					<tiers-page class="flex layout vertical" value="Tiers" tiers="[[tiers]]" rounds="[[rounds]]"></tiers-page>
 					<bracket-page class="flex layout vertical" value="Bracket" rounds="[[rounds]]"></bracket-page>
+					<timeslots-page class="flex layout vertical" value="Timeslots"></timeslots-page>
 					<registrations-page class="flex layout vertical" value="Registrations"></registrations-page>
 					<roles-page class="flex layout vertical" value="Roles"></roles-page>
 					<lobbies-page class="flex layout vertical" value="Lobbies" tiers="[[tiers]]" rounds="[[rounds]]"></lobbies-page>

@@ -128,8 +128,26 @@ $app->post('/registrations', function($request, $response) {
 		return echo400('Value for osu ID missing');
 	}
 
-	$database->postRegistration($body->osuId);
+	$database->postRegistration($body->osuId, $body->timeslots);
 	return echoSuccess($response, 'Registration successfull');
+});
+
+$app->put('/registrations', function($request, $response) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::REGISTRATION) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	$database->putRegistration($body->timeslots);
+	return echoSuccess($response, 'Registration updated');
 });
 
 $app->delete('/registrations/{id}', function($request, $response, $args) {
@@ -1200,6 +1218,31 @@ $app->put('/mappoolers/{id}', function($request, $response, $args) {
 	$database->putMappooler($args['id'], $body->tiers);
 
 	return echoSuccess($response, 'Mappoolers updated');
+});
+
+$app->get('/timeslots', function($request, $response) {
+	global $database;
+
+	return $response->withJson($database->getTimeslots());
+});
+
+$app->post('/timeslots', function($request, $response) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::ADMIN) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	$database->postTimeslots($body->timeslots);
+
+	return echoSuccess($response, 'Timeslots saved');
 });
 
 $app->run();
