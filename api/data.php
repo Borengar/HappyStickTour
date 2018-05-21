@@ -565,7 +565,7 @@ $app->put('/lobbies/{id}/matchId', function($request, $response, $args) {
 
 	$body = $request->getParsedBody();
 
-	$database->putLobbyMatchId($args['id'], $body);
+	$database->putLobbyMatchId($args['id'], $body->matchId);
 
 	return echoSuccess($response, 'Match ID saved');
 });
@@ -613,7 +613,7 @@ $app->put('/lobbies/{id}/result', function($request, $response, $args) {
 
 	$body = $request->getParsedBody();
 
-	$database->putResult($_GET['id'], $body);
+	$database->putResult($args['id'], $body);
 
 	return echoSuccess($response, 'Results saved');
 });

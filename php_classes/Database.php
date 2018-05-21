@@ -715,7 +715,7 @@ class Database {
 			$stmt->bindValue(':eliminated', $player->continue == 'Eliminated', PDO::PARAM_BOOL);
 			$stmt->bindValue(':forfeit', $player->continue == 'Forfeit', PDO::PARAM_BOOL);
 			$stmt->bindValue(':noshow', $player->continue == 'Noshow', PDO::PARAM_BOOL);
-			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
+			$stmt->bindValue(':lobby', $lobbyId, PDO::PARAM_INT);
 			$stmt->bindValue(':user_id', $player->userId, PDO::PARAM_INT);
 			$stmt->execute();
 			$nextRound = null;

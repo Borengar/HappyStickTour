@@ -270,7 +270,9 @@
 				this.$.putMatchIdAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putMatchIdAjax.body = this.lobby.matchId;
+				this.$.putMatchIdAjax.body = {
+					'matchId': this.lobby.matchId
+				};
 				this.$.putMatchIdAjax.generateRequest();
 			}
 
