@@ -249,7 +249,7 @@ class Database {
 	public function getRegistrations() {
 		$registrations = [];
 
-		$stmt = $this->db->prepare('SELECT registrations.osu_id as osuId, registrations.registration_time as registrationTime, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, registrations.twitch_id as twitchId, twitch_users.username as twitchUsername, twitch_users.display_name as twitchDisplayName, twitch_users.avatar as twitchAvatar, twitch_users.sub_since as twitchSubSince, twitch_users.sub_plan as twitchSubPlan, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
+		$stmt = $this->db->prepare('SELECT registrations.osu_id as osuId, registrations.registration_time as registrationTime, registrations.donator as donator, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, registrations.twitch_id as twitchId, twitch_users.username as twitchUsername, twitch_users.display_name as twitchDisplayName, twitch_users.avatar as twitchAvatar, twitch_users.sub_since as twitchSubSince, twitch_users.sub_plan as twitchSubPlan, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar
 			FROM registrations INNER JOIN osu_users ON registrations.osu_id = osu_users.id INNER JOIN discord_users ON registrations.id = discord_users.id LEFT JOIN twitch_users ON registrations.twitch_id = twitch_users.id
 			ORDER BY registrations.registration_time ASC');
 		$stmt->execute();
@@ -257,6 +257,7 @@ class Database {
 		foreach ($rows as $row) {
 			$registration = new stdClass;
 			$registration->time = $row->registrationTime;
+			$registration->donator = (bool) $row->donator;
 
 			$registration->discord = new stdClass;
 			$registration->discord->id = $row->discordId;
@@ -303,6 +304,15 @@ class Database {
 		$stmt->bindValue(':id_old', $discordIdOld, PDO::PARAM_INT);
 		$stmt->execute();
 		$this->cacheNewDiscordAccount($discordIdNew);
+	}
+
+	public function putRegistrationDonator($discordId, $donator) {
+		$stmt = $this->db->prepare('UPDATE registrations
+			SET donator = :donator
+			WHERE id = :id');
+		$stmt->bindValue(':donator', $donator, PDO::PARAM_INT);
+		$stmt->bindValue(':id', $discordId, PDO::PARAM_INT);
+		$stmt->execute();
 	}
 
 	public function putRegistrationTwitchId($discordId, $twitchId) {

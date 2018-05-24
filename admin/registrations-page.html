@@ -93,9 +93,11 @@
 							<template class="header">Rank</template>
 							<template>[[item.osu.rank]]</template>
 						</vaadin-grid-column>
-						<vaadin-grid-column width="50px" flex-grow="0">
-							<template class="header">Sub</template>
-							<template>[[item.twitch.subPlan]]</template>
+						<vaadin-grid-column width="100px" flex-grow="0">
+							<template class="header">Donator</template>
+							<template>
+								<paper-checkbox checked="[[item.donator]]" disabled></paper-checkbox>
+							</template>
 						</vaadin-grid-column>
 					</vaadin-grid>
 				</div>
@@ -112,16 +114,14 @@
 								</div>
 							</div>
 						</div>
-						<template is="dom-if" if="[[twitchId]]">
-							<div class="edit-section">
-								<a href="https://twitch.tv/[[twitchUsername]]" target="_blank">
-									<twitch-profile avatar="[[twitchAvatar]]" display-name="[[twitchDisplayName]]" sub-since="[[twitchSubSince]]"></twitch-profile>
-								</a>
+						<div class="edit-section layout horizontal">
+							<div class="layout vertical">
+								<div class="flex"></div>
+								<paper-checkbox checked="{{donator}}">Donator</paper-checkbox>
+								<div class="flex"></div>
 							</div>
-						</template>
-						<template is="dom-if" if="[[!twitchId]]">
-							<div class="edit-section">No TwitchTV account linked</div>
-						</template>
+							<paper-button class="action-button" on-click="_changeDonator">Save</paper-button>
+						</div>
 						<div class="edit-section">
 							<a href="https://osu.ppy.sh/users/[[osuId]]" target="_blank">
 								<osu-profile avatar-url="[[osuAvatarUrl]]" username="[[osuUsername]]" pp="[[osuPp]]" hit-accuracy="[[osuHitAccuracy]]" play-count="[[osuPlayCount]]" level="[[osuLevel]]" rank="[[osuRank]]"></osu-profile>
@@ -218,21 +218,7 @@
 					this.osuRankHistory = e.osu.rankHistory.split(',');
 					this.osuUsername = e.osu.username;
 					this.registrationTime = e.time;
-					if (e.twitch) {
-						this.twitchAvatar = e.twitch.avatar;
-						this.twitchDisplayName = e.twitch.displayName;
-						this.twitchId = e.twitch.id;
-						this.twitchSubPlan = e.twitch.subPlan;
-						this.twitchSubSince = e.twitch.subSince;
-						this.twitchUsername = e.twitch.username;
-					} else {
-						this.twitchAvatar = null;
-						this.twitchDisplayName = null;
-						this.twitchId = null;
-						this.twitchSubPlan = null;
-						this.twitchSubSince = null;
-						this.twitchUsername = null;
-					}
+					this.donator = e.donator;
 					this.editVisible = true;
 				}
 			}
@@ -253,6 +239,17 @@
 				}
 				this.$.putRegistrationAjax.body = {
 					'idNew': this.newDiscordId
+				}
+				this.$.putRegistrationAjax.generateRequest();
+			}
+
+			_changeDonator() {
+				this.$.putRegistrationAjax.url = '../api/registrations/' + this.discordId + '/donator';
+				this.$.putRegistrationAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putRegistrationAjax.body = {
+					'donator': this.donator
 				}
 				this.$.putRegistrationAjax.generateRequest();
 			}

@@ -91,8 +91,30 @@ $app->put('/registrations/{id}/discordId', function($request, $response, $args) 
 		return echo400($response, 'Value for new Discord ID missing');
 	}
 
-	$database->putPlayerDiscordId($args['id'], $body->discordId);
+	$database->putRegistrationDiscordId($args['id'], $body->discordId);
 	return echoSuccess($response, 'Discord ID changed');
+});
+
+$app->put('/registrations/{id}/donator', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::ADMIN) {
+		return echo403($response);
+	}
+
+	$body = $request->getParsedBody();
+
+	if (empty($body)) {
+		return echo400($response, 'Value for donator flag missing');
+	}
+
+	$database->putRegistrationDonator($args['id'], $body->donator);
+	return echoSuccess($response, 'Donator state changed');
 });
 
 $app->get('/registrations', function($request, $response) {
