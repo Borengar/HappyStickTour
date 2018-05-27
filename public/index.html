@@ -52,7 +52,7 @@
 				height: 120px;
 			}
 		</style>
-		<iron-ajax id="authAjax" url="../auth.php" method="GET" params='{"scope":"PUBLIC"}' on-response="authResponse"></iron-ajax>
+		<iron-ajax id="authAjax" url="../api/discordlogin" method="POST" content-type="application/json" on-response="authResponse"></iron-ajax>
 		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}"></iron-ajax>
 		<iron-ajax id="allPlayersAjax" url="../api/players" method="GET" last-response="{{all_players}}"></iron-ajax>
 		<iron-ajax id="roundsAjax" url="../api/tiers//rounds" method="GET" on-response="roundsResponse"></iron-ajax>
@@ -84,10 +84,7 @@
 				<template is="dom-repeat" items="[[tiers]]" as="tier">
 					<paper-card elevation="2" heading="[[tier.name]]" class="tier-card" on-click="chooseTier">
 						<div class="card-content">
-							<div class="layout horizontal"">
-								<iron-icon icon="social:person"></iron-icon>
-								<div style="margin-left:10px;">[[tier.slots]]</div>
-							</div>
+							
 						</div>
 					</paper-card>
 				</template>
@@ -191,6 +188,9 @@
 					}
 				},
 				ready: function() {
+					this.$.authAjax.body = {
+						'scope': 'PUBLIC'
+					}
 					this.$.authAjax.generateRequest();
 				},
 				authResponse: function(e) {
