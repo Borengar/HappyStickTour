@@ -1,0 +1,480 @@
+<dom-module id="index-page">
+	<template>
+		<style include="iron-flex iron-flex-alignment iron-positioning">
+			app-header {
+				background-color: var(--discord-grey);
+			}
+			.main-title {
+				color: white;
+				pointer-events: auto;
+			}
+			.header {
+				color: var(--happystick-green);
+				font-size: 40px;
+				margin: 20px 0 10px 20px;
+			}
+			.tier-card, .players-card, .round-card, .mappool-card {
+				margin: 20px;
+				color: white;
+				--paper-card-background-color: var(--happystick-green);
+				--paper-card-header-color: white;
+				cursor: pointer;
+			}
+			.tier-card {
+				height: 120px;
+			}
+			.players-card, .mappool-card {
+				height: 60px;
+				width: 300px;
+			}
+			.round-card {
+				height: 120px;
+			}
+			.lobby-wrapper {
+				width: 450px;
+				margin: 10px;
+			}
+			.player-drop-wrapper {
+				margin: 10px auto;
+				width: 400px;
+			}
+			.player-empty {
+				height: 100px;
+				flex-shrink: 0;
+				background-color: #090909;
+				color: white;
+			}
+			.lobby-button {
+				margin: 5px 20px;
+				background-color: var(--happystick-green);
+				color: white;
+			}
+		</style>
+		<iron-ajax id="authAjax" url="../api/discordlogin" method="POST" content-type="application/json" on-response="_authResponse"></iron-ajax>
+		<iron-ajax id="tiersAjax" url="../api/tiers" method="GET" last-response="{{tiers}}" auto></iron-ajax>
+		<iron-ajax id="allPlayersAjax" url="../api/players" method="GET" last-response="{{allPlayers}}" auto></iron-ajax>
+		<iron-ajax id="roundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
+		<iron-ajax id="mappoolAjax" url="../api/rounds//mappool" method="GET" last-response="{{mappool}}"></iron-ajax>
+		<iron-ajax id="lobbiesAjax" url="../api/rounds//lobbies" method="GET" last-response="{{lobbies}}"></iron-ajax>
+		<app-header>
+			<app-toolbar>
+				<div main-title class="main-title layout horizontal">
+					<template is="dom-repeat" items="[[breadcrumb]]">
+						<div class="layout horizontal">
+							<div style="margin:5px;">&gt;</div>
+							<div style="margin:5px;cursor:pointer;" on-click="_navigate">[[item.name]]</div>
+						</div>
+					</template>
+				</div>
+			</app-toolbar>
+		</app-header>
+		<iron-pages attr-for-selected="value" selected="[[pageSelected]]" class="flex layout vertical">
+			<div value="wait" class="flex layout vertical">
+				<div class="flex"></div>
+				<div class="layout horizontal">
+					<div class="flex"></div>
+					<paper-spinner active></paper-spinner>
+					<div class="flex"></div>
+				</div>
+				<div class="flex"></div>
+			</div>
+			<div value="home" class="flex layout horizontal wrap">
+				<template is="dom-repeat" items="[[tiers]]" as="tier">
+					<paper-card elevation="2" heading="[[tier.name]]" class="tier-card" on-click="_chooseTier"></paper-card>
+				</template>
+			</div>
+			<div value="tier" class="flex layout vertical">
+				<paper-card elevation="2" heading="Players" class="players-card" on-click="_choosePlayers"></paper-card>
+				<div class="header">Rounds</div>
+				<div class="layout horizontal wrap">
+					<template is="dom-repeat" items="[[rounds]]" as="round">
+						<paper-card elevation="2" heading="[[round.name]]" class="round-card" on-click="_chooseRound">
+							<div class="card-content">
+								<div style="color:white;">[[round.time_from]]</div>
+							</div>
+						</paper-card>
+					</template>
+				</div>
+			</div>
+			<div value="players" class="flex layout vertical">
+				<div class="layout horizontal wrap">
+					<template is="dom-repeat" items="[[players]]" as="player">
+						<osu-profile avatar-url="[[player.osu.avatarUrl]]" username="[[player.osu.username]]" pp="[[player.osu.pp]]" hit-accuracy="[[player.osu.hitAccuracy]]" play-count="[[player.osu.playCount]]" level="[[player.osu.level]]" rank="[[player.osu.rank]]" style="margin:10px;"></osu-profile>
+					</template>
+				</div>
+			</div>
+			<div value="round" class="flex layout vertical">
+				<paper-card elevation="2" heading="Mappool" class="mappool-card" on-click="_chooseMappool"></paper-card>
+				<div class="header">Lobbies</div>
+				<div class="layout horizontal wrap">
+					<template is="dom-repeat" items="[[lobbies]]" as="lobby">
+						<div class="lobby-wrapper layout vertical">
+							<div style="margin-left:20px;font-size:20px;">Lobby <span>[[lobby.id]]</span></div>
+							<div>[[lobby.matchTime]]</div>
+							<paper-button class="lobby-button" raised on-click="_chooseLobby">Open lobby</paper-button>
+							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
+								<div hidden$="[[!slot.userId]]">
+									<div class="player-drop-wrapper layout vertical">
+										<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]"></osu-profile>
+									</div>
+								</div>
+								<div hidden$="[[slot.userId]]">
+									<div class="player-drop-wrapper layout vertical">
+										<div class="player-empty layout horizontal">
+											<div class="flex"></div>
+											<div class="layout vertical">
+												<div class="flex"></div>
+												<div>EMPTY</div>
+												<div class="flex"></div>
+											</div>
+											<div class="flex"></div>
+										</div>
+									</div>
+								</div>
+							</template>
+						</div>
+					</template>
+				</div>
+			</div>
+			<div value="mappool" class="flex layout vertical" style="display:block;">
+				<!--
+				<paper-dropdown-menu label="Sort by" style="margin:20px;">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{sortBy}}">
+						<paper-item value="Mod">Mod</paper-item>
+						<paper-item value="Picks">Picks</paper-item>
+						<paper-item value="Bans">Bans</paper-item>
+						<paper-item value="Acc">Acc</paper-item>
+						<paper-item value="Passes">Passes</paper-item>
+					</paper-listbox>
+				</paper-dropdown-menu>
+				-->
+				<template is="dom-repeat" items="[[mappool.slots]]" as="slot" sort="{{sortMappool(sortBy)}}">
+					<div class="layout horizontal" style="margin:20px;">
+						<beatmap-info accuracy="[[slot.accuracy]]" ar="[[slot.ar]]" artist="[[slot.artist]]" beatmap-id="[[slot.beatmapId]]" beatmapset-id="[[slot.beatmapsetId]]" bpm="[[slot.bpm]]" count-circles="[[slot.countCircles]]" count-sliders="[[slot.countSliders]]" cover="[[slot.cover]]" cs="[[slot.cs]]" difficulty-rating="[[slot.difficultyRating]]" drain="[[slot.drain]]" preview-url="[[slot.previewUrl]]" title="[[slot.title]]" total-length="[[slot.totalLength]]" version="[[slot.version]]" mod="[[slot.mod]]"></beatmap-info>
+						<!--
+						<div class="layout vertical" style="margin-left:20px;font-size:20px;">
+							<div>Picks:</div>
+							<div>Bans:</div>
+							<div>Total:</div>
+						</div>
+						<div class="layout vertical" style="margin-left:20px;text-align:right;font-size:20px;">
+							<div>[[slot.pick_amount]]</div>
+							<div>[[slot.ban_amount]]</div>
+							<div>[[slot.total_amount]]</div>
+						</div>
+						<div class="layout vertical" style="margin-left:20px;text-align:right;font-size:20px;">
+							<div><span>[[slot.pick_percentage]]</span> %</div>
+							<div><span>[[slot.ban_percentage]]</span> %</div>
+							<div><span>[[slot.total_percentage]]</span> %</div>
+						</div>
+						<div class="layout vertical" style="margin-left:50px;font-size:20px;">
+							<div>Acc:</div>
+							<div>Passes:</div>
+							<div>Fails:</div>
+						</div>
+						<div class="layout vertical" style="margin-left:20px;text-align:right;font-size:20px;">
+							<div><span>[[slot.average_accuracy]]</span> %</div>
+							<div>[[slot.pass_amount]]</div>
+							<div>[[slot.fail_amount]]</div>
+						</div>
+						<div class="layout vertical" style="margin-left:20px;text-align:right;font-size:20px;">
+							<div>&nbsp;</div>
+							<div><span>[[slot.pass_percentage]]</span> %</div>
+							<div><span>[[slot.fail_percentage]]</span> %</div>
+						</div>
+						-->
+					</div>
+				</template>
+			</div>
+			<div value="lobby" class="flex layout vertical">
+				<lobby-page id="lobbyPage" lobby="[[lobby]]" mappool="[[mappool]]" round="[[round]]"></lobby-page>
+			</div>
+		</iron-pages>
+	</template>
+	<script>
+		class IndexPage extends Polymer.Element {
+			static get is() { return 'index-page' }
+
+			static get properties() {
+				return {
+					pageSelected: {
+						type: String,
+						value: 'wait'
+					},
+					breadcrumb: {
+						type: Array,
+						value: []
+					},
+					sortBy: {
+						type: String,
+						value: 'Mod'
+					}
+				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.authAjax.body = {
+					'scope': 'PUBLIC'
+				};
+				this.$.authAjax.generateRequest();
+			}
+
+			_authResponse(e) {
+				var response = e.detail.response;
+				localStorage.setItem('token', response.token);
+				localStorage.setItem('scope', response.scope);
+				this.pageSelected = 'home';
+				this.push('breadcrumb', {
+					name: 'Tiers',
+					type: 'home'
+				});
+			}
+
+			_navigate(e) {
+				var item = e.model.item;
+				switch (item.type) {
+					case 'home': {
+						this.splice('breadcrumb', 1, 5);
+						this.pageSelected = 'home';
+					}; break;
+					case 'tier': {
+						this.splice('breadcrumb', 2, 5);
+						this.pageSelected = 'tier';
+					}; break;
+					case 'round': {
+						this.splice('breadcrumb', 3, 5);
+						this.pageSelected = 'round';
+					}; break;
+				}
+				console.log(this.breadcrumb);
+			}
+
+			_chooseTier(e) {
+				this.tier = e.model.tier;
+				this.push('breadcrumb', {
+					name: this.tier.name,
+					type: 'tier'
+				});
+				this.pageSelected = 'tier';
+			}
+
+			_choosePlayers() {
+				this.set('players', []);
+				this.players = [];
+				for (var i = 0; i < this.allPlayers.length; i++) {
+					if (this.allPlayers[i].tier.id == this.tier.id) {
+						this.push('players', this.allPlayers[i]);
+					}
+				}
+				this.players.sort(function(a, b) {return a.osu.username > b.osu.username ? 1 : (a.osu.username < b.osu.username ? -1 : 0);});
+				this.push('breadcrumb', {
+					name: 'Players',
+					type: 'players'
+				});
+				this.pageSelected = 'players';
+			}
+
+			_chooseRound(e) {
+				this.round = e.model.round;
+				this.$.lobbiesAjax.url = '../api/rounds/' + this.round.id + '/tiers/' + this.tier.id + '/lobbies';
+				this.$.lobbiesAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.lobbiesAjax.generateRequest();
+				this.$.mappoolAjax.url = '../api/rounds/' + this.round.id + '/tiers/' + this.tier.id + '/mappool';
+				this.$.mappoolAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				};
+				this.$.mappoolAjax.generateRequest();
+				this.push('breadcrumb', {
+					name: this.round.name,
+					type: 'round'
+				});
+				this.pageSelected = 'round';
+			}
+
+			_chooseMappool(e) {
+				this.pageSelected = 'mappool';
+				this.push('breadcrumb', {
+					name: 'Mappool',
+					type: 'mappool'
+				});
+			}
+
+			_chooseLobby(e) {
+				this.lobby = e.model.lobby;
+				this.$.lobbyPage.refresh();
+				this.push('breadcrumb', {
+					name: 'Lobby ' + this.lobby.id,
+					type: 'lobby'
+				});
+				this.pageSelected = 'lobby';
+			}
+		}
+
+		window.customElements.define(IndexPage.is, IndexPage);
+
+		/*
+		addEventListener('WebComponentsReady', () => {
+			Polymer({
+				is: 'index-page',
+				properties: {
+					page_selected: {
+						type: String,
+						value: 'auth'
+					},
+					breadcrumb: {
+						type: Array,
+						value: [{name: 'Tiers', type: 'home'}]
+					},
+					sort_by: {
+						type: String,
+						value: 'Mod'
+					}
+				},
+				ready: function() {
+					this.$.authAjax.body = {
+						'scope': 'PUBLIC'
+					}
+					this.$.authAjax.generateRequest();
+				},
+				authResponse: function(e) {
+					var response = e.detail.response;
+					localStorage.setItem('token', response.token);
+					localStorage.setItem('scope', response.scope);
+					this.$.allPlayersAjax.headers = {
+						'Authorization': response.token
+					};
+					this.$.allPlayersAjax.generateRequest();
+					this.page_selected = 'home';
+				},
+				navigate: function(e) {
+					var item = e.model.item;
+					console.log(item);
+					switch (item.type) {
+						case 'home': {
+							this.splice('breadcrumb', 1);
+							this.page_selected = 'home';
+						}; break;
+						case 'tier': {
+							this.splice('breadcrumb', 2);
+							this.page_selected = 'tier';
+						}; break;
+						case 'round': {
+							this.splice('breadcrumb', 3);
+							this.page_selected = 'round';
+						}; break;
+					}
+					console.log(this.breadcrumb);
+				},
+				chooseTier: function(e) {
+					var tier = e.model.tier;
+					this.tier = tier;
+					this.breadcrumb = [{name: 'Tiers', type: 'home'}];
+					this.push('breadcrumb', {name: tier.name, type: 'tier', tier: tier});
+					this.page_selected = 'tier';
+				},
+				choosePlayers: function() {
+					this.players = [];
+					for (var i = 0; i < this.all_players.length; i++) {
+						if (this.all_players[i].tier.id == this.breadcrumb[1].tier.id) {
+							this.push('players', this.all_players[i]);
+						}
+					}
+					this.players.sort(function(a, b) {return a.osu_profile.username > b.osu_profile.username ? 1 : (a.osu_profile.username < b.osu_profile.username ? -1 : 0);});
+					this.push('breadcrumb', {name: 'Players', type: 'players'});
+					this.page_selected = 'players';
+				},
+				chooseRound: function(e) {
+					var round = e.model.round;
+					this.push('breadcrumb', {name: round.name, type: 'round', round: round});
+					this.$.lobbiesAjax.url = '../api/rounds/' + round.id + '/tiers/' + this.tier.id + '/lobbies';
+					this.$.lobbiesAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.lobbiesAjax.generateRequest();
+					this.page_selected = 'round';
+				},
+				chooseMappool: function() {
+					this.$.mappoolAjax.url = '../api/rounds/' + this.breadcrumb[2].round.id + '/mappool';
+					this.$.mappoolAjax.headers = {
+						'Authorization': localStorage.getItem('token')
+					};
+					this.$.mappoolAjax.generateRequest();
+					this.push('breadcrumb', {name: 'Mappool', type: 'mappool'});
+					this.page_selected = 'mappool';
+				},
+				mappoolResponse: function(e) {
+					var response = e.detail.response;
+					this.mappool = [];
+					for (var i = 0; i < response.slots.length; i++) {
+						this.push('mappool', response.slots[i]);
+					}
+				},
+				chooseLobby: function(e) {
+					this.selected_lobby = e.detail.id;
+					this.push('breadcrumb', {name: 'Lobby ' + e.detail.id, type: 'lobby', id: e.detail.id});
+					this.page_selected = 'lobby';
+				},
+				sortMappool: function(sort_by) {
+					switch (sort_by) {
+						case 'Mod': {
+							return function(a, b) {
+								if (a.tiebreaker == '1') {
+									return 1;
+								}
+								if (b.tiebreaker == '1') {
+									return -1;
+								}
+								if (a.freemod == '1') {
+									if (b.freemod == '1') {
+										return 1;
+									} else {
+										return 0;
+									}
+								} else if (b.freemod == '1') {
+									return -1;
+								}
+								return a.mods - b.mods;
+							}
+						}; break;
+						case 'Picks': {
+							return function(a, b) {
+								return b.pick_amount - a.pick_amount;
+							}
+						}; break;
+						case 'Bans': {
+							return function(a, b) {
+								return b.ban_amount - a.ban_amount;
+							}
+						}; break;
+						case 'Acc': {
+							return function(a, b) {
+								if (b.pick_amount == 0) {
+									return -1;
+								}
+								if (a.pick_amount == 0) {
+									return 1;
+								}
+								return b.average_accuracy - a.average_accuracy;
+							}
+						}; break;
+						case 'Passes': {
+							return function(a, b) {
+								if (b.pick_amount == 0) {
+									return -1;
+								}
+								if (a.pick_amount == 0) {
+									return 1;
+								}
+								return b.pass_percentage - a.pass_percentage;
+							}
+						}; break;
+					}
+				}
+			});
+		});
+		*/
+	</script>
+</dom-module>
