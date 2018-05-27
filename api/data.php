@@ -1075,6 +1075,17 @@ $app->post('/discordlogin', function($request, $response) {
 		return echoError($response, 'Unknown Member');
 	}
 
+	if ($body->scope == 'PUBLIC') {
+		$token = $database->loginUser($user->id, 'PUBLIC');
+
+		$responseObject = new stdClass;
+		$responseObject->error = '0';
+		$responseObject->message = 'Login successfull';
+		$responseObject->token = (string) $token;
+		$responseObject->scope = $body->scope;
+		return $response->withJson($responseObject);
+	}
+
 	$roles = $database->getRoles();
 
 	$settings = $database->getSettings();
