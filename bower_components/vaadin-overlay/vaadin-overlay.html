@@ -12,10 +12,17 @@ This program is available under Apache License Version 2.0, available at https:/
 <dom-module id="vaadin-overlay-default-theme">
   <template>
     <style>
-      [part="content"] {
+      :host {
+        /* Make nice gaps inside viewport */
+        top: 8px;
+        right: 8px;
+        left: 8px;
+        bottom: calc(8px + var(--vaadin-overlay-viewport-bottom));
+      }
+
+      [part="overlay"] {
         background: #fff;
-        -webkit-overflow-scrolling: touch;
-        overflow: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       }
     </style>
   </template>
@@ -27,18 +34,54 @@ This program is available under Apache License Version 2.0, available at https:/
       :host {
         z-index: 200;
         position: fixed;
+
+        /*
+          Despite of what the names say, <vaadin-overlay> is just a container
+          for position/sizing/alignment. The actual overlay is the overlay part.
+        */
+
+        /*
+          Default position constraints: the entire viewport. Note: themes can
+          override this to introduce gaps between the overlay and the viewport.
+        */
         top: 0;
+        right: 0;
+        bottom: var(--vaadin-overlay-viewport-bottom);
         left: 0;
-        pointer-events: auto;
-        overflow: hidden;
+
+        /* Use flexbox alignment for the overlay part. */
+        display: flex;
+        flex-direction: column; /* makes dropdowns sizing easier */
+        /* Align to center by default. */
+        align-items: center;
+        justify-content: center;
+
+        /* Allow centering when max-width/max-height applies. */
+        margin: auto;
+
+        /* The host is not clickable, only the overlay part is. */
+        pointer-events: none;
+
+        /* Remove tap highlight on touch devices. */
+        -webkit-tap-highlight-color: transparent;
+
+        /* stylelint-disable */
+        /* CSS API for host */
+        --vaadin-overlay-viewport-bottom: 0px;
+        /* stylelint-enable */
       }
 
+      :host([hidden]),
       :host(:not([opened])) {
         display: none !important;
       }
 
-      [part="content"] {
-        max-height: 100%;
+      [part="overlay"] {
+        -webkit-overflow-scrolling: touch;
+        overflow: auto;
+        pointer-events: auto;
+        max-width: 100%; /* prevents overflowing the host in MSIE 11 */
+        -webkit-tap-highlight-color: initial; /* reenable tap highlight inside */
       }
 
       [part="backdrop"] {
@@ -50,14 +93,15 @@ This program is available under Apache License Version 2.0, available at https:/
         left: 0;
         bottom: 0;
         right: 0;
+        pointer-events: auto;
       }
     </style>
 
     <div id="backdrop" part="backdrop" hidden$="{{!withBackdrop}}">
 
     </div>
-    <div part="content" id="content">
-      <slot id="slot"></slot>
+    <div part="overlay" id="overlay">
+      <div part="content" id="content"></div>
     </div>
   </template>
 </dom-module>
@@ -70,6 +114,23 @@ This program is available under Apache License Version 2.0, available at https:/
   {
     /**
      * `<vaadin-overlay>` is a Polymer 2 element for creating overlays.
+     *
+     * ### Styling
+     *
+     * The following Shadow DOM parts are available for styling:
+     *
+     * Part name  | Description
+     * -----------|---------------------------------------------------------|
+     * `backdrop` | Backdrop of the overlay
+     * `overlay`  | Container for position/sizing/alignment of the content
+     * `content`  | Content of the overlay
+     *
+     * The following custom CSS properties are available for styling:
+     *
+     * Custom CSS property | Description | Default value
+     * ---|---|---
+     * `--vaadin-overlay-viewport-bottom` | Bottom offset of the visible viewport area | `0px` or detected offset
+     *
      * @memberof Vaadin
      * @mixes Vaadin.ThemableMixin
      * @demo demo/index.html
@@ -103,6 +164,16 @@ This program is available under Apache License Version 2.0, available at https:/
             reflectToAttribute: true
           },
 
+          /**
+           * When true the overlay won't disable the main content, showing
+           * it doesn’t change the functionality of the user interface.
+           */
+          modeless: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true,
+            observer: '_modelessChanged'
+          },
 
           /**
            * When true move focus to the first focusable element in the overlay,
@@ -141,6 +212,8 @@ This program is available under Apache License Version 2.0, available at https:/
 
       constructor() {
         super();
+        this._boundMouseDownListener = this._mouseDownListener.bind(this);
+        this._boundMouseUpListener = this._mouseUpListener.bind(this);
         this._boundOutsideClickListener = this._outsideClickListener.bind(this);
         this._boundKeydownListener = this._keydownListener.bind(this);
 
@@ -153,6 +226,10 @@ This program is available under Apache License Version 2.0, available at https:/
           e.preventDefault();
           window.removeEventListener('iron-overlay-canceled', this._boundIronOverlayCanceledListener);
         };
+
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          this._boundIosResizeListener = () => this._detectIosNavbar();
+        }
       }
 
       ready() {
@@ -160,8 +237,31 @@ This program is available under Apache License Version 2.0, available at https:/
 
         this._observer.flush();
 
-        this.addEventListener('mousedown', e => this._mouseDownInside = e.composedPath().indexOf(this.$.content) >= 0);
-        this.addEventListener('mouseup', e => this._mouseUpInside = e.composedPath().indexOf(this.$.content) >= 0);
+        // Need to add dummy click listeners to this and the backdrop or else
+        // the document click event listener (_outsideClickListener) may never
+        // get invoked on iOS Safari (reproducible in <vaadin-dialog>
+        // and <vaadin-context-menu>).
+        this.addEventListener('click', () => {});
+        this.$.backdrop.addEventListener('click', () => {});
+      }
+
+      _detectIosNavbar() {
+        if (!this.opened) {
+          return;
+        }
+
+        const innerHeight = window.innerHeight;
+        const innerWidth = window.innerWidth;
+
+        const landscape = innerWidth > innerHeight;
+
+        const clientHeight = document.documentElement.clientHeight;
+
+        if (landscape && clientHeight > innerHeight) {
+          this.style.setProperty('--vaadin-overlay-viewport-bottom', clientHeight - innerHeight + 'px');
+        } else {
+          this.style.setProperty('--vaadin-overlay-viewport-bottom', '0px');
+        }
       }
 
       _setTemplateFromNodes(nodes) {
@@ -186,6 +286,11 @@ This program is available under Apache License Version 2.0, available at https:/
         if (this.parentNode === document.body) {
           window.addEventListener('iron-overlay-canceled', this._boundIronOverlayCanceledListener);
         }
+
+        if (this._boundIosResizeListener) {
+          this._detectIosNavbar();
+          window.addEventListener('resize', this._boundIosResizeListener);
+        }
       }
 
       disconnectedCallback() {
@@ -202,6 +307,16 @@ This program is available under Apache License Version 2.0, available at https:/
             window.removeEventListener('iron-overlay-canceled', this._boundIronOverlayCanceledListener);
           }
         }
+
+        this._boundIosResizeListener && window.removeEventListener('resize', this._boundIosResizeListener);
+      }
+
+      _mouseDownListener(event) {
+        this._mouseDownInside = event.composedPath().indexOf(this.$.overlay) >= 0;
+      }
+
+      _mouseUpListener(event) {
+        this._mouseUpInside = event.composedPath().indexOf(this.$.overlay) >= 0;
       }
 
       /**
@@ -213,7 +328,13 @@ This program is available under Apache License Version 2.0, available at https:/
        * fired before the `vaadin-overlay` will be closed on outside click. If canceled the closing of the overlay is canceled as well.
        */
       _outsideClickListener(event) {
-        if (this._mouseDownInside || this._mouseUpInside) {
+        if (event.composedPath().indexOf(this.$.overlay) !== -1 ||
+            this._mouseDownInside || this._mouseUpInside) {
+          this._mouseDownInside = false;
+          this._mouseUpInside = false;
+          return;
+        }
+        if (!this._last) {
           return;
         }
 
@@ -230,8 +351,12 @@ This program is available under Apache License Version 2.0, available at https:/
        * fired before the `vaadin-overlay` will be closed on ESC button press. If canceled the closing of the overlay is canceled as well.
        */
       _keydownListener(event) {
+        if (!this._last) {
+          return;
+        }
+
         // TAB
-        if (event.keyCode === 9 && this.focusTrap) {
+        if (event.key === 'Tab' && this.focusTrap) {
           const focusableElements = this._getFocusableElements();
           const focusedElementIndex = focusableElements.indexOf(this._focusedElement);
 
@@ -247,7 +372,7 @@ This program is available under Apache License Version 2.0, available at https:/
           event.preventDefault();
 
         // ESC
-        } else if (event.keyCode === 27) {
+        } else if (event.key === 'Escape' || event.key === 'Esc') {
           const evt = new CustomEvent('vaadin-overlay-escape-press', {bubbles: true, cancelable: true, detail: {sourceEvent: event}});
           this.dispatchEvent(evt);
 
@@ -267,34 +392,69 @@ This program is available under Apache License Version 2.0, available at https:/
           this.parentNode.insertBefore(this._placeholder, this);
           document.body.appendChild(this);
 
-          document.addEventListener('click', this._boundOutsideClickListener, true);
-          document.addEventListener('keydown', this._boundKeydownListener);
-
-          // Set body pointer-events to 'none' to disable mouse interactions with
-          // other document nodes (combo-box is "modal")
-          this._previousDocumentPointerEvents = document.body.style.pointerEvents;
-          document.body.style.pointerEvents = 'none';
-
           Polymer.Async.idlePeriod.run(() => {
-            // Focus
-            //  - the overlay content by default
-            //  - or the first focusable element if focusTrap is true
-            this._setFocus(-1, 1);
+            if (this.focusTrap) {
+              // Focus
+              //  - the overlay content by default
+              //  - or the first focusable element if focusTrap is true
+              this._setFocus(-1, 1);
+            }
 
             const evt = new CustomEvent('vaadin-overlay-open', {bubbles: true});
             this.dispatchEvent(evt);
           });
 
-        } else if (this._placeholder) {
-          document.removeEventListener('click', this._boundOutsideClickListener, true);
-          document.removeEventListener('keydown', this._boundKeydownListener);
-
-          this._placeholder.parentNode.insertBefore(this, this._placeholder);
-          this._processPendingMutationObserversFor(document.body);
-          this._placeholder.parentNode.removeChild(this._placeholder);
-
-          document.body.style.pointerEvents = this._previousDocumentPointerEvents;
+          if (!this.modeless) {
+            this._enterModalState();
+          }
+        } else {
+          if (this._placeholder) {
+            this._placeholder.parentNode.insertBefore(this, this._placeholder);
+            this._processPendingMutationObserversFor(document.body);
+            this._placeholder.parentNode.removeChild(this._placeholder);
+          }
+          this._exitModalState();
         }
+      }
+
+      /**
+       * returns true if this is the last one in the opened overlays stack
+       */
+      get _last() {
+        return this == Array.from(document.body.children).filter(e => e instanceof Vaadin.OverlayElement).pop();
+      }
+
+      _modelessChanged(modeless) {
+        if (!modeless) {
+          if (this.opened) {
+            this._enterModalState();
+          }
+        } else {
+          this._exitModalState();
+        }
+      }
+
+      _enterModalState() {
+        document.addEventListener('mousedown', this._boundMouseDownListener);
+        document.addEventListener('mouseup', this._boundMouseUpListener);
+        document.addEventListener('click', this._boundOutsideClickListener, true);
+        document.addEventListener('keydown', this._boundKeydownListener);
+
+        // Set body pointer-events to 'none' to disable mouse interactions with
+        // other document nodes.
+        this._previousDocumentPointerEvents = document.body.style.pointerEvents;
+        document.body.style.pointerEvents = 'none';
+      }
+
+      _exitModalState() {
+        document.removeEventListener('mousedown', this._boundMouseDownListener);
+        document.removeEventListener('mouseup', this._boundMouseUpListener);
+        document.removeEventListener('click', this._boundOutsideClickListener, true);
+        document.removeEventListener('keydown', this._boundKeydownListener);
+
+        // Restore body pointer-events
+        document.body.style.pointerEvents = this._previousDocumentPointerEvents;
+        delete this._previousDocumentPointerEvents;
       }
 
       _templateChanged(template) {
@@ -343,8 +503,8 @@ This program is available under Apache License Version 2.0, available at https:/
         }
 
         // fallback if there are no focusable elements
-        this._focusedElement = this.$.content;
-        this.$.content.focus();
+        this._focusedElement = this.$.overlay;
+        this.$.overlay.focus();
       }
 
       // borrowed from jqeury $(elem).is(':visible') implementation
