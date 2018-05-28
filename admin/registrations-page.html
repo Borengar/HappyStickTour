@@ -52,7 +52,7 @@
 		</style>
 		<iron-ajax id="getSettingsAjax" url="../api/settings" method="GET" on-response="_settingsResponse" auto></iron-ajax>
 		<iron-ajax id="putSettingsAjax" url="../api/settings" method="PUT" content-type="application/json" on-response="_putSettingsResponse"></iron-ajax>
-		<iron-ajax id="getRegistrationsAjax" url="../api/registrations" method="GET" last-response="{{registrations}}"></iron-ajax>
+		<iron-ajax id="getRegistrationsAjax" url="../api/registrations" method="GET" last-response="{{registrations}}" on-response="_getRegistrationsResponse"></iron-ajax>
 		<iron-ajax id="putRegistrationAjax" url="../api/registrations" method="PUT" content-type="application/json" on-response="_putRegistrationResponse"></iron-ajax>
 		<iron-ajax id="deleteRegistrationAjax" url="../api/registrations/" method="DELETE" on-response="_deleteRegistrationResponse"></iron-ajax>
 		<div class="wrapper layout vertical">
@@ -76,7 +76,8 @@
 			<div class="layout horizontal">
 				<div class="list-wrapper layout vertical">
 					<div class="header">Registrations</div>
-					<vaadin-grid class="registrations-grid" items="[[registrations]]" active-item="{{selectedRegistration}}">
+					<vaadin-text-field label="Search" value="{{search}}"></vaadin-text-field>
+					<vaadin-grid class="registrations-grid" items="[[_filterRegistrations(registrations, search)]]" active-item="{{selectedRegistration}}">
 						<vaadin-grid-column width="180px" flex-grow="0">
 							<template class="header">Time</template>
 							<template>[[item.time]]</template>
@@ -100,6 +101,17 @@
 							</template>
 						</vaadin-grid-column>
 					</vaadin-grid>
+					<div class="header" style="margin-top:10px;margin-bottom:10px;">Overview</div>
+					<template is="dom-repeat" items="[[overview]]">
+						<div class="layout horizontal" style="flex-shrink:0;">
+							<div style="width:100px;">[[item.tier.name]]</div>
+							<div>[[item.count]]</div>
+						</div>
+					</template>
+					<div class="layout horizontal" style="flex-shrink:0;">
+						<div style="width:100px;">Total</div>
+						<div>[[registrations.length]]</div>
+					</div>
 				</div>
 				<div class="edit-wrapper layout vertical">
 					<div hidden$="[[!editVisible]]">
@@ -153,7 +165,8 @@
 					},
 					selectedRegistration: {
 						observer: '_selectedRegistrationChanged'
-					}
+					},
+					registrations: Array
 				}
 			}
 
@@ -284,6 +297,27 @@
 					this.$.successToast.open();
 					this.editVisible = false;
 					this.$.getRegistrationsAjax.generateRequest();
+				}
+			}
+
+			_filterRegistrations(registrations, search) {
+				if (registrations && search) {
+					return registrations.filter((item) => {
+						return (item.discord.username && item.discord.username.toLowerCase().includes(search.toLowerCase())) || (item.osu.username.toLowerCase() && item.osu.username.includes(search.toLowerCase()));
+					});
+				}
+				return registrations;
+			}
+
+			_getRegistrationsResponse(e) {
+				this.set('overview', []);
+				for (var i = 0; i < this.tiers.length; i++) {
+					this.push('overview', {
+						tier: this.tiers[i],
+						count: this.registrations.filter((item) => {
+							return parseInt(item.osu.rank) >= parseInt(this.tiers[i].lowerEndpoint) && parseInt(item.osu.rank) <= parseInt(this.tiers[i].upperEndpoint)
+						}).length
+					});
 				}
 			}
 		}
