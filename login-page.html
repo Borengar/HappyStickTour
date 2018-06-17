@@ -45,8 +45,10 @@
 			<template is="dom-if" if="[[showDefault]]">
 				<div class="layout horizontal">
 					<div class="flex"></div>
+					<!--
 					<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Player login</vaadin-button>
 					<div style="width:200px;"></div>
+					-->
 					<vaadin-button class="discord-login-button" on-click="_publicLogin">Public Stats</vaadin-button>
 					<div class="flex"></div>
 				</div>
@@ -321,6 +323,10 @@
 
 			_joinGuild() {
 				window.location = 'https://a.trigonocul.us/rekindling';
+			}
+
+			_publicLogin() {
+				window.location = 'public';
 			}
 		}
 

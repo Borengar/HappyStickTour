@@ -1075,7 +1075,7 @@ $app->post('/discordlogin', function($request, $response) {
 		return echoError($response, 'Unknown Member');
 	}
 
-	if ($body->scope == 'PUBLIC') {
+	if (isset($body->scope) && $body->scope == 'PUBLIC') {
 		$token = $database->loginUser($user->id, 'PUBLIC');
 
 		$responseObject = new stdClass;
