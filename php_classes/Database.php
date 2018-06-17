@@ -1024,12 +1024,11 @@ class Database {
 		$stmt->execute();
 	}
 
-	public function getAvailability($userId, $round) {
-		$stmt = $this->db->prepare('SELECT id, time_from as timeFrom, time_to as timeTo
-			FROM availabilities
-			WHERE round = :round AND user_id = :user_id
-			ORDER BY time_from ASC');
-		$stmt->bindValue(':round', $round, PDO::PARAM_INT);
+	public function getAvailability($userId) {
+		$stmt = $this->db->prepare('SELECT time_slots.day, time_slots.time
+			FROM availabilities INNER JOIN time_slots ON availabilities.time_slot = time_slots.id
+			WHERE availabilities.user_id = :user_id
+			ORDER BY time_slots.id ASC');
 		$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
 		$stmt->execute();
 		return $stmt->fetchAll();

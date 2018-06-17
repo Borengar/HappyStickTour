@@ -97,7 +97,7 @@
 										<osu-profile avatar-url="[[slot.osu.avatarUrl]]" username="[[slot.osu.username]]" pp="[[slot.osu.pp]]" hit-accuracy="[[slot.osu.hitAccuracy]]" play-count="[[slot.osu.playCount]]" level="[[slot.osu.level]]" rank="[[slot.osu.rank]]" draggable="true" on-dragover="_dragOver" on-drop="_dropOnPlayer" on-dragstart="_dragFromLobbies"></osu-profile>
 										<template is="dom-repeat" items="[[slot.availabilities]]" as="availability">
 											<div class="availability-wrapper">
-												<div><span>[[availability.timeFrom]]</span> - <span>[[availability.timeTo]]</span></div>
+												<div><span>[[availability.day]]</span>  <span>[[availability.time]]</span></div>
 											</div>
 										</template>
 									</div>
@@ -125,7 +125,7 @@
 							<osu-profile avatar-url="[[player.osu.avatarUrl]]" username="[[player.osu.username]]" pp="[[player.osu.pp]]" hit-accuracy="[[player.osu.hitAccuracy]]" play-count="[[player.osu.playCount]]" level="[[player.osu.level]]" rank="[[player.osu.rank]]" draggable="true" on-dragstart="_dragFromPlayers"></osu-profile>
 							<template is="dom-repeat" items="[[player.availabilities]]" as="availability">
 								<div class="availability-wrapper">
-									<div><span>[[availability.timeFrom]]</span> - <span>[[availability.timeTo]]</span></div>
+									<div><span>[[availability.day]]</span> - <span>[[availability.time]]</span></div>
 								</div>
 							</template>
 						</div>

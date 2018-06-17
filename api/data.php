@@ -249,9 +249,9 @@ $app->get('/rounds/{round}/tiers/{tier}/players', function($request, $response, 
 
 	$players = $database->getPlayers($args['tier'], $args['round']);
 
-	if ($database->getScope() == SCOPE::ADMIN && isset($args['round'])) {
+	if ($database->getScope() == SCOPE::ADMIN) {
 		foreach ($players as &$player) {
-			$player->availabilities = $database->getAvailability($player->userId, $args['round']);
+			$player->availabilities = $database->getAvailability($player->discord->id);
 		}
 	}
 
