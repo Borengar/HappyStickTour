@@ -180,18 +180,18 @@ class Database {
 		$players = [];
 
 		if ($roundId != 0) {
-			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName
+			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName, players.role_set as roleSet
 				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN tiers ON players.tier = tiers.id
 				WHERE tiers.id = :tier AND next_round = :next_round');
 			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
 			$stmt->bindValue(':next_round', $roundId, PDO::PARAM_INT);
 		} elseif ($tierId != 0) {
-			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName
+			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName, players.role_set as roleSet
 				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN tiers ON players.tier = tiers.id
 				WHERE tiers.id = :tier');
 			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
 		} else {
-			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName
+			$stmt = $this->db->prepare('SELECT players.id as userId, players.osu_id as osuId, players.current_lobby as currentLobby, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar, tiers.id as tierId, tiers.name as tierName, players.role_set as roleSet
 				FROM players INNER JOIN discord_users ON players.discord_id = discord_users.id INNER JOIN tiers ON players.tier = tiers.id');
 		}
 		$stmt->execute();
@@ -212,6 +212,8 @@ class Database {
 			$player->tier = new stdClass;
 			$player->tier->id = $row->tierId;
 			$player->tier->name = $row->tierName;
+
+			$player->roleSet = $row->roleSet;
 			$players[] = $player;
 		}
 
@@ -246,7 +248,17 @@ class Database {
 		$stmt->execute();
 	}
 
+	public function putPlayerRoleSet($userId, $roleSet) {
+		$stmt = $this->db->prepare('UPDATE players
+			SET role_set = :role_set
+			WHERE id = :id');
+		$stmt->bindValue(':role_set', $roleSet, PDO::PARAM_BOOL);
+		$stmt->bindValue(':id', $userId, PDO::PARAM_INT);
+		$stmt->execute();
+	}
+
 	public function getRegistrations() {
+		$osuApi = new OsuApi();
 		$registrations = [];
 
 		$stmt = $this->db->prepare('SELECT registrations.osu_id as osuId, registrations.registration_time as registrationTime, registrations.donator as donator, osu_users.username as osuUsername, osu_users.avatar_url as osuAvatarUrl, osu_users.hit_accuracy as osuHitAccuracy, osu_users.level as osuLevel, osu_users.play_count as osuPlayCount, osu_users.pp as osuPp, osu_users.rank as osuRank, osu_users.rank_history as osuRankHistory, osu_users.best_score as osuBestScore, osu_users.playstyle as osuPlaystyle, osu_users.join_date as osuJoinDate, osu_users.country as osuCountry, registrations.twitch_id as twitchId, twitch_users.username as twitchUsername, twitch_users.display_name as twitchDisplayName, twitch_users.avatar as twitchAvatar, twitch_users.sub_since as twitchSubSince, twitch_users.sub_plan as twitchSubPlan, discord_users.id as discordId, discord_users.username as discordUsername, discord_users.discriminator as discordDiscriminator, discord_users.avatar as discordAvatar

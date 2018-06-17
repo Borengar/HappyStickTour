@@ -1278,6 +1278,30 @@ $app->post('/timeslots', function($request, $response) {
 	return echoSuccess($response, 'Timeslots saved');
 });
 
+$app->get('/assignplayerrole', function($request, $response) {
+	global $database;
+	global $discordApi;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::ADMIN) {
+		return echo403($response);
+	}
+
+	$players = $database->getPlayers();
+
+	foreach ($players as $player) {
+		if ($player->roleSet == '0') {
+			$discordApi->addUserRole($player->discord->id, '457505604353916931');
+			$database->putPlayerRoleSet($player->userId, 1);
+			sleep(5);
+		}
+	}
+});
+
 $app->run();
 
 ?>
