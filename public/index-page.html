@@ -97,8 +97,14 @@
 				</div>
 			</div>
 			<div value="players" class="flex layout vertical">
+				<paper-dropdown-menu label="Sorting" style="margin:10px;width:200px;">
+					<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{sortPlayersBy}}">
+						<paper-item value="Name">Name</paper-item>
+						<paper-item value="Rank">Rank</paper-item>
+					</paper-listbox>
+				</paper-dropdown-menu>
 				<div class="layout horizontal wrap">
-					<template is="dom-repeat" items="[[players]]" as="player">
+					<template is="dom-repeat" items="[[players]]" as="player" sort="{{_sortPlayers(sortPlayersBy)}}">
 						<osu-profile avatar-url="[[player.osu.avatarUrl]]" username="[[player.osu.username]]" pp="[[player.osu.pp]]" hit-accuracy="[[player.osu.hitAccuracy]]" play-count="[[player.osu.playCount]]" level="[[player.osu.level]]" rank="[[player.osu.rank]]" style="margin:10px;"></osu-profile>
 					</template>
 				</div>
@@ -208,6 +214,10 @@
 					sortBy: {
 						type: String,
 						value: 'Mod'
+					},
+					sortPlayersBy: {
+						type: String,
+						value: 'Name'
 					}
 				}
 			}
@@ -218,6 +228,7 @@
 					'scope': 'PUBLIC'
 				};
 				this.$.authAjax.generateRequest();
+				this.sortPlayersBy = 'Name';
 			}
 
 			_authResponse(e) {
@@ -267,7 +278,6 @@
 						this.push('players', this.allPlayers[i]);
 					}
 				}
-				this.players.sort(function(a, b) {return a.osu.username > b.osu.username ? 1 : (a.osu.username < b.osu.username ? -1 : 0);});
 				this.push('breadcrumb', {
 					name: 'Players',
 					type: 'players'
@@ -310,6 +320,13 @@
 					type: 'lobby'
 				});
 				this.pageSelected = 'lobby';
+			}
+
+			_sortPlayers(sortBy) {
+				switch (sortBy) {
+					case 'Name': return function(a, b) {return a.osu.username.toLowerCase() > b.osu.username.toLowerCase() ? 1 : (a.osu.username.toLowerCase() < b.osu.username.toLowerCase() ? -1 : 0)}; break;
+					case 'Rank': return function(a, b) { return a.osu.rank - b.osu.rank }; break;
+				}
 			}
 		}
 
