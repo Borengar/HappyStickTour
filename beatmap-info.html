@@ -24,6 +24,8 @@
 				font-size: 35px;
 				font-style: italic;
 				font-weight: bold;
+				color: white;
+				text-decoration: none;
 			}
 			.artist {
 				position: absolute;
@@ -165,7 +167,7 @@
 		</style>
 		<div class="wrapper layout horizontal" style="background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('[[cover]]') no-repeat center center;">
 			<div class="version">[[version]]</div>
-			<div class="title">[[title]]</div>
+			<a href="https://osu.ppy.sh/beatmaps/[[beatmapId]]" target="_blank" class="title">[[title]]</a>
 			<div class="artist">[[artist]]</div>
 			<div class="preview-box" on-click="_togglePreview"></div>
 			<iron-icon class="preview-icon" icon="[[previewIcon]]" on-click="_togglePreview"></iron-icon>
