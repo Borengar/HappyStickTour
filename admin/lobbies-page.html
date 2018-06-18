@@ -63,6 +63,7 @@
 		<iron-ajax id="postLobbiesAjax" url="../api/rounds//tiers//lobbies" method="POST" content-type="application/json" on-response="_postLobbiesResponse"></iron-ajax>
 		<iron-ajax id="deleteLobbiesAjax" url="../api/rounds//tiers//lobbies" method="DELETE" content-type="application/json" on-response="_deleteLobbiesResponse"></iron-ajax>
 		<iron-ajax id="getPlayersAjax" url="../api/players" method="GET" content-type="application/json" last-response="{{players}}" on-response="_getPlayersResponse"></iron-ajax>
+		<iron-ajax id="getTimeSlotsAjax" url="../api/timeslots" method="GET" content-type="application/json" last-response="{{timeSlots}}"></iron-ajax>
 		<div class="wrapper flex layout vertical">
 			<div class="filter-wrapper layout horizontal">
 				<paper-dropdown-menu label="Round">
@@ -120,7 +121,15 @@
 					</template>
 				</div>
 				<div class="players-wrapper layout vertical" on-dragover="_dragOver" on-drop="_dropOnList">
-					<template is="dom-repeat" items="[[players]]" as="player">
+					<paper-dropdown-menu label="Filter">
+						<paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{filterPlayersBy}}">
+							<paper-item value="All">All</paper-item>
+							<template is="dom-repeat" items="[[timeSlots]]" as="timeSlot">
+								<paper-item value="[[timeSlot.id]]">[[timeSlot.day]] [[timeSlot.time]]</paper-item>
+							</template>
+						</paper-listbox>
+					</paper-dropdown-menu>
+					<template is="dom-repeat" items="[[players]]" as="player" sort="{{_sortPlayers()}}" filter="{{_filterPlayers(filterPlayersBy)}}">
 						<div class="player-wrapper layout vertical">
 							<osu-profile avatar-url="[[player.osu.avatarUrl]]" username="[[player.osu.username]]" pp="[[player.osu.pp]]" hit-accuracy="[[player.osu.hitAccuracy]]" play-count="[[player.osu.playCount]]" level="[[player.osu.level]]" rank="[[player.osu.rank]]" draggable="true" on-dragstart="_dragFromPlayers"></osu-profile>
 							<template is="dom-repeat" items="[[player.availabilities]]" as="availability">
@@ -169,6 +178,15 @@
 						observer: '_getLobbies'
 					}
 				}
+			}
+
+			ready() {
+				super.ready();
+				this.$.getTimeSlotsAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.getTimeSlotsAjax.generateRequest();
+				this.filterPlayersBy = 'All';
 			}
 
 			_getLobbies() {
@@ -490,6 +508,36 @@
 					userId: e.model.slot.userId
 				}
 				console.log(this.dragObject);
+			}
+
+			_sortPlayers() {
+				/*
+				return function(a, b) {
+					if (a.availabilities.length == 0) {
+						if (b.availabilities.length == 0) {
+							return 0;
+						}
+						return 1;
+					}
+					if (b.availabilities.length == 0) {
+						return -1;
+					}
+					return (a.availabilities[0].id - b.availabilities[0].id);
+				}
+				*/
+				return function(a, b) {
+					return (a.availabilities.length - b.availabilities.length);
+				}
+			}
+
+			_filterPlayers(filterBy) {
+				if (filterBy == 'All') return null;
+				return function(player) {
+					for (var i = 0; i < player.availabilities.length; i++) {
+						if (player.availabilities[i].id == filterBy) return true;
+					}
+					return false;
+				}
 			}
 		}
 

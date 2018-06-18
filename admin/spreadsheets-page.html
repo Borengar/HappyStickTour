@@ -116,7 +116,13 @@
 						return item.id == response[i].tier
 					});
 					content += tier.name + ',';
-					content += response[i].matchTime + '\r\n';
+					content += response[i].matchTime + ',';
+					for (var j = 0; j < response[i].slots.length; j++) {
+						if (response[i].slots[j].osu)
+							content += response[i].slots[j].osu.username;
+						content += ',';
+					}
+					content += '\r\n';
 				}
 				this._createCsv(content, 'lobbies');
 			}

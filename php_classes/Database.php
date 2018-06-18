@@ -629,12 +629,11 @@ class Database {
 
 		foreach ($lobby->slots as &$slot) {
 			if (!empty($slot->userId)) {
-				$stmt = $this->db->prepare('SELECT time_from as timeFrom, time_to as timeTo
-					FROM availabilities
-					WHERE round = :round AND user_id = :user_id
-					ORDER BY time_from ASC');
-				$stmt->bindValue(':round', $lobby->round, PDO::PARAM_INT);
-				$stmt->bindValue(':user_id', $slot->userId, PDO::PARAM_INT);
+				$stmt = $this->db->prepare('SELECT time_slots.id, time_slots.day, time_slots.time
+					FROM availabilities INNER JOIN time_slots ON availabilities.time_slot = time_slots.id
+					WHERE availabilities.user_id = :user_id
+					ORDER BY time_slots.id ASC');
+				$stmt->bindValue(':user_id', $slot->discord->id, PDO::PARAM_INT);
 				$stmt->execute();
 				$slot->availabilities = $stmt->fetchAll();
 			} else {
@@ -1037,7 +1036,7 @@ class Database {
 	}
 
 	public function getAvailability($userId) {
-		$stmt = $this->db->prepare('SELECT time_slots.day, time_slots.time
+		$stmt = $this->db->prepare('SELECT time_slots.id, time_slots.day, time_slots.time
 			FROM availabilities INNER JOIN time_slots ON availabilities.time_slot = time_slots.id
 			WHERE availabilities.user_id = :user_id
 			ORDER BY time_slots.id ASC');
