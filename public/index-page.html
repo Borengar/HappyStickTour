@@ -115,8 +115,8 @@
 				<div class="layout horizontal wrap">
 					<template is="dom-repeat" items="[[lobbies]]" as="lobby">
 						<div class="lobby-wrapper layout vertical">
-							<div style="margin-left:20px;font-size:20px;">Lobby <span>[[lobby.id]]</span></div>
-							<div>[[lobby.matchTime]]</div>
+							<div style="margin-left:20px;font-size:30px;">Lobby <span>[[lobby.id]]</span></div>
+							<div style="margin-left:20px;margin-top:5px;margin-bottom:5px;">[[lobby.matchTime]] UTC</div>
 							<paper-button class="lobby-button" raised on-click="_chooseLobby">Open lobby</paper-button>
 							<template is="dom-repeat" items="[[lobby.slots]]" as="slot">
 								<div hidden$="[[!slot.userId]]">
