@@ -992,22 +992,7 @@ $app->delete('/osugame/{id}', function($request, $response, $args) {
 	return echoSuccess($response, 'Bracket reset removed');
 });
 
-$app->get('/rounds/{id}/availability', function($request, $response, $args) {
-	global $database;
-
-	$user = $database->getUser();
-	if (!$user) {
-		return echo401($response);
-	}
-
-	if ($database->getScope() != SCOPE::PLAYER) {
-		return echo403($response);
-	}
-
-	return $response->withJson($database->getAvailability($user->userId, $args['id']));
-});
-
-$app->put('/rounds/{id}/availability', function($request, $response, $args) {
+$app->put('/availability', function($request, $response) {
 	global $database;
 
 	$user = $database->getUser();
@@ -1021,7 +1006,7 @@ $app->put('/rounds/{id}/availability', function($request, $response, $args) {
 
 	$body = $request->getParsedBody();
 
-	$database->putAvailability($user->userId, $args['id'], $body->availabilities);
+	$database->putAvailability($body->timeslots);
 
 	return echoSuccess($response, 'Availability saved');
 });

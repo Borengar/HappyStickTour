@@ -17,11 +17,11 @@
 			.discord-login-button {
 				background-color: var(--happystick-green);
 				color: white;
-				font-size: 40px;
+				font-size: 35px;
 				padding: 20px;
 				border-radius: 50%;
-				width: 250px;
-				height: 250px;
+				width: 270px;
+				height: 270px;
 			}
 			.scope-login-button {
 				margin-bottom: 10px;
@@ -45,10 +45,8 @@
 			<template is="dom-if" if="[[showDefault]]">
 				<div class="layout horizontal">
 					<div class="flex"></div>
-					<!--
-					<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Player login</vaadin-button>
+					<vaadin-button class="discord-login-button" on-click="_getDiscordUri">Change Availability</vaadin-button>
 					<div style="width:200px;"></div>
-					-->
 					<vaadin-button class="discord-login-button" on-click="_publicLogin">Public Stats</vaadin-button>
 					<div class="flex"></div>
 				</div>

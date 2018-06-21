@@ -160,6 +160,13 @@ class Database {
 			$user->round = new stdClass;
 			$user->round->id = $row->nextRound;
 			$user->trivia = $row->trivia;
+
+			$stmt = $this->db->prepare('SELECT time_slots.id, time_slots.day, time_slots.time
+				FROM time_slots INNER JOIN availabilities ON time_slots.id = availabilities.time_slot
+				WHERE availabilities.user_id = :user_id');
+			$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+			$stmt->execute();
+			$user->timeslots = $stmt->fetchAll();
 		}
 
 		// mappooler data
@@ -1045,20 +1052,17 @@ class Database {
 		return $stmt->fetchAll();
 	}
 
-	public function putAvailability($userId, $round, $availabilities) {
+	public function putAvailability($availabilities) {
 		$stmt = $this->db->prepare('DELETE FROM availabilities
-			WHERE round = :round AND user_id = :user_id');
-		$stmt->bindValue(':round', $round, PDO::PARAM_INT);
-		$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+			WHERE user_id = :user_id');
+		$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
 		$stmt->execute();
 
 		foreach ($availabilities as $availability) {
-			$stmt = $this->db->prepare('INSERT INTO availabilities (round, user_id, time_from, time_to)
-				VALUES (:round, :user_id, :time_from, :time_to)');
-			$stmt->bindValue(':round', $round, PDO::PARAM_INT);
-			$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
-			$stmt->bindValue(':time_from', $availability->timeFrom, PDO::PARAM_STR);
-			$stmt->bindValue(':time_to', $availability->timeTo, PDO::PARAM_STR);
+			$stmt = $this->db->prepare('INSERT INTO availabilities (user_id, time_slot)
+				VALUES (:user_id, :time_slot)');
+			$stmt->bindValue(':user_id', $this->discordId, PDO::PARAM_INT);
+			$stmt->bindValue(':time_slot', $availability->id, PDO::PARAM_INT);
 			$stmt->execute();
 		}
 	}

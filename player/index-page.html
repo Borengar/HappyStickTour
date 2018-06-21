@@ -5,50 +5,52 @@
 				background-color: var(--discord-grey);
 				color: white;
 			}
-			app-drawer-layout {
-				height: 100%;
+			.wrapper {
+				margin: 20px;
 			}
-			app-header-layout {
-				height: 100%;
+			.timeslots-grid {
+				width: 500px;
+				padding: 10px;
 			}
-			paper-icon-button {
+			.update-button {
+				background-color: var(--happystick-green);
 				color: white;
-			}
-			.drawer-wrapper {
-				height: 100%;
-				overflow: auto;
+				margin-top: 10px;
+				width: 400px;
 			}
 		</style>
-		<iron-ajax id="getRoundsAjax" url="../api/rounds" method="GET" last-response="{{rounds}}" auto></iron-ajax>
 		<iron-ajax id="getUserAjax" url="../api/user" method="GET" last-response="{{user}}"></iron-ajax>
-		<app-drawer-layout force-narrow>
-			<app-drawer slot="drawer">
-				<paper-listbox class="drawer-wrapper" selected="{{pageSelected}}" attr-for-selected="value">
-					<paper-item value="Dashboard">Dashboard</paper-item>
-					<paper-item value="Match">My Next Match</paper-item>
-					<paper-item value="Lobby">My Current Lobby</paper-item>
-					<paper-item value="Mappools">Mappools</paper-item>
-					<paper-item value="Info">Info</paper-item>
-				</paper-listbox>
-			</app-drawer>
-			<app-header-layout fullbleed has-scrolling-region>
-				<app-header slot="header">
-					<app-toolbar>
-						<paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
-						<div main-title>Player</div>
-						<div class="flex"></div>
-						<discord-profile id="[[user.discord.id]]" avatar="[[user.discord.avatar]]" username="[[user.discord.username]]" discriminator="[[user.discord.discriminator]]"></discord-profile>
-					</app-toolbar>
-				</app-header>
-				<iron-pages class="flex layout vertical" selected="[[pageSelected]]" attr-for-selected="value">
-					<dashboard-page class="flex layout vertical" value="Dashboard" user="[[user]]"></dashboard-page>
-					<match-page class="flex layout vertical" value="Match" user="[[user]]" rounds="[[rounds]]"></match-page>
-					<lobby-page value="Lobby" user="[[user]]"></lobby-page>
-					<mappools-page class="flex layout vertical" value="Mappools" user="[[user]]" rounds="[[rounds]]"></mappools-page>
-					<info-page class="flex layout vertical" value="Info" user="[[user]]"></info-page>
-				</iron-pages>
-			</app-header-layout>
-		</app-drawer-layout>
+		<iron-ajax id="getTimeslotsAjax" url="../api/timeslots" method="GET" last-response="{{timeslots}}" auto></iron-ajax>
+		<iron-ajax id="putAvailabilityAjax" url="../api/availability" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<app-header-layout>
+			<app-header slot="header">
+				<app-toolbar class="layout horizontal">
+					<div main-title>Availability</div>
+					<div class="flex"></div>
+					<discord-profile id="[[user.discord.id]]" username="[[user.discord.username]]" avatar="[[user.discord.avatar]]" discriminator="[[user.discord.discriminator]]"></discord-profile>
+				</app-toolbar>
+			</app-header>
+			<div class="flex layout vertical wrapper">
+				<vaadin-grid class="timeslots-grid" items="{{timeslots}}">
+					<vaadin-grid-column width="50px" flex-grow="0">
+						<template>
+							<paper-checkbox checked="{{item.selected}}"></paper-checkbox>
+						</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column>
+						<template class="header">Day</template>
+						<template>[[item.day]]</template>
+					</vaadin-grid-column>
+					<vaadin-grid-column>
+						<template class="header">Time</template>
+						<template>[[item.time]] UTC</template>
+					</vaadin-grid-column>
+				</vaadin-grid>
+				<vaadin-button class="update-button" raised on-click="_update">Update availability</vaadin-button>
+			</div>
+		</app-header-layout>
+		<paper-toast id="successToast" text="[[message]]"></paper-toast>
+		<paper-toast id="errorToast" text="[[message]]"></paper-toast>
 	</template>
 	<script>
 		class IndexPage extends Polymer.Element {
@@ -56,7 +58,12 @@
 
 			static get properties() {
 				return {
-					
+					timeslots: {
+						observer: '_updateTimeslots'
+					},
+					user: {
+						observer: '_updateTimeslots'
+					}
 				}
 			}
 
@@ -67,6 +74,39 @@
 				}
 				this.$.getUserAjax.generateRequest();
 				this.pageSelected = 'Dashboard';
+			}
+
+			_update() {
+				this.$.putAvailabilityAjax.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.putAvailabilityAjax.body = {
+					'timeslots': this.timeslots.filter(slot => slot.selected)
+				}
+				this.$.putAvailabilityAjax.generateRequest();
+			}
+
+			_updateTimeslots() {
+				if (this.user && this.timeslots) {
+					for (var i = 0; i < this.user.timeslots.length; i++) {
+						for (var j = 0; j < this.timeslots.length; j++) {
+							if (this.user.timeslots[i].id == this.timeslots[j].id) {
+								this.set('timeslots.' + j + '.selected', true);
+							}
+						}
+					}
+				}
+			}
+
+			_defaultResponse(e) {
+				var response = e.detail.response;
+				this.message = response.message;
+				if (response.error == '1') {
+					this.$.errorToast.open();
+				} else {
+					this.$.successToast.open();
+					this.$.getUserAjax.generateRequest();
+				}
 			}
 		}
 
