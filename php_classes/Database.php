@@ -757,7 +757,7 @@ class Database {
 	public function putResult($lobbyId, $result) {
 		$discordApi = new DiscordApi();
 
-		$stmt = $this->db->prepare('SELECT rounds.id as roundId, rounds.name as roundName, tiers.id as tierId, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId
+		$stmt = $this->db->prepare('SELECT rounds.id as roundId, rounds.name as roundName, tiers.id as tierId, tiers.name as tierName, rounds.continue_round as continueRound, rounds.drop_down_round as dropDownRound, lobbies.match_id as matchId, lobbies.result_sent as resultSent
 			FROM rounds INNER JOIN lobbies ON rounds.id = lobbies.round INNER JOIN tiers ON lobbies.tier = tiers.id
 			WHERE lobbies.id = :id');
 		$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
@@ -768,6 +768,7 @@ class Database {
 		$tierId = $round->tierId;
 		$tierName = $round->tierName;
 		$matchId = $round->matchId;
+		$resultSent = $round->resultSent;
 		foreach ($result as &$player) {
 			$stmt = $this->db->prepare('UPDATE lobby_slots
 				SET continue_to_upper = :continue_to_upper, drop_down = :drop_down, eliminated = :eliminated, forfeit = :forfeit, noshow = :noshow
@@ -793,7 +794,7 @@ class Database {
 			$stmt->bindValue(':id', $player->userId, PDO::PARAM_INT);
 			$stmt->execute();
 
-			$player->score = 0;
+			//$player->score = 0;
 		}
 
 		$message = "**" . $roundName . " | " . $tierName . "**\r\n";
@@ -805,6 +806,7 @@ class Database {
 		$stmt->execute();
 		$events = $stmt->fetchAll(PDO::FETCH_OBJ);
 		$hasBracketReset = false;
+		/*
 		foreach ($events as $event) {
 			if ($event->type == 'bracket-reset') {
 				$hasBracketReset = true;
@@ -813,7 +815,7 @@ class Database {
 				}
 			}
 			if ($event->type == 'other' && $event->counts) {
-				$scoreAmount = count($result) == 2 ? 1 : 4;
+				$scoreAmount = count($result) == 2 ? 1 : 6;
 
 				$stmt = $this->db->prepare('SELECT user_id as userId, score, pass
 					FROM osu_match_scores
@@ -827,6 +829,7 @@ class Database {
 						if ($score->userId == $player->osu->id) {
 							$player->score += $scoreAmount;
 							switch ($scoreAmount) {
+								case 6: $scoreAmount = 4; break;
 								case 4: $scoreAmount = 3; break;
 								case 3: $scoreAmount = 2; break;
 								default: $scoreAmount = 0; break;
@@ -840,6 +843,7 @@ class Database {
 				}
 			}
 		}
+		*/
 
 		usort($result, function($a, $b) {
 			return $b->score - $a->score;
@@ -889,7 +893,17 @@ class Database {
 				$message .= $score->score . " | " . $score->osu->username . " (<@" . $score->discord->id . ">)\r\n";
 			}
 		}
+		/*
 		$discordApi->sendMessage($message);
+		*/
+		if ($resultSent != "1") {
+			$discordApi->sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName);
+			$stmt = $this->db->prepare('UPDATE lobbies
+				SET result_sent = 1
+				WHERE id = :id');
+			$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
+			$stmt->execute();
+		}
 	}
 
 	public function getMappoolId($tierId, $roundId) {

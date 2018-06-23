@@ -215,7 +215,7 @@
 				var overall = [];
 				this.bracketResetUsed = false;
 				for (var i = 0; i < this.lobby.slots.length; i++) {
-					if (this.lobby.slots[i].osu.id) {
+					if (this.lobby.slots[i].osu && this.lobby.slots[i].osu.id) {
 						overall.push({
 							osu: {
 								avatarUrl: this.lobby.slots[i].osu.avatarUrl,
@@ -237,13 +237,14 @@
 						if (overall.length == 2) {
 							var scoreAmount = 1;
 						} else {
-							var scoreAmount = 4;
+							var scoreAmount = 6;
 						}
 						for (var j = 0; j < this.matchHistory[i].game.scores.length; j++) {
 							for (var k = 0; k < overall.length; k++) {
 								if (overall[k].osu.id == this.matchHistory[i].game.scores[j].userId) {
 									overall[k].score += scoreAmount;
 									switch (scoreAmount) {
+										case 6: scoreAmount = 4; break;
 										case 4: scoreAmount = 3; break;
 										case 3: scoreAmount = 2; break;
 										default: scoreAmount = 0; break;
@@ -255,7 +256,7 @@
 							}
 						}
 					}
-					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded') {
+					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded' || i == this.matchHistory.length - 1) {
 						if (this.matchHistory[i].type == 'bracket-reset') {
 							this.bracketResetUsed = true;
 						}
@@ -264,7 +265,7 @@
 						});
 						for (var j = 0; j < this.lobby.slots.length; j++) {
 							for (var k = 0; k < overall.length; k++) {
-								if (this.lobby.slots[j].osu.id == overall[k].osu.id) {
+								if (this.lobby.slots[j].osu && this.lobby.slots[j].osu.id == overall[k].osu.id) {
 									this.lobby.slots[j].score = overall[k].score;
 								}
 							}
@@ -273,10 +274,17 @@
 							return b.score - a.score;
 						});
 						this.notifyPath('lobby.slots');
-						this.splice('matchHistory', i, 0, {
-							type: 'overall',
-							slots: overall
-						});
+						if (i == this.matchHistory.length - 1) {
+							this.push('matchHistory', {
+								type: 'overall',
+								slots: overall
+							});
+						} else {
+							this.splice('matchHistory', i, 0, {
+								type: 'overall',
+								slots: overall
+							});
+						}
 						var overall = [];
 						for (var j = 0; j < this.lobby.slots.length; j++) {
 							if (this.lobby.slots[j].osuId) {
@@ -303,133 +311,5 @@
 		}
 
 		window.customElements.define(LobbyPage.is, LobbyPage);
-
-		/*
-		Polymer({
-			is: 'lobby-page',
-			properties: {
-				id: {
-					type: Number,
-					observer: 'idChanged'
-				},
-				round: {
-					type: Number,
-					observer: 'roundChanged'
-				},
-				match_id: {
-					type: Number
-				},
-				match_name: String
-			},
-			idChanged: function() {
-				this.tabSelected = 'Overview';
-				this.$.lobbyAjax.url = '../api/lobbies/' + this.id;
-				this.$.lobbyAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.lobbyAjax.generateRequest();
-			},
-			roundChanged: function() {
-				this.$.mappoolAjax.url = '../api/rounds/' + this.round + '/mappool';
-				this.$.mappoolAjax.headers = {
-					'Authorization': localStorage.getItem('token')
-				};
-				this.$.mappoolAjax.generateRequest();
-			},
-			lobbyResponse: function() {
-				if (this.lobby && this.lobby.match_id) {
-					this.match_id = this.lobby.match_id;
-					this.$.matchAjax.url = '../api/matches/' + this.match_id;
-					this.$.matchAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.matchAjax.generateRequest();
-					this.$.bansAjax.url = '../api/matches/' + this.match_id + '/bans';
-					this.$.bansAjax.headers = {
-						'Authorization': localStorage.getItem('token')
-					};
-					this.$.bansAjax.generateRequest();
-					this.new_match = false;
-					this.ref_comments = this.lobby.comment;
-				} else {
-					this.new_match = true;
-				}
-				this.players = this.lobby.slots;
-				this.round = this.lobby.round;
-			},
-			refreshLobby: function() {
-				this.$.lobbyAjax.generateRequest();
-			},
-			matchResponse: function(e) {
-				this.games = [];
-				this.overall = [];
-				for (var player = 0; player < this.players.length; player++) {
-					if (this.players[player].user.osu_profile) {
-						this.push('overall', this.players[player]);
-						this.overall[this.overall.length - 1].score = 0;
-						if (this.players[player].continue_to_upper == '1' && this.players[player].drop_down == '0') {
-							this.overall[this.overall.length - 1].continues = 'Continues';
-						} else if (this.players[player].continue_to_upper == '0' && this.players[player].drop_down == '1') {
-							this.overall[this.overall.length - 1].continues = 'Drops down';
-						} else if (this.players[player].continue_to_upper == '0' && this.players[player].drop_down == '0') {
-							this.overall[this.overall.length - 1].continues = 'Eliminated';
-						}
-					}
-				}
-				var games = e.detail.response.games;
-				for (var game = 0; game < games.length; game++) {
-					if (games[game].counts == '1') {
-						var scoreAdd = this.players.length > 2 ? 6 : 1;
-						for (var score = 0; score < games[game].scores.length; score++) {
-							for (var player = 0; player < this.overall.length; player++) {
-								if (games[game].scores[score].user_id == this.overall[player].user.osu_profile.user_id) {
-									this.overall[player].score += scoreAdd;
-									games[game].scores[score].points = scoreAdd;
-									switch (scoreAdd) {
-										case 6: scoreAdd = 4; break;
-										case 4: scoreAdd = 3; break;
-										case 3: scoreAdd = 2; break;
-										case 2: scoreAdd = 0; break;
-										case 1: scoreAdd = 0; break;
-									}
-								}
-							}
-						}
-					}
-					for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-						if (this.mappool.slots[slot].beatmap.beatmap_id == games[game].beatmap_id) {
-							games[game].tiebreaker = this.mappool.slots[slot].tiebreaker;
-							games[game].freemod = this.mappool.slots[slot].freemod;
-							if (games[game].counts == '1') {
-								this.set('mappool.slots.' + slot + '.picked', true);
-							}
-						}
-					}
-					this.push('games', games[game]);
-				}
-				this.overall.sort(function(a, b) {
-					return b.score - a.score;
-				});
-			},
-			bansResponse: function(e) {
-				var response = e.detail.response;
-				for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-					this.set('mappool.slots.' + slot + '.banned', false);
-					this.set('mappool.slots.' + slot + '.banned_by', '');
-				}
-				for (var i = 0; i < response.length; i++) {
-					for (var slot = 0; slot < this.mappool.slots.length; slot++) {
-						if (this.mappool.slots[slot].beatmap.beatmap_id == response[i].beatmap_id) {
-							this.set('mappool.slots.' + slot + '.banned', true);
-							this.set('mappool.slots.' + slot + '.banned_by', response[i].user.discord_profile.id);
-						}
-					}
-				}
-			},
-			mappoolResponse: function() {
-				this.$.bansAjax.generateRequest();
-			}
-		});
-		*/
 	</script>
 </dom-module>

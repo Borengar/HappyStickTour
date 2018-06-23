@@ -16,6 +16,7 @@ class DiscordApi {
 		$this->botToken = $config['discordBotToken'];
 		$this->guildId = $config['discordGuildId'];
 		$this->channelId = $config['discordChannelId'];
+		$this->webhook = $config['discordWebhook'];
 	}
 
 	public function getLoginUri() {
@@ -152,6 +153,52 @@ class DiscordApi {
 			CURLOPT_HTTPHEADER => array(
 				'Authorization: Bot ' . $this->botToken
 				),
+			CURLOPT_POSTFIELDS => json_encode($messageObject)
+			)
+		);
+		$response = json_decode(curl_exec($curl));
+		curl_close($curl);
+		return $response;
+	}
+
+	public function sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName) {
+		var_dump($result);
+		$messageObject = new stdClass;
+		$messageObject->username = "RekindlingBot";
+		$messageObject->avatar_url = "https://cdn.discordapp.com/app-icons/442726345869492254/4c5e5e08533eb9df9ba9c479b3ae23ce.png";
+		$messageObject->embeds = [];
+		$embed = new stdClass;
+		$embed->color = 16711680;
+		$embed->author = new stdClass;
+		$embed->author->name = "Lobby " . $lobbyId . " (" . $roundName . " | " . $tierName . ")";
+		$embed->author->icon_url = "https://images-ext-2.discordapp.net/external/zJZT3pGPZl6avCRuQOOnL1_1vktR3ZiN5KZTKKRmAvk/https/cdn0.iconfinder.com/data/icons/fighting-1/258/brawl003-512.png";
+		$embed->description = "https://osu.ppy.sh/community/matches/" . $matchId;
+		$embed->fields = [];
+		$playerList = new stdClass;
+		$playerList->name = "Player";
+		$playerList->inline = true;
+		$playerList->value = [];
+		$scoreList = new stdClass;
+		$scoreList->name = "Score";
+		$scoreList->inline = true;
+		$scoreList->value = [];
+		foreach ($result as $score) {
+			$playerList->value[] = $score->osu->username;
+			$scoreList->value[] = $score->score;
+		}
+		$playerList->value = join($playerList->value, "\n");
+		$scoreList->value = join($scoreList->value, "\n");
+		$embed->fields[] = $playerList;
+		$embed->fields[] = $scoreList;
+		$messageObject->embeds[] = $embed;
+
+		$curl = curl_init();
+		curl_setopt_array($curl, array(
+			CURLOPT_SSL_VERIFYPEER => false,
+			CURLOPT_FOLLOWLOCATION => false,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_URL => $this->webhook,
 			CURLOPT_POSTFIELDS => json_encode($messageObject)
 			)
 		);

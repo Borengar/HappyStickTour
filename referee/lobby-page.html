@@ -186,6 +186,7 @@
 									<div class="player-invite">!mp invite #[[slot.osu.id]]</div>
 									<vaadin-combo-box class="player-continues" label="Continues" items='["Continue","Drop down","Eliminated","Forfeit","Noshow"]' value="{{slot.continue}}"></vaadin-combo-box>
 								</div>
+								<discord-profile id="[[slot.discord.id]]" avatar="[[slot.discord.avatar]]" username="[[slot.discord.username]]" discriminator="[[slot.discord.discriminator]]" style="margin-left:20px;"></discord-profile>
 							</div>
 						</template>
 					</template>
@@ -296,7 +297,7 @@
 				var overall = [];
 				this.bracketResetUsed = false;
 				for (var i = 0; i < this.lobby.slots.length; i++) {
-					if (this.lobby.slots[i].osu.id) {
+					if (this.lobby.slots[i].osu && this.lobby.slots[i].osu.id) {
 						overall.push({
 							osu: {
 								avatarUrl: this.lobby.slots[i].osu.avatarUrl,
@@ -318,13 +319,14 @@
 						if (overall.length == 2) {
 							var scoreAmount = 1;
 						} else {
-							var scoreAmount = 4;
+							var scoreAmount = 6;
 						}
 						for (var j = 0; j < this.matchHistory[i].game.scores.length; j++) {
 							for (var k = 0; k < overall.length; k++) {
 								if (overall[k].osu.id == this.matchHistory[i].game.scores[j].userId) {
 									overall[k].score += scoreAmount;
 									switch (scoreAmount) {
+										case 6: scoreAmount = 4; break;
 										case 4: scoreAmount = 3; break;
 										case 3: scoreAmount = 2; break;
 										default: scoreAmount = 0; break;
@@ -336,7 +338,7 @@
 							}
 						}
 					}
-					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded') {
+					if (this.matchHistory[i].type == 'bracket-reset' || this.matchHistory[i].type == 'match-disbanded' || i == this.matchHistory.length - 1) {
 						if (this.matchHistory[i].type == 'bracket-reset') {
 							this.bracketResetUsed = true;
 						}
@@ -345,7 +347,7 @@
 						});
 						for (var j = 0; j < this.lobby.slots.length; j++) {
 							for (var k = 0; k < overall.length; k++) {
-								if (this.lobby.slots[j].osu.id == overall[k].osu.id) {
+								if (this.lobby.slots[j].osu && this.lobby.slots[j].osu.id == overall[k].osu.id) {
 									this.lobby.slots[j].score = overall[k].score;
 								}
 							}
@@ -354,10 +356,17 @@
 							return b.score - a.score;
 						});
 						this.notifyPath('lobby.slots');
-						this.splice('matchHistory', i, 0, {
-							type: 'overall',
-							slots: overall
-						});
+						if (i == this.matchHistory.length) {
+							this.push('matchHistory', {
+								type: 'overall',
+								slots: overall
+							});
+						} else {
+							this.splice('matchHistory', i, 0, {
+								type: 'overall',
+								slots: overall
+							});
+						}
 						var overall = [];
 						for (var j = 0; j < this.lobby.slots.length; j++) {
 							if (this.lobby.slots[j].osuId) {
