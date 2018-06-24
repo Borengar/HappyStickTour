@@ -107,6 +107,7 @@
 		<iron-ajax id="putMatchIdAjax" url="../api/lobbies//matchId" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="putCommentAjax" url="../api/lobbies//comment" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
 		<iron-ajax id="putResultAjax" url="../api/lobbies//result" method="PUT" content-type="application/json" on-response="_defaultResponse"></iron-ajax>
+		<iron-ajax id="resetResultSent" url="../api/lobbies//resultSent" method="PUT" on-response="_defaultResponse"></iron-ajax>
 		<div class="flex layout vertical">
 			<paper-tabs selected="{{tabSelected}}" attr-for-selected="value">
 				<paper-tab value="match">MATCH</paper-tab>
@@ -118,7 +119,8 @@
 				<div class="wrapper flex layout vertical" value="match">
 					<div class="layout horizontal">
 						<paper-input class="id-input" label="Match ID" value="{{lobby.matchId}}"></paper-input>
-						<paper-button class="action-button" raised on-click="_matchIdChanged">Change</paper-button>
+						<paper-button class="action-button" raised on-click="_matchIdChanged">Save</paper-button>
+						<div style="margin-top:18px;font-size:20px;"><- Click this button after entering match id!!!!!!!</div>
 					</div>
 					<paper-button class="action-button refresh-button" raised on-click="_loadMatch">Refresh</paper-button>
 					<template is="dom-repeat" items="{{matchHistory}}">
@@ -191,6 +193,12 @@
 						</template>
 					</template>
 					<paper-button class="action-button save-continue-button" raised on-click="_saveContinues">Save</paper-button>
+					<template is="dom-if" if="{{_isResultSent(lobby.resultSent)}}">
+						<div class="layout horizontal">
+							<div style="margin-top:20px;margin-left:10px;">Match result has been sent.</div>
+							<paper-button class="action-button" on-click="_resetResultSent">Reset</paper-button>
+						</div>
+					</template>
 					<div id="editor"></div>
 					<paper-button class="action-button save-comment-button" raised on-click="_saveComment">Save</paper-button>
 				</div>
@@ -440,6 +448,7 @@
 				}
 				this.$.putResultAjax.body = this.lobby.slots;
 				this.$.putResultAjax.generateRequest();
+				this.set('lobby.resultSent', '1');
 			}
 
 			_saveComment() {
@@ -447,7 +456,9 @@
 				this.$.putCommentAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
-				this.$.putCommentAjax.body = JSON.stringify(this.editor.getContents());
+				this.$.putCommentAjax.body = {
+					'comment': JSON.stringify(this.editor.getContents())
+				};
 				this.$.putCommentAjax.generateRequest();
 			}
 
@@ -490,6 +501,15 @@
 						}
 					}
 				}
+			}
+
+			_resetResultSent() {
+				this.$.resetResultSent.url = '../api/lobbies/' + this.lobby.id + '/resultSent';
+				this.$.resetResultSent.headers = {
+					'Authorization': localStorage.getItem('token')
+				}
+				this.$.resetResultSent.generateRequest();
+				this.set('lobby.resultSent', '0');
 			}
 
 			_isMatchCreated(e) {
@@ -537,6 +557,11 @@
 					return 'None';
 				}
 				return e;
+			}
+
+			_isResultSent(e) {
+				console.log(e);
+				return e == '1';
 			}
 		}
 

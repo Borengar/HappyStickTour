@@ -592,7 +592,7 @@ class Database {
 	public function getLobby($lobbyId) {
 		$osuApi = new OsuApi();
 
-		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment
+		$stmt = $this->db->prepare('SELECT lobbies.id, lobbies.round, lobbies.tier, lobbies.match_id as matchId, lobbies.match_time as matchTime, lobbies.comment, lobbies.result_sent as resultSent
 			FROM lobbies INNER JOIN rounds ON lobbies.round = rounds.id
 			WHERE lobbies.id = :id');
 		$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
@@ -698,6 +698,14 @@ class Database {
 			SET comment = :comment
 			WHERE id = :id');
 		$stmt->bindValue(':comment', $comment, PDO::PARAM_STR);
+		$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
+		$stmt->execute();
+	}
+
+	public function resetResultSent($lobbyId) {
+		$stmt = $this->db->prepare('UPDATE lobbies
+			SET result_sent = 0
+			WHERE id = :id');
 		$stmt->bindValue(':id', $lobbyId, PDO::PARAM_INT);
 		$stmt->execute();
 	}

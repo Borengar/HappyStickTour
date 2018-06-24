@@ -162,7 +162,6 @@ class DiscordApi {
 	}
 
 	public function sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName) {
-		var_dump($result);
 		$messageObject = new stdClass;
 		$messageObject->username = "RekindlingBot";
 		$messageObject->avatar_url = "https://cdn.discordapp.com/app-icons/442726345869492254/4c5e5e08533eb9df9ba9c479b3ae23ce.png";
@@ -183,8 +182,10 @@ class DiscordApi {
 		$scoreList->inline = true;
 		$scoreList->value = [];
 		foreach ($result as $score) {
-			$playerList->value[] = $score->osu->username;
-			$scoreList->value[] = $score->score;
+			if ($score->osu && $score->osu->username) {
+				$playerList->value[] = $score->osu->username;
+				$scoreList->value[] = $score->score;
+			}
 		}
 		$playerList->value = join($playerList->value, "\n");
 		$scoreList->value = join($scoreList->value, "\n");

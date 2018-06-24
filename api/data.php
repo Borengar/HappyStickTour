@@ -624,7 +624,7 @@ $app->put('/lobbies/{id}/comment', function($request, $response, $args) {
 
 	$body = $request->getParsedBody();
 
-	$database->putLobbyComment($args['id'], $body);
+	$database->putLobbyComment($args['id'], $body->comment);
 
 	return echoSuccess($response, 'Comment saved');
 });
@@ -656,6 +656,23 @@ $app->put('/lobbies/{id}/result', function($request, $response, $args) {
 	$database->putResult($args['id'], $body);
 
 	return echoSuccess($response, 'Results saved');
+});
+
+$app->put('/lobbies/{id}/resultSent', function($request, $response, $args) {
+	global $database;
+
+	$user = $database->getUser();
+	if (!$user) {
+		return echo401($response);
+	}
+
+	if ($database->getScope() != SCOPE::REFEREE) {
+		return echo403($response);
+	}
+
+	$database->resetResultSent($args['id']);
+
+	return echoSuccess($response, 'Send lock reset');
 });
 
 $app->get('/rounds/{round}/tiers/{tier}/mappool', function($request, $response, $args) {
@@ -1098,7 +1115,7 @@ $app->post('/discordlogin', function($request, $response) {
 
 	$registrations = $database->getRegistrations();
 	foreach ($registrations as $registration) {
-		if ($registration->discordId == $user->id) {
+		if ($registration->discord->id == $user->id) {
 			$possibleRoles[] = 'REGISTRATION';
 		}
 	}
