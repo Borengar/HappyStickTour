@@ -37,7 +37,7 @@
 				</paper-dropdown-menu>
 			</div>
 			<vaadin-button on-click="_players">All players</vaadin-button>
-			<vaadin-button on-click="_availability">Availability for selected round and tier</vaadin-button>
+			<vaadin-button on-click="_availability">Availability for selected tier</vaadin-button>
 			<vaadin-button on-click="_lobbies">Lobbies for selected round</vaadin-button>
 		</div>
 	</template>
@@ -59,7 +59,7 @@
 			}
 
 			_availability() {
-				this.$.getAvailabilityAjax.url = '../api/rounds/' + this.selectedRound + '/tiers/' + this.selectedTier + '/players';
+				this.$.getAvailabilityAjax.url = '../api/tiers/' + this.selectedTier + '/players';
 				this.$.getAvailabilityAjax.headers = {
 					'Authorization': localStorage.getItem('token')
 				}
@@ -90,7 +90,7 @@
 
 			_availabilityResponse(e) {
 				var response = e.detail.response;
-				var content = 'Discord username,osu username,availability\r\n';
+				var content = 'Discord username,osu username,day,time\r\n';
 				for (var i = 0; i < response.length; i++) {
 					if (response[i].availabilities.length == 0) {
 						content += response[i].discord.username + ',';
@@ -100,7 +100,8 @@
 						for (var j = 0; j < response[i].availabilities.length; j++) {
 							content += response[i].discord.username + ',';
 							content += response[i].osu.username + ',';
-							content += response[i].availabilities[j].timeFrom + ' - ' + response[i].availabilities[j].timeTo + '\r\n';
+							content += response[i].availabilities[j].day + ',';
+							content += response[i].availabilities[j].time + '\r\n';
 						}
 					}
 				}
