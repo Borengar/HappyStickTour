@@ -263,6 +263,12 @@ $app->get('/tiers/{tier}/players', function($request, $response, $args) {
 
 	$players = $database->getPlayers($args['tier']);
 
+	if ($database->getScope() == SCOPE::ADMIN) {
+		foreach ($players as &$player) {
+			$player->availabilities = $database->getAvailability($player->discord->id);
+		}
+	}
+
 	return $response->withJson($players);
 });
 
