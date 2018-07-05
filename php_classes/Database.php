@@ -1067,11 +1067,20 @@ class Database {
 	public function getAvailability($userId) {
 		$stmt = $this->db->prepare('SELECT time_slots.id, time_slots.day, time_slots.time
 			FROM availabilities INNER JOIN time_slots ON availabilities.time_slot = time_slots.id
-			WHERE availabilities.user_id = :user_id
-			ORDER BY time_slots.id ASC');
+			WHERE availabilities.user_id = :user_id');
 		$stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
 		$stmt->execute();
-		return $stmt->fetchAll();
+		$availability = $stmt->fetchAll();
+
+		usort($availability, function($a, $b) {
+			if ($a->day == $b->day) {
+				return substr($a->time, 0, 2) - substr($b->time, 0, 2);
+			}
+			$days = [ 'Friday', 'Saturday', 'Sunday', 'Monday' ];
+			return intval(array_search($a->day, $days)) - intval(array_search($b->day, $days));
+		});
+
+		return $availability;
 	}
 
 	public function putAvailability($availabilities) {
@@ -1306,8 +1315,17 @@ class Database {
 		$stmt = $this->db->prepare('SELECT id, day, `time`
 			FROM time_slots');
 		$stmt->execute();
+		$timeslots = $stmt->fetchAll();
 
-		return $stmt->fetchAll();
+		usort($timeslots, function($a, $b) {
+			if ($a->day == $b->day) {
+				return substr($a->time, 0, 2) - substr($b->time, 0, 2);
+			}
+			$days = [ 'Friday', 'Saturday', 'Sunday', 'Monday' ];
+			return intval(array_search($a->day, $days)) - intval(array_search($b->day, $days));
+		});
+
+		return $timeslots;
 	}
 
 	public function postTimeslots($timeslots) {
