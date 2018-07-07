@@ -805,63 +805,18 @@ class Database {
 			//$player->score = 0;
 		}
 
-		$message = "**" . $roundName . " | " . $tierName . "**\r\n";
-		$stmt = $this->db->prepare('SELECT osu_match_events.id, osu_match_events.type, osu_match_events.user_id as userId, osu_match_games.counts
-			FROM osu_match_events INNER JOIN lobbies ON osu_match_events.match_id = lobbies.match_id LEFT JOIN osu_match_games ON osu_match_events.id = osu_match_games.match_event
-			WHERE lobbies.id = :id
-			ORDER BY osu_match_events.timestamp ASC');
-		$stmt->bindValue(':id', $_GET['lobby'], PDO::PARAM_INT);
-		$stmt->execute();
-		$events = $stmt->fetchAll(PDO::FETCH_OBJ);
-		$hasBracketReset = false;
-		/*
-		foreach ($events as $event) {
-			if ($event->type == 'bracket-reset') {
-				$hasBracketReset = true;
-				foreach ($result as &$player) {
-					$player->score = 0;
-				}
-			}
-			if ($event->type == 'other' && $event->counts) {
-				$scoreAmount = count($result) == 2 ? 1 : 6;
-
-				$stmt = $this->db->prepare('SELECT user_id as userId, score, pass
-					FROM osu_match_scores
-					WHERE match_event = :match_event
-					ORDER BY pass DESC, score DESC');
-				$stmt->bindValue(':match_event', $event->id, PDO::PARAM_INT);
-				$stmt->execute();
-				$scores = $stmt->fetchAll(PDO::FETCH_OBJ);
-				foreach ($scores as $score) {
-					foreach ($result as &$player) {
-						if ($score->userId == $player->osu->id) {
-							$player->score += $scoreAmount;
-							switch ($scoreAmount) {
-								case 6: $scoreAmount = 4; break;
-								case 4: $scoreAmount = 3; break;
-								case 3: $scoreAmount = 2; break;
-								default: $scoreAmount = 0; break;
-							}
-							break;
-						}
-					}
-					if ($scoreAmount == 0) {
-						break;
-					}
-				}
-			}
-		}
-		*/
-
 		usort($result, function($a, $b) {
 			return $b->score - $a->score;
 		});
 
-		if (count($result) == 2) {
-			$message .= "Final Score: **" . $result[0]->osu->username . " (<@" . $result[0]->discord->id . ">) " . $result[0]->score . "** | " . $result[1]->score . " " . $result[1]->osu->username . " (<@" . $result[1]->discord->id . ">)\r\n";
-			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n\r\n";
-			$message .= "**Bans**\r\n";
-			$message .= "__" . $result[0]->osu->username . "__\r\n";
+		if ($resultSent != "1") {
+			$stmt = $this->db->prepare('SELECT beatmap_id as beatmapId, banned_by as bannedBy
+				FROM lobby_bans
+				WHERE lobby = :lobby');
+			$stmt->bindValue(':lobby', $lobbyId, PDO::PARAM_INT);
+			$stmt->execute();
+			$bans = $stmt->fetchAll(PDO::FETCH_OBJ);
+
 			$stmt = $this->db->prepare('SELECT mappool_slots.mod, osu_beatmaps.beatmap_id as beatmapId, osu_beatmaps.artist, osu_beatmaps.title, osu_beatmaps.version
 				FROM mappools INNER JOIN mappool_slots ON mappools.id = mappool_slots.mappool INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
 				WHERE mappools.tier = :tier AND mappools.round = :round');
@@ -869,43 +824,9 @@ class Database {
 			$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
 			$stmt->execute();
 			$mappool = $stmt->fetchAll(PDO::FETCH_OBJ);
-			$stmt = $this->db->prepare('SELECT beatmap_id as beatmapId, banned_by as bannedBy
-				FROM lobby_bans
-				WHERE lobby = :lobby AND after_bracket_reset = :after_bracket_reset');
-			$stmt->bindValue(':lobby', $_GET['lobby'], PDO::PARAM_INT);
-			$stmt->bindValue(':after_bracket_reset', $hasBracketReset, PDO::PARAM_BOOL);
-			$stmt->execute();
-			$bans = $stmt->fetchAll(PDO::FETCH_OBJ);
-			foreach ($bans as $ban) {
-				if ($ban->bannedBy == $result[0]->userId) {
-					foreach ($mappool as $beatmap) {
-						if ($beatmap->beatmapId == $ban->beatmapId) {
-							$message .= $beatmap->mod . " | " . $beatmap->artist . " - " . $beatmap->title . " [" . $beatmap->version . "]\r\n";
-						}
-					}
-				}
-			}
-			$message .= "\r\n__" . $result[1]->osu->username . "__\r\n";
-			foreach ($bans as $ban) {
-				if ($ban->bannedBy == $result[1]->userId) {
-					foreach ($mappool as $beatmap) {
-						if ($beatmap->beatmapId == $ban->beatmapId) {
-							$message .= $beatmap->mod . " | " . $beatmap->artist . " - " . $beatmap->title . " [" . $beatmap->version . "]\r\n";
-						}
-					}
-				}
-			}
-		} else {
-			$message .= "MP LINK: https://osu.ppy.sh/community/matches/" . $matchId . "\r\n\r\n";
-			foreach ($result as $score) {
-				$message .= $score->score . " | " . $score->osu->username . " (<@" . $score->discord->id . ">)\r\n";
-			}
-		}
-		/*
-		$discordApi->sendMessage($message);
-		*/
-		if ($resultSent != "1") {
-			$discordApi->sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName);
+
+			$discordApi->sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName, $bans, $mappool);
+
 			$stmt = $this->db->prepare('UPDATE lobbies
 				SET result_sent = 1
 				WHERE id = :id');
