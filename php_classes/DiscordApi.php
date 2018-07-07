@@ -181,10 +181,25 @@ class DiscordApi {
 		$scoreList->name = "Score";
 		$scoreList->inline = true;
 		$scoreList->value = [];
-		foreach ($result as $score) {
-			if ($score->osu && $score->osu->username) {
-				$playerList->value[] = $score->osu->username;
-				$scoreList->value[] = $score->score;
+		if (isset($result[0]->score)) {
+			foreach ($result as $score) {
+				if ($score->osu && $score->osu->username) {
+					$playerList->value[] = $score->osu->username;
+					$scoreList->value[] = $score->score;
+				}
+			}
+		} else {
+			foreach ($result as $score) {
+				if ($score->continue == "Continue") {
+					$playerList->value[] = $score->osu->username;
+					$scoreList->value[] = "🏆";
+				}
+			}
+			foreach ($result as $score) {
+				if ($score->continue != "Continue") {
+					$playerList->value[] = $score->osu->username;
+					$scoreList->value[] = "Forfeit";
+				}
 			}
 		}
 		$playerList->value = join($playerList->value, "\n");
