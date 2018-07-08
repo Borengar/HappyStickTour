@@ -586,7 +586,7 @@ $app->put('/lobbies/{id}/bans', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -605,7 +605,7 @@ $app->put('/lobbies/{id}/matchId', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -624,7 +624,7 @@ $app->put('/lobbies/{id}/comment', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -643,7 +643,7 @@ $app->put('/lobbies/{id}/result', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -672,7 +672,7 @@ $app->put('/lobbies/{id}/resultSent', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -947,7 +947,7 @@ $app->post('/osumatch/{id}/games', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -966,7 +966,7 @@ $app->put('/osugame/{id}/counts', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -985,7 +985,7 @@ $app->put('/osugame/{id}/pickedby', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
@@ -1004,7 +1004,7 @@ $app->delete('/osugame/{id}', function($request, $response, $args) {
 		return echo401($response);
 	}
 
-	if ($database->getScope() != SCOPE::REFEREE) {
+	if ($database->getScope() != SCOPE::REFEREE && $database->getScope() != SCOPE::ADMIN) {
 		return echo403($response);
 	}
 
