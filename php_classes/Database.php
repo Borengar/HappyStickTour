@@ -805,9 +805,11 @@ class Database {
 			//$player->score = 0;
 		}
 
-		usort($result, function($a, $b) {
-			return $b->score - $a->score;
-		});
+		if (isset($result[0]->score)) {
+			usort($result, function($a, $b) {
+				return $b->score - $a->score;
+			});
+		}
 
 		if ($resultSent != "1") {
 			$stmt = $this->db->prepare('SELECT beatmap_id as beatmapId, banned_by as bannedBy
@@ -816,16 +818,10 @@ class Database {
 			$stmt->bindValue(':lobby', $lobbyId, PDO::PARAM_INT);
 			$stmt->execute();
 			$bans = $stmt->fetchAll(PDO::FETCH_OBJ);
+			
+			$mappool = $this->getMappool($this->getMappoolId($tierId, $roundId));
 
-			$stmt = $this->db->prepare('SELECT mappool_slots.mod, osu_beatmaps.beatmap_id as beatmapId, osu_beatmaps.artist, osu_beatmaps.title, osu_beatmaps.version
-				FROM mappools INNER JOIN mappool_slots ON mappools.id = mappool_slots.mappool INNER JOIN osu_beatmaps ON mappool_slots.beatmap_id = osu_beatmaps.beatmap_id
-				WHERE mappools.tier = :tier AND mappools.round = :round');
-			$stmt->bindValue(':tier', $tierId, PDO::PARAM_INT);
-			$stmt->bindValue(':round', $roundId, PDO::PARAM_INT);
-			$stmt->execute();
-			$mappool = $stmt->fetchAll(PDO::FETCH_OBJ);
-
-			$discordApi->sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName, $bans, $mappool);
+			$discordApi->sendMatchResult($lobbyId, $matchId, $result, $roundName, $tierName, $bans, $mappool->slots);
 
 			$stmt = $this->db->prepare('UPDATE lobbies
 				SET result_sent = 1
