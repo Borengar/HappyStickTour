@@ -652,7 +652,7 @@ $app->put('/lobbies/{id}/result', function($request, $response, $args) {
 	foreach ($lobby->slots as $slot) {
 		foreach ($players as $player) {
 			if ($player->userId == $slot->userId && $player->currentLobby != $args['id']) {
-				echo400('Some players already moved to another round');
+				return echo400($response, 'Some players already moved to another round');
 			}
 		}
 	}
