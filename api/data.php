@@ -522,7 +522,7 @@ $app->post('/rounds/{round}/tiers/{tier}/lobbies', function($request, $response,
 		return echo403($response);
 	}
 
-	$lobbies = $database->getLobbies($args['tier'], $args['round']);
+	$lobbies = $database->getLobbies($args['round'], $args['tier']);
 	if (count($lobbies) > 0) {
 		return echo400($response, 'There are already existing lobbies');
 	}
