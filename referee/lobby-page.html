@@ -367,17 +367,17 @@
 						if (i == this.matchHistory.length) {
 							this.push('matchHistory', {
 								type: 'overall',
-								slots: overall
+								slots: overall.slice()
 							});
 						} else {
 							this.splice('matchHistory', i, 0, {
 								type: 'overall',
-								slots: overall
+								slots: overall.slice()
 							});
 						}
-						var overall = [];
+						overall = [];
 						for (var j = 0; j < this.lobby.slots.length; j++) {
-							if (this.lobby.slots[j].osuId) {
+							if (this.lobby.slots[j].osu && this.lobby.slots[j].osu.id) {
 								overall.push({
 									osu: {
 										avatarUrl: this.lobby.slots[j].osu.avatarUrl,
