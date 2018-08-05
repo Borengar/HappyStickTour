@@ -221,7 +221,10 @@ class DiscordApi {
 					}
 				}
 			}
-			$banList->value = join($banList->value, "\n");
+			if (count($banList->value) > 0) {
+				$banList->value = join($banList->value, "\n");
+				$embed->fields[] = $banList;
+			}
 			$banList2 = new stdClass;
 			$banList2->name = "Bans " . $result[1]->osu->username;
 			$banList2->inline = false;
@@ -235,9 +238,10 @@ class DiscordApi {
 					}
 				}
 			}
-			$banList2->value = join($banList2->value, "\n");
-			$embed->fields[] = $banList;
-			$embed->fields[] = $banList2;
+			if (count($banList2->value) > 0) {
+				$banList2->value = join($banList2->value, "\n");
+				$embed->fields[] = $banList2;
+			}
 		}
 
 		$messageObject->embeds[] = $embed;
